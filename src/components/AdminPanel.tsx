@@ -4,6 +4,7 @@ import {
   BarChart3,
   Camera,
   CheckCircle2,
+  Clock,
   Database,
   Download,
   FileSpreadsheet,
@@ -47,6 +48,14 @@ import {
   fetchFromOutscraper,
 } from '../services/sources/outscraper';
 import { DATA_SOURCE_LABELS, findDuplicateInDatabase } from '../services/validator';
+import {
+  isAlreadyMirroredImageUrl,
+  isTemporaryGoogleImageUrl,
+  mirrorVenuePhotos,
+  sanitizeVenueDescription,
+  sanitizeVenueName,
+  type MirrorImageResult,
+} from '../services/venueMedia';
 import type { ReservationRequest } from '../types/experience';
 import type {
   ClaimRequest,
@@ -139,15 +148,33 @@ export function AdminPanel({
   // Shared Staging Area
   const [staged, setStaged] = useState<StagedItem[]>([]);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<string>('');
+  const [mirrorImagesOnPublish, setMirrorImagesOnPublish] = useState<boolean>(true);
+  const [mirroringRowId, setMirroringRowId] = useState<string | null>(null);
+  const [sanitizingCatalog, setSanitizingCatalog] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const showToast = (msg: string) => {
+    setErrorMessage('');
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 5500);
+    setTimeout(() => setToastMessage(''), 6000);
   };
 
   const toStagedItems = (items: Array<Omit<Restaurant, 'id'>>): StagedItem[] => {
-    return items.map((data, idx) => {
+    return items.map((raw, idx) => {
+      const cleanName = sanitizeVenueName(raw.name) || raw.name;
+      const cleanDesc = sanitizeVenueDescription(
+        raw.description,
+        cleanName,
+        raw.category,
+        raw.neighborhood
+      );
+      const data: Omit<Restaurant, 'id'> = {
+        ...raw,
+        name: cleanName,
+        description: cleanDesc,
+      };
       const dup = findDuplicateInDatabase(data, restaurants);
       const isClosed = data.validation_status === 'FECHADO/INVÁLIDO';
       const isAuthorized = data.is_redistribution_authorized !== false;
@@ -326,27 +353,248 @@ export function AdminPanel({
     );
   };
 
+  const handleMirrorSingleRow = async (item: StagedItem) => {
+    setMirroringRowId(item.id);
+    setErrorMessage('');
+    try {
+      const cleanName = sanitizeVenueName(item.data.name) || item.data.name;
+      const venueKey = item.data.external_id || cleanName;
+      const mirrored = await mirrorVenuePhotos(
+        item.data.cover_image,
+        item.data.gallery || [],
+        venueKey
+      );
+
+      setStaged((prev) =>
+        prev.map((row) =>
+          row.id === item.id
+            ? {
+                ...row,
+                data: {
+                  ...row.data,
+                  name: cleanName,
+                  description: sanitizeVenueDescription(
+                    row.data.description,
+                    cleanName,
+                    row.data.category,
+                    row.data.neighborhood
+                  ),
+                  cover_image: mirrored.cover_image,
+                  gallery: mirrored.gallery,
+                  has_real_photo: mirrored.gallery.length > 0,
+                },
+              }
+            : row
+        )
+      );
+
+      if (mirrored.mirroredCount > 0) {
+        showToast(
+          `${cleanName}: ${mirrored.mirroredCount} foto(s) convertida(s) em WebP otimizado${
+            mirrored.failedCount > 0 ? ` (${mirrored.failedCount} mantida na URL original)` : ''
+          }.`
+        );
+      } else if (mirrored.failedCount > 0) {
+        setErrorMessage(
+          `${cleanName}: não foi possível baixar a imagem (CORS/rede). A URL original foi mantida.`
+        );
+      }
+    } finally {
+      setMirroringRowId(null);
+    }
+  };
+
   const handleBulkUpsert = async () => {
     const toImport = authorizedSelectedItems.map((s) => s.data);
     if (toImport.length === 0) return;
 
     setImporting(true);
+    setErrorMessage('');
+    setImportProgress('');
     try {
-      const res = await upsertRestaurants(toImport);
+      const cache = new Map<string, MirrorImageResult>();
+      const prepared: Array<Omit<Restaurant, 'id'>> = [];
+      let totalMirrored = 0;
+      let totalMirrorFailed = 0;
+
+      for (let i = 0; i < toImport.length; i++) {
+        const raw = toImport[i];
+        const cleanName = sanitizeVenueName(raw.name) || raw.name;
+        const cleanDesc = sanitizeVenueDescription(
+          raw.description,
+          cleanName,
+          raw.category,
+          raw.neighborhood
+        );
+
+        let nextCover = raw.cover_image;
+        let nextGallery = raw.gallery || [];
+
+        if (mirrorImagesOnPublish && (nextCover || nextGallery.length > 0)) {
+          setImportProgress(
+            `Espelhando fotos p/ WebP (${i + 1}/${toImport.length}): ${cleanName}...`
+          );
+          const mirrored = await mirrorVenuePhotos(
+            nextCover,
+            nextGallery,
+            raw.external_id || cleanName,
+            { cache }
+          );
+          nextCover = mirrored.cover_image;
+          nextGallery = mirrored.gallery;
+          totalMirrored += mirrored.mirroredCount;
+          totalMirrorFailed += mirrored.failedCount;
+        }
+
+        prepared.push({
+          ...raw,
+          name: cleanName,
+          description: cleanDesc,
+          cover_image: nextCover,
+          gallery: nextGallery,
+          has_real_photo: nextGallery.length > 0,
+        });
+      }
+
+      setImportProgress('Gravando estabelecimentos higienizados no catálogo...');
+      const res = await upsertRestaurants(prepared);
       await onDatabaseUpdated();
       setStaged([]);
+
+      const mirrorSuffix = mirrorImagesOnPublish
+        ? ` · ${totalMirrored} foto(s) espelhada(s) em WebP${
+            totalMirrorFailed > 0 ? ` (${totalMirrorFailed} mantida(s) na URL original)` : ''
+          }`
+        : '';
+
       showToast(
-        `Publicação autorizada concluída: ${res.inserted} novos adicionados, ${res.updated} atualizados. Total no guia: ${res.total}.`
+        `Publicação autorizada concluída: ${res.inserted} novos adicionados, ${res.updated} atualizados. Total no guia: ${res.total}${mirrorSuffix}.`
+      );
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Erro ao publicar lote selecionado.'
       );
     } finally {
       setImporting(false);
+      setImportProgress('');
+    }
+  };
+
+  const handleSanitizeCatalog = async () => {
+    if (restaurants.length === 0) return;
+
+    setSanitizingCatalog(true);
+    setErrorMessage('');
+    setImportProgress('');
+    try {
+      const cache = new Map<string, MirrorImageResult>();
+      const changedItems: Restaurant[] = [];
+      let textCleanedCount = 0;
+      let totalMirrored = 0;
+      let totalMirrorFailed = 0;
+
+      for (let i = 0; i < restaurants.length; i++) {
+        const r = restaurants[i];
+        const cleanName = sanitizeVenueName(r.name) || r.name;
+        const cleanDesc = sanitizeVenueDescription(
+          r.description,
+          cleanName,
+          r.category,
+          r.neighborhood
+        );
+
+        const textChanged = cleanName !== r.name || cleanDesc !== r.description;
+        if (textChanged) textCleanedCount++;
+
+        const hasTempGoogle =
+          isTemporaryGoogleImageUrl(r.cover_image) ||
+          (r.gallery || []).some((u) => isTemporaryGoogleImageUrl(u));
+        const isImportedExternal =
+          (r.data_source === 'outscraper_api' || r.data_source === 'csv_import') &&
+          ((Boolean(r.cover_image) &&
+            r.cover_image.startsWith('http') &&
+            !isAlreadyMirroredImageUrl(r.cover_image)) ||
+            (r.gallery || []).some((u) => u.startsWith('http') && !isAlreadyMirroredImageUrl(u)));
+
+        let nextCover = r.cover_image;
+        let nextGallery = r.gallery || [];
+        let mediaChanged = false;
+
+        if (hasTempGoogle || isImportedExternal) {
+          setImportProgress(
+            `Higienizando e espelhando fotos (${i + 1}/${restaurants.length}): ${cleanName}...`
+          );
+          const mirrored = await mirrorVenuePhotos(
+            r.cover_image,
+            r.gallery || [],
+            r.external_id || r.id,
+            {
+              cache,
+              onlyTemporaryGoogle: !isImportedExternal,
+            }
+          );
+          if (
+            mirrored.cover_image !== r.cover_image ||
+            JSON.stringify(mirrored.gallery) !== JSON.stringify(r.gallery || [])
+          ) {
+            nextCover = mirrored.cover_image;
+            nextGallery = mirrored.gallery;
+            mediaChanged = true;
+          }
+          totalMirrored += mirrored.mirroredCount;
+          totalMirrorFailed += mirrored.failedCount;
+        }
+
+        if (textChanged || mediaChanged) {
+          changedItems.push({
+            ...r,
+            name: cleanName,
+            description: cleanDesc,
+            cover_image: nextCover,
+            gallery: nextGallery,
+            has_real_photo: nextGallery.length > 0,
+          });
+        }
+      }
+
+      if (changedItems.length === 0) {
+        if (totalMirrorFailed > 0) {
+          setErrorMessage(
+            `Nomes e descrições já estão limpos, mas ${totalMirrorFailed} link(s) temporário(s) falharam ao espelhar por CORS/rede.`
+          );
+        } else {
+          showToast(
+            `Catálogo já higienizado: nenhum título SEO ou link temporário pendente entre ${restaurants.length} locais.`
+          );
+        }
+        return;
+      }
+
+      await upsertRestaurants(changedItems);
+      await onDatabaseUpdated();
+      showToast(
+        `Higienização concluída: ${changedItems.length} estabelecimento(s) atualizado(s) (${textCleanedCount} nomes/descrições limpos, ${totalMirrored} foto(s) convertida(s) em WebP${
+          totalMirrorFailed > 0 ? `, ${totalMirrorFailed} mantida(s) na URL original por CORS/rede` : ''
+        }).`
+      );
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Erro ao higienizar catálogo existente.'
+      );
+    } finally {
+      setSanitizingCatalog(false);
+      setImportProgress('');
     }
   };
 
   const handleResetSeed = async () => {
-    await resetToSeed();
-    await onDatabaseUpdated();
-    showToast('Base restaurada com os 12 restaurantes icônicos do Rio de Janeiro!');
+    try {
+      await resetToSeed();
+      await onDatabaseUpdated();
+      showToast('Base restaurada com os 12 restaurantes icônicos do Rio de Janeiro!');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Erro ao restaurar seed.');
+    }
   };
 
   const handleClearDB = async () => {
@@ -374,11 +622,25 @@ export function AdminPanel({
             Motor de Extração &amp; Validação Multi-Fonte
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Importe com procedência rastreável, validação de status e política rígida de fotografias reais ou placeholder editorial.
+            Importe com procedência rastreável, limpeza automática de SEO/descrições e espelhamento WebP sem links temporários.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            id="btn-sanitize-catalog"
+            type="button"
+            disabled={sanitizingCatalog || importing || restaurants.length === 0}
+            onClick={handleSanitizeCatalog}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-300"
+          >
+            {sanitizingCatalog ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            Higienizar Catálogo &amp; Fotos
+          </button>
           <button
             type="button"
             onClick={() => exportRestaurantsAsJSON(restaurants)}
@@ -414,11 +676,25 @@ export function AdminPanel({
         </div>
       </div>
 
-      {/* Toast Feedback */}
+      {/* Toast & Progress/Error Feedback */}
+      {importProgress && (
+        <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-[#E05A47]/35 bg-[#E05A47]/10 px-4 py-3 text-sm font-medium text-[var(--text-primary)]">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-[#E05A47]" />
+          <span>{importProgress}</span>
+        </div>
+      )}
+
       {toastMessage && (
         <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -933,6 +1209,17 @@ export function AdminPanel({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)]">
+                <input
+                  id="chk-mirror-webp"
+                  type="checkbox"
+                  checked={mirrorImagesOnPublish}
+                  onChange={(e) => setMirrorImagesOnPublish(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded accent-[#E05A47]"
+                />
+                Espelhar fotos p/ WebP ao publicar
+              </label>
+
               <button
                 type="button"
                 onClick={() =>
@@ -953,7 +1240,7 @@ export function AdminPanel({
               <button
                 id="btn-commit-bulk"
                 type="button"
-                disabled={importing || authorizedSelectedItems.length === 0}
+                disabled={importing || sanitizingCatalog || authorizedSelectedItems.length === 0}
                 onClick={handleBulkUpsert}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E05A47] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#c84b39] disabled:opacity-50"
               >
@@ -1081,7 +1368,7 @@ export function AdminPanel({
                         />
                       </td>
 
-                      <td className="min-w-[150px] px-4 py-3 align-top">
+                      <td className="min-w-[165px] px-4 py-3 align-top">
                         <SmartImage
                           src={item.data.cover_image}
                           alt={item.data.name}
@@ -1101,6 +1388,37 @@ export function AdminPanel({
                             </span>
                           </div>
                         )}
+                        {(isTemporaryGoogleImageUrl(item.data.cover_image) ||
+                          (item.data.gallery || []).some((u) => isTemporaryGoogleImageUrl(u))) && (
+                          <div className="mt-1 flex flex-col items-start gap-1">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                              <Clock className="h-2.5 w-2.5" />
+                              Link temporário Google
+                            </span>
+                            <button
+                              type="button"
+                              disabled={mirroringRowId === item.id || importing || sanitizingCatalog}
+                              onClick={() => void handleMirrorSingleRow(item)}
+                              className="inline-flex items-center gap-1 rounded border border-[#E05A47]/40 bg-[#E05A47]/10 px-2 py-0.5 text-[10px] font-semibold text-[#E05A47] transition-colors hover:bg-[#E05A47] hover:text-white disabled:opacity-50"
+                            >
+                              {mirroringRowId === item.id ? (
+                                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-2.5 w-2.5" />
+                              )}
+                              Espelhar WebP
+                            </button>
+                          </div>
+                        )}
+                        {!isTemporaryGoogleImageUrl(item.data.cover_image) &&
+                          isAlreadyMirroredImageUrl(item.data.cover_image) && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+                                <CheckCircle2 className="h-2.5 w-2.5" />
+                                WebP otimizado
+                              </span>
+                            </div>
+                          )}
                         <input
                           type="url"
                           value={item.data.cover_image}

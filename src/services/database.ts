@@ -17,6 +17,8 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
   supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
+export const supabase: SupabaseClient | null = supabaseClient;
+
 export function getStorageMode(): StorageMode {
   return supabaseClient ? 'supabase' : 'local';
 }
@@ -58,8 +60,22 @@ function readLocalRestaurants(): Restaurant[] {
 }
 
 function writeLocalRestaurants(restaurants: Restaurant[]): void {
-  localStorage.setItem(STORAGE_KEY_RESTAURANTS, JSON.stringify(restaurants));
-  localStorage.setItem(STORAGE_KEY_INITIALIZED, '1');
+  try {
+    localStorage.setItem(STORAGE_KEY_RESTAURANTS, JSON.stringify(restaurants));
+    localStorage.setItem(STORAGE_KEY_INITIALIZED, '1');
+  } catch (err) {
+    if (
+      err instanceof DOMException &&
+      (err.name === 'QuotaExceededError' ||
+        err.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+        err.code === 22)
+    ) {
+      throw new Error(
+        'Limite do armazenamento local (localStorage) atingido ao salvar fotos espelhadas. Configure o Supabase Storage (bucket "venue-media") ou publique em lotes menores.'
+      );
+    }
+    throw err;
+  }
 }
 
 function readLocalClaims(): ClaimRequest[] {

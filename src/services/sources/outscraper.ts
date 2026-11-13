@@ -2,6 +2,7 @@ import type { ExperienceAttributes, MacroCategory, MomentMode } from '../../type
 import type { OperationalStatus, PriceRange, Restaurant, RestaurantCategory } from '../../types/restaurant';
 import { normalizeCategory, normalizePriceRange, slugify } from '../../utils/slug';
 import { evaluateRestaurantValidation } from '../validator';
+import { sanitizeVenueDescription, sanitizeVenueName } from '../venueMedia';
 
 export type OutscraperQueryType = 'restaurant' | 'bar' | 'cafe' | 'tourism' | 'culture' | 'all';
 
@@ -351,21 +352,6 @@ function inferMomentTagsAndAttributes(
   };
 }
 
-function buildEditorialDescription(
-  place: OutscraperPlaceRecord,
-  neighborhood: string,
-  category: RestaurantCategory
-): string {
-  const rawDesc = typeof place.description === 'string' ? place.description.trim() : '';
-  if (rawDesc.length >= 15) return rawDesc;
-
-  const subtypeLabel = Array.isArray(place.subtypes)
-    ? place.subtypes.slice(0, 2).join(', ')
-    : place.type || place.category || category;
-
-  return `${place.name} em ${neighborhood}, Rio de Janeiro (${subtypeLabel}). Dados importados via Google Maps / Outscraper para publicação piloto aguardando reivindicação e confirmação direta pelo estabelecimento.`;
-}
-
 function mapBusinessStatus(status?: string): OperationalStatus {
   const up = (status || '').toUpperCase();
   if (up === 'OPERATIONAL') return 'OPERACIONAL';
@@ -490,7 +476,9 @@ export function normalizeOutscraperPlaces(
   const normalized: Array<Omit<Restaurant, 'id'>> = [];
 
   for (const place of places) {
-    const name = (place.name || place.title || '').trim();
+    const rawName = (place.name || place.title || '').trim();
+    if (!rawName) continue;
+    const name = sanitizeVenueName(rawName);
     if (!name) continue;
 
     const rawAddress = (place.full_address || place.address || '').trim();
@@ -563,7 +551,12 @@ export function normalizeOutscraperPlaces(
       address,
       latitude,
       longitude,
-      description: buildEditorialDescription(place, neighborhood, category),
+      description: sanitizeVenueDescription(
+        typeof place.description === 'string' ? place.description : undefined,
+        name,
+        category,
+        neighborhood
+      ),
       cover_image: coverImage,
       gallery,
       rating,

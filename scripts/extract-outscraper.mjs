@@ -220,8 +220,32 @@ function flattenData(data) {
   return out;
 }
 
+function sanitizeVenueName(rawName) {
+  if (!rawName) return '';
+  let cleaned = String(rawName).split('|')[0].trim();
+  const locationSuffixes =
+    /\s*[-–—]\s*(Barra da Tijuca|Recreio(?:\s+dos\s+Bandeirantes)?|Rio de J.*|RJ|Copacabana|Ipanema|Leblon|Botafogo|Centro|Tijuca|Lagoa|Flamengo|Laranjeiras|G[áa]vea|Jardim Bot[âa]nico|Santa Teresa|Lapa|Urca|Humait[áa]|S[ãa]o Conrado|Leme|Arpoador|Catete|Gl[óo]ria).*$/i;
+  cleaned = cleaned.replace(locationSuffixes, '').trim();
+  return cleaned || String(rawName).trim();
+}
+
+function sanitizeVenueDescription(rawDesc, cleanName, category, neighborhood) {
+  const trimmed = String(rawDesc || '').trim();
+  const normalizedCleanName = String(cleanName || '').trim().toLowerCase();
+  if (
+    !trimmed ||
+    (normalizedCleanName.length > 0 && trimmed.toLowerCase().startsWith(normalizedCleanName)) ||
+    trimmed.includes('|') ||
+    trimmed.length < 20
+  ) {
+    return `Experiência de ${String(category || 'gastronomia').toLowerCase()} selecionada em ${neighborhood || 'Rio de Janeiro'}, Rio de Janeiro.`;
+  }
+  return trimmed;
+}
+
 function normalizePlace(place, maxPhotos) {
-  const name = (place.name || place.title || '').trim();
+  const rawName = (place.name || place.title || '').trim();
+  const name = sanitizeVenueName(rawName);
   const rawAddress = (place.full_address || place.address || '').trim();
   const neighborhood = normalizeNeighborhood(place.borough || place.county, rawAddress);
   const address = rawAddress || `${neighborhood}, Rio de Janeiro - RJ`;
@@ -262,10 +286,12 @@ function normalizePlace(place, maxPhotos) {
     address,
     latitude: Number(place.latitude) || -22.9519,
     longitude: Number(place.longitude) || -43.2105,
-    description:
-      (typeof place.description === 'string' && place.description.trim().length >= 15
-        ? place.description.trim()
-        : `${name} em ${neighborhood}, Rio de Janeiro (${place.type || category}). Extraído via Outscraper API aguardando reivindicação direta do estabelecimento.`),
+    description: sanitizeVenueDescription(
+      typeof place.description === 'string' ? place.description : '',
+      name,
+      category,
+      neighborhood
+    ),
     cover_image: gallery[0] || '',
     gallery,
     rating,

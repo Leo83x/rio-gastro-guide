@@ -8,6 +8,7 @@ import {
   normalizeRioNeighborhood,
   type OutscraperPhotoItem,
 } from './sources/outscraper';
+import { sanitizeVenueDescription, sanitizeVenueName } from './venueMedia';
 
 export type RawRow = Record<string, unknown>;
 
@@ -129,7 +130,7 @@ function collectRowGallery(row: RawRow, coverCandidate: string): string[] {
   const addUrl = (val: unknown) => {
     if (typeof val !== 'string') return;
     const t = val.trim();
-    if (t.startsWith('http://') || t.startsWith('https://')) {
+    if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('data:image/')) {
       seen.add(t);
     }
   };
@@ -179,7 +180,9 @@ export function mapRowsToRestaurants(
       return String(raw).trim();
     };
 
-    const name = getVal('name');
+    const rawName = getVal('name');
+    if (!rawName) return;
+    const name = sanitizeVenueName(rawName);
     if (!name) return;
 
     const address = getVal('address') || 'Rio de Janeiro - RJ';
@@ -204,10 +207,7 @@ export function mapRowsToRestaurants(
     const cover_image = hasRealPhoto ? gallery[0] : '';
 
     const rawDesc = getVal('description');
-    const description =
-      rawDesc && rawDesc.length > 20
-        ? rawDesc
-        : `Destaque de culinária ${category.toLowerCase()} em ${neighborhood}, reunindo sabor autêntico, ambiente acolhedor e experiência gastronômica carioca.`;
+    const description = sanitizeVenueDescription(rawDesc, name, category, neighborhood);
 
     const phone = getVal('phone') || undefined;
     const externalId = getVal('external_id') || slugify(`import-${name}-${neighborhood}`);
