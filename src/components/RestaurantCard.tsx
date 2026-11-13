@@ -5,10 +5,11 @@ import { SmartImage } from './SmartImage';
 interface RestaurantCardProps {
   restaurant: Restaurant;
   index: number;
+  matchScore?: number | null;
   onSelect: (restaurant: Restaurant) => void;
 }
 
-export function RestaurantCard({ restaurant, onSelect }: RestaurantCardProps) {
+export function RestaurantCard({ restaurant, matchScore, onSelect }: RestaurantCardProps) {
   const hasRating = restaurant.rating > 0 && restaurant.rating_source !== 'none';
 
   return (
@@ -31,10 +32,17 @@ export function RestaurantCard({ restaurant, onSelect }: RestaurantCardProps) {
 
         {/* Top badges */}
         <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
-            <MapPin className="h-3 w-3 text-[#E05A47]" />
-            {restaurant.neighborhood}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
+              <MapPin className="h-3 w-3 text-[#E05A47]" />
+              {restaurant.neighborhood}
+            </span>
+            {matchScore && matchScore >= 75 && (
+              <span className="rounded-full bg-emerald-600/90 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-md">
+                {matchScore}% Match
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5">
             {restaurant.is_featured && (
@@ -44,7 +52,7 @@ export function RestaurantCard({ restaurant, onSelect }: RestaurantCardProps) {
               </span>
             )}
             <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-[#1C1917] backdrop-blur-md">
-              {restaurant.price_range}
+              {restaurant.attributes?.is_free ? 'Gratuito' : restaurant.price_range}
             </span>
           </div>
         </div>
@@ -52,7 +60,9 @@ export function RestaurantCard({ restaurant, onSelect }: RestaurantCardProps) {
         {/* Bottom category pill */}
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
           <span className="rounded-lg bg-white/95 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#1C1917] shadow-xs">
-            {restaurant.category}
+            {restaurant.macro_category && restaurant.macro_category !== 'Gastronomia'
+              ? restaurant.macro_category
+              : restaurant.category}
           </span>
 
           {hasRating && (

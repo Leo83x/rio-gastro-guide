@@ -72,6 +72,12 @@ export interface Restaurant {
   image_origin?: ImageOrigin;
   image_license?: string;
   has_real_photo?: boolean;
+
+  // Extensão unificada de experiências (Superapp)
+  macro_category?: import('./experience').MacroCategory;
+  moment_tags?: import('./experience').MomentMode[];
+  attributes?: import('./experience').ExperienceAttributes;
+  data_reliability?: import('./experience').DataReliability;
 }
 
 export interface ClaimRequest {

@@ -13,8 +13,10 @@ import {
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import type { ReservationRequest } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
 import { ClaimModal } from './ClaimModal';
+import { ExperienceIntelligenceBlocks } from './ExperienceIntelligenceBlocks';
 import { LeafletMap } from './LeafletMap';
 import { SmartImage } from './SmartImage';
 
@@ -22,12 +24,14 @@ interface RestaurantDetailModalProps {
   restaurant: Restaurant;
   onClose: () => void;
   onRestaurantClaimed: (restaurantId: string) => void;
+  onReservationCreated?: (req: ReservationRequest) => void;
 }
 
 export function RestaurantDetailModal({
   restaurant,
   onClose,
   onRestaurantClaimed,
+  onReservationCreated,
 }: RestaurantDetailModalProps) {
   const photos =
     restaurant.gallery && restaurant.gallery.length > 0
@@ -234,6 +238,11 @@ export function RestaurantDetailModal({
                 </a>
               )}
             </div>
+
+            <ExperienceIntelligenceBlocks
+              experience={restaurant}
+              onReservationCreated={onReservationCreated}
+            />
 
             {/* Claim Owner Card */}
             <div className="rounded-2xl border border-[#E05A47]/25 bg-gradient-to-br from-[#E05A47]/8 to-transparent p-5">

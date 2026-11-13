@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   AlertTriangle,
+  BarChart3,
   CheckCircle2,
   Database,
   Download,
@@ -40,6 +41,7 @@ import {
 } from '../services/overpass';
 import { fetchFromGooglePlacesOfficial } from '../services/sources/googlePlaces';
 import { DATA_SOURCE_LABELS, findDuplicateInDatabase } from '../services/validator';
+import type { ReservationRequest } from '../types/experience';
 import type {
   ClaimRequest,
   ImageOrigin,
@@ -47,15 +49,17 @@ import type {
   RestaurantCategory,
   ValidationStatus,
 } from '../types/restaurant';
+import { B2BPartnerView } from './B2BPartnerView';
 import { SmartImage } from './SmartImage';
 
 interface AdminPanelProps {
   restaurants: Restaurant[];
   claims: ClaimRequest[];
+  reservations: ReservationRequest[];
   onDatabaseUpdated: () => Promise<void>;
 }
 
-type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims';
+type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b';
 type LiveSource = 'openstreetmap' | 'google_places_api';
 type StatusFilter = 'ALL' | ValidationStatus;
 
@@ -86,7 +90,12 @@ const STATUS_BADGE_STYLES: Record<ValidationStatus, string> = {
   'FECHADO/INVÁLIDO': 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
 };
 
-export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPanelProps) {
+export function AdminPanel({
+  restaurants,
+  claims,
+  reservations,
+  onDatabaseUpdated,
+}: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('overpass');
   const storageMode = getStorageMode();
 
@@ -456,7 +465,24 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
           <Users className="h-4 w-4" />
           Leads Reivindicados ({claims.length})
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('b2b')}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+            activeTab === 'b2b'
+              ? 'bg-[#E05A47] text-white shadow-sm'
+              : 'border border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          Visão do Parceiro (B2B)
+        </button>
       </div>
+
+      {activeTab === 'b2b' && (
+        <B2BPartnerView experiences={restaurants} reservations={reservations} />
+      )}
 
       {/* Tab 1: Multi-Source Live Extractor */}
       {activeTab === 'overpass' && (
