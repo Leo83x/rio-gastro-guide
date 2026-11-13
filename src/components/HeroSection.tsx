@@ -1,13 +1,18 @@
 import {
+  Activity,
+  Bookmark,
+  Car,
   CloudRain,
   Compass,
   Heart,
+  Info,
   Landmark,
   MapPin,
   MoreHorizontal,
   Music,
   Palmtree,
   Plane,
+  Plus,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -45,6 +50,11 @@ interface HeroSectionProps {
   resultCount: number;
   onOpenPersonalize: () => void;
   personalizationActive: boolean;
+  locationConsent: boolean;
+  vaultCount: number;
+  onAskBoraIa: (intentText: string) => void;
+  onOpenVault: () => void;
+  onOpenVaultCapture: () => void;
   isDark: boolean;
 }
 
@@ -91,6 +101,54 @@ const NEIGHBORHOOD_OPTIONS = [
 
 const PRICE_OPTIONS: PriceRange[] = ['$', '$$', '$$$', '$$$$'];
 
+function getRioGreeting(): { greeting: string; hour: number } {
+  try {
+    const hourStr = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: 'numeric',
+      hour12: false,
+    }).format(new Date());
+    const hour = parseInt(hourStr, 10) || 14;
+    if (hour >= 5 && hour < 12) return { greeting: 'BOM DIA NO RIO', hour };
+    if (hour >= 12 && hour < 18) return { greeting: 'BOA TARDE NO RIO', hour };
+    return { greeting: 'BOA NOITE NO RIO', hour };
+  } catch {
+    return { greeting: 'HOJE NO RIO', hour: 14 };
+  }
+}
+
+function estimateDeBoaIndex(hour: number, isRaining?: boolean): {
+  label: string;
+  detail: string;
+} {
+  if (isRaining) {
+    return {
+      label: 'De Boa: Locais cobertos',
+      detail:
+        'Estimativa BoraRio baseada em chuva atual no Rio + horário: priorize espaços cobertos e museus.',
+    };
+  }
+  if (hour >= 19 && hour <= 22) {
+    return {
+      label: 'De Boa: Pico noturno',
+      detail:
+        'Estimativa BoraRio para esta faixa horária (19h–22h). Bares e restaurantes populares costumam ter maior procura; não mede fila oficial.',
+    };
+  }
+  if (hour >= 12 && hour <= 14) {
+    return {
+      label: 'De Boa: Almoço ativo',
+      detail:
+        'Estimativa BoraRio para o horário do almoço no Rio. Use o termômetro dentro de cada local como referência.',
+    };
+  }
+  return {
+    label: 'De Boa: Fluxo tranquilo',
+    detail:
+      'Estimativa BoraRio baseada em horário e clima aberto: janela favorável para circular com tranquilidade.',
+  };
+}
+
 export function HeroSection({
   filters,
   onChange,
@@ -98,14 +156,23 @@ export function HeroSection({
   resultCount,
   onOpenPersonalize,
   personalizationActive,
+  locationConsent,
+  vaultCount,
+  onAskBoraIa,
+  onOpenVault,
+  onOpenVaultCapture,
   isDark,
 }: HeroSectionProps) {
   const [weather, setWeather] = useState<RioWeatherSnapshot | null>(null);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+  const [activePillInfo, setActivePillInfo] = useState<'deboa' | 'mobility' | null>(null);
 
   useEffect(() => {
     void fetchRioWeatherLive().then(setWeather).catch(() => undefined);
   }, []);
+
+  const { greeting, hour } = getRioGreeting();
+  const deBoa = estimateDeBoaIndex(hour, weather?.isRaining);
 
   const activeFilterCount = [
     filters.neighborhood,
@@ -140,8 +207,8 @@ export function HeroSection({
 
   return (
     <section className="relative w-full overflow-x-clip">
-      {/* 1. TOPO ATMOSFÉRICO LIMPO E ESPAÇADO */}
-      <div className="relative overflow-hidden pb-11 pt-7 text-white sm:pb-14 sm:pt-10">
+      {/* 1. TOPO ATMOSFÉRICO DO RIO */}
+      <div className="relative overflow-hidden pb-11 pt-6 text-white sm:pb-14 sm:pt-9">
         <img
           src={isDark ? rioHeroNight : rioHeroDay}
           alt="Paisagem atmosférica do Rio de Janeiro"
@@ -151,37 +218,93 @@ export function HeroSection({
         <div
           className={`absolute inset-0 ${
             isDark
-              ? 'bg-gradient-to-b from-[#06101B]/65 via-[#0A1D30]/45 to-[#07111C]'
-              : 'bg-gradient-to-b from-[#0A2036]/65 via-[#123B56]/40 to-[#F8F5EF]'
+              ? 'bg-gradient-to-b from-[#06101B]/70 via-[#0A1D30]/50 to-[#07111C]'
+              : 'bg-gradient-to-b from-[#0A2036]/70 via-[#123B56]/45 to-[#F8F5EF]'
           }`}
         />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <h1 className="text-2xl font-bold leading-snug tracking-tight text-white drop-shadow-sm sm:text-4xl">
+              <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#F7931E]">
+                <Sparkles className="h-3 w-3" />
+                {greeting}
+              </p>
+              <h1 className="mt-1 text-2xl font-bold leading-snug tracking-tight text-white drop-shadow-sm sm:text-4xl">
                 A cidade acontece.
                 <br />
                 Você aproveita.
               </h1>
             </div>
 
-            {weather && (
-              <div className="inline-flex items-center gap-1.5 self-start rounded-full border border-white/25 bg-[#0A1E30]/55 px-3 py-1.5 text-xs font-medium text-[#F1E8D8] backdrop-blur-md sm:self-auto">
-                {weather.isRaining ? (
-                  <CloudRain className="h-3.5 w-3.5 text-[#FF6B35]" />
+            {/* Compact 3-Pill Status Panel (sem inflar altura vertical nem simular preço fixo) */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#0A1E30]/60 px-2.5 py-1 text-[11px] font-medium text-[#F1E8D8] backdrop-blur-md">
+                {weather?.source === 'open-meteo-live' ? (
+                  <>
+                    {weather.isRaining ? (
+                      <CloudRain className="h-3.5 w-3.5 text-[#FF6B35]" />
+                    ) : (
+                      <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
+                    )}
+                    <span>
+                      {weather.temperatureC}°C · {weather.isRaining ? 'Chuva' : 'Tempo aberto'}
+                    </span>
+                  </>
                 ) : (
-                  <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
+                  <>
+                    <Sun className="h-3.5 w-3.5 text-white/60" />
+                    <span>Clima indisponível</span>
+                  </>
                 )}
-                <span>
-                  {weather.temperatureC}°C · {weather.weatherLabel}
-                </span>
               </div>
-            )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setActivePillInfo((prev) => (prev === 'deboa' ? null : 'deboa'))
+                }
+                className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-[#0A1E30]/60 px-2.5 py-1 text-[11px] font-medium text-[#F1E8D8] backdrop-blur-md hover:border-[#F7931E]"
+              >
+                <Activity className="h-3 w-3 text-[#4CA188]" />
+                <span>{deBoa.label}</span>
+                <Info className="h-3 w-3 opacity-70" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setActivePillInfo((prev) => (prev === 'mobility' ? null : 'mobility'))
+                }
+                className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-[#0A1E30]/60 px-2.5 py-1 text-[11px] font-medium text-[#F1E8D8] backdrop-blur-md hover:border-[#F7931E]"
+              >
+                <Car className="h-3 w-3 text-[#FF6B35]" />
+                <span>{locationConsent ? 'Rotas via GPS' : 'Uber / Rotas sob demanda'}</span>
+                <Info className="h-3 w-3 opacity-70" />
+              </button>
+            </div>
           </div>
 
+          {activePillInfo && (
+            <div className="mt-2.5 flex items-start justify-between gap-2 rounded-2xl border border-white/20 bg-[#0A1E30]/85 px-3.5 py-2.5 text-[11px] text-[#F1E8D8] backdrop-blur-md">
+              <p>
+                {activePillInfo === 'deboa'
+                  ? deBoa.detail
+                  : 'O custo de Uber/99 varia conforme origem, destino e tarifa dinâmica. Ao abrir qualquer experiência, você acessa distância e atalhos reais de rota.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setActivePillInfo(null)}
+                aria-label="Fechar explicação"
+                className="shrink-0 text-white/70 hover:text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* 5 Primary Moment Pills + "..." Expand */}
-          <div className="mt-7 flex w-full min-w-0 items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar sm:gap-3">
+          <div className="mt-5 flex w-full min-w-0 items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar sm:gap-3">
             {PRIMARY_MOMENTS.map((m) => {
               const Icon = m.icon;
               const active = filters.momentMode === m.id;
@@ -218,10 +341,10 @@ export function HeroSection({
         </div>
       </div>
 
-      {/* 2. BARRA DE BUSCA LIMPA */}
+      {/* 2. BARRA DE INTENÇÃO DA IA ("O que você quer viver hoje?") */}
       <div className="relative z-20 mx-auto -mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 p-2 shadow-lg backdrop-blur-xl">
-          <div className="flex min-w-0 items-center gap-2.5 px-1">
+          <div className="flex min-w-0 items-center gap-2 px-1">
             <Search className="h-4.5 w-4.5 shrink-0 text-[var(--text-secondary)]" />
 
             <input
@@ -229,6 +352,12 @@ export function HeroSection({
               type="text"
               value={filters.search}
               onChange={(e) => onChange({ ...filters, search: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && filters.search.trim().length > 3) {
+                  e.preventDefault();
+                  onAskBoraIa(filters.search.trim());
+                }
+              }}
               placeholder="O que você quer viver hoje?"
               className="min-w-0 flex-1 bg-transparent py-2 text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/80 focus:outline-none"
             />
@@ -243,6 +372,21 @@ export function HeroSection({
                 <X className="h-4 w-4" />
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() =>
+                onAskBoraIa(
+                  filters.search.trim() ||
+                    'Quero uma boa recomendação no Rio combinando com o clima de hoje'
+                )
+              }
+              title="Perguntar à Bora IA"
+              className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-2 text-xs font-bold text-white shadow-xs hover:opacity-95"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Bora IA</span>
+            </button>
 
             <button
               type="button"
@@ -380,7 +524,43 @@ export function HeroSection({
           )}
         </div>
 
-        {/* 3. CATEGORIAS ESPACIOSAS (única faixa abaixo da busca) */}
+        {/* Direct Access Bar to Cofre de Intenções */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-xs shadow-xs">
+          <button
+            type="button"
+            onClick={onOpenVault}
+            className="flex min-w-0 items-center gap-2 text-left hover:opacity-85"
+          >
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#123B56] text-white">
+              <Bookmark className="h-3.5 w-3.5 text-[#F7931E]" />
+            </div>
+            <span className="truncate font-semibold text-[var(--text-primary)]">
+              {vaultCount > 0
+                ? `${vaultCount} ${vaultCount === 1 ? 'desejo salvo' : 'desejos salvos'} no seu Cofre de Intenções`
+                : 'Cofre de Intenções: guarde links e prints para viver no Rio'}
+            </span>
+          </button>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenVaultCapture}
+              className="inline-flex items-center gap-1 rounded-lg bg-[#FF6B35]/15 px-2.5 py-1.5 text-[11px] font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
+            >
+              <Plus className="h-3 w-3" />
+              Salvar link/print
+            </button>
+            <button
+              type="button"
+              onClick={onOpenVault}
+              className="rounded-lg border border-[var(--border-hairline)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-primary)] hover:border-[#123B56]"
+            >
+              Abrir Cofre
+            </button>
+          </div>
+        </div>
+
+        {/* 3. CATEGORIAS ESPACIOSAS */}
         <div className="flex w-full min-w-0 items-center gap-4 overflow-x-auto pb-2 pt-5 no-scrollbar sm:justify-start sm:gap-7">
           {MACRO_CATEGORIES.map((mc) => {
             const Icon = mc.icon;
@@ -395,7 +575,7 @@ export function HeroSection({
                 <div
                   className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${mc.gradient} text-white shadow-sm transition-all group-hover:scale-105 ${
                     active
-                      ? 'ring-2 ring-[#FF6B35] ring-offset-2 ring-offset-[var(--bg-canvas)] scale-105 shadow-md'
+                      ? 'scale-105 ring-2 ring-[#FF6B35] ring-offset-2 ring-offset-[var(--bg-canvas)] shadow-md'
                       : 'opacity-85 hover:opacity-100'
                   }`}
                 >

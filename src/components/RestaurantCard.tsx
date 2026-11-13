@@ -1,4 +1,4 @@
-import { BadgeCheck, MapPin, Sparkles, Star } from 'lucide-react';
+import { BadgeCheck, Bookmark, HeartHandshake, MapPin, Sparkles, Star } from 'lucide-react';
 import type { Restaurant } from '../types/restaurant';
 import { SmartImage } from './SmartImage';
 
@@ -6,11 +6,30 @@ interface RestaurantCardProps {
   restaurant: Restaurant;
   index: number;
   matchScore?: number | null;
+  inVault?: boolean;
+  confiaCount?: number;
+  onSaveToVault?: (restaurant: Restaurant) => void;
   onSelect: (restaurant: Restaurant) => void;
 }
 
-export function RestaurantCard({ restaurant, matchScore, onSelect }: RestaurantCardProps) {
+export function RestaurantCard({
+  restaurant,
+  matchScore,
+  inVault = false,
+  confiaCount = 0,
+  onSaveToVault,
+  onSelect,
+}: RestaurantCardProps) {
   const hasRating = restaurant.rating > 0 && restaurant.rating_source !== 'none';
+  const showMatch = typeof matchScore === 'number' && matchScore >= 65;
+
+  const statusBadge =
+    restaurant.operational_status === 'FECHADO' ||
+    restaurant.validation_status === 'FECHADO/INVÁLIDO'
+      ? { label: 'Fechado', cls: 'text-red-500' }
+      : restaurant.is_claimed || restaurant.validation_status === 'CONFIRMADO'
+        ? { label: 'Confirmado', cls: 'text-emerald-600 dark:text-emerald-400' }
+        : null;
 
   return (
     <article
@@ -32,12 +51,12 @@ export function RestaurantCard({ restaurant, matchScore, onSelect }: RestaurantC
 
         {/* Top badges */}
         <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
               <MapPin className="h-3 w-3 text-[#FF6B35]" />
               {restaurant.neighborhood}
             </span>
-            {matchScore && matchScore >= 75 && (
+            {showMatch && (
               <span className="rounded-full bg-[#397B68]/95 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-md">
                 {matchScore}% Match
               </span>
@@ -54,16 +73,42 @@ export function RestaurantCard({ restaurant, matchScore, onSelect }: RestaurantC
             <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-[#102F46] backdrop-blur-md">
               {restaurant.attributes?.is_free ? 'Gratuito' : restaurant.price_range}
             </span>
+            {onSaveToVault && (
+              <button
+                type="button"
+                aria-label={inVault ? 'Salvo no Cofre de Intenções' : 'Guardar no Cofre de Intenções'}
+                title={inVault ? 'Salvo no seu Cofre' : 'Guardar no Cofre de Intenções'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaveToVault(restaurant);
+                }}
+                className={`flex h-7 w-7 items-center justify-center rounded-full backdrop-blur-md transition ${
+                  inVault
+                    ? 'bg-[#FF6B35] text-white'
+                    : 'bg-black/55 text-white hover:bg-[#FF6B35]'
+                }`}
+              >
+                <Bookmark className={`h-3.5 w-3.5 ${inVault ? 'fill-current' : ''}`} />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Bottom category pill */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-          <span className="rounded-lg bg-white/95 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#102F46] shadow-xs">
-            {restaurant.macro_category && restaurant.macro_category !== 'Gastronomia'
-              ? restaurant.macro_category
-              : restaurant.category}
-          </span>
+        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-lg bg-white/95 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#102F46] shadow-xs">
+              {restaurant.macro_category && restaurant.macro_category !== 'Gastronomia'
+                ? restaurant.macro_category
+                : restaurant.category}
+            </span>
+            {confiaCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-[#397B68]/95 px-2 py-1 text-[10px] font-bold text-white shadow-xs">
+                <HeartHandshake className="h-3 w-3" />
+                Confia ({confiaCount})
+              </span>
+            )}
+          </div>
 
           {hasRating && (
             <div className="inline-flex items-center gap-1 rounded-lg bg-black/75 px-2 py-1 text-xs font-semibold text-white backdrop-blur-md">
@@ -103,8 +148,15 @@ export function RestaurantCard({ restaurant, matchScore, onSelect }: RestaurantC
           </p>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-[var(--border-hairline)] pt-3 text-xs text-[var(--text-secondary)]">
-          <span className="truncate pr-2">{restaurant.address}</span>
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--border-hairline)] pt-3 text-xs text-[var(--text-secondary)]">
+          <div className="flex min-w-0 items-center gap-2">
+            {statusBadge && (
+              <span className={`shrink-0 text-[10px] font-bold uppercase ${statusBadge.cls}`}>
+                {statusBadge.label}
+              </span>
+            )}
+            <span className="truncate">{restaurant.address}</span>
+          </div>
           <span className="shrink-0 font-bold text-[#FF6B35] group-hover:underline">
             Ver guia →
           </span>

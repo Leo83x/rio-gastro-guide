@@ -34,12 +34,22 @@ const FAVORITE_NEIGHBORHOODS = [
 export function calculateMatchScore(item: Restaurant, prefs: UserPreferences): number | null {
   if (!prefs.lgpd_consents.personalization) return null;
 
-  let score = 62;
+  const configuredCriteria =
+    prefs.favorite_macro_categories.length +
+    prefs.favorite_neighborhoods.length +
+    prefs.preferred_moments.length;
+  if (configuredCriteria < 2) return null;
+
+  let score = 46;
   const macro = item.macro_category || 'Gastronomia';
-  if (prefs.favorite_macro_categories.includes(macro)) score += 16;
-  if (prefs.favorite_neighborhoods.includes(item.neighborhood)) score += 14;
-  if (item.price_range === prefs.budget_tier) score += 5;
-  if (item.is_featured) score += 2;
+  if (prefs.favorite_macro_categories.includes(macro)) score += 22;
+  if (prefs.favorite_neighborhoods.includes(item.neighborhood)) score += 20;
+  if (item.price_range === prefs.budget_tier) score += 7;
+  if (
+    item.moment_tags?.some((tag) => prefs.preferred_moments.includes(tag))
+  ) {
+    score += 4;
+  }
   return Math.min(99, score);
 }
 

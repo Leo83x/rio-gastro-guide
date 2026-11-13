@@ -30,6 +30,19 @@ export const EXTERNAL_INTEGRATIONS_REGISTRY: ExternalIntegrationSpec[] = [
     licensingNotes: 'Licença aberta ODbL com atribuição obrigatória ao OpenStreetMap.',
   },
   {
+    id: 'outscraper',
+    name: 'Outscraper Google Maps & Photos API',
+    domain: 'maps',
+    provider: 'Outscraper Cloud',
+    docsUrl: 'https://app.outscraper.cloud/api-docs',
+    status: 'CONFIGURABLE',
+    requiresCredentials: true,
+    envVarName: 'OUTSCRAPER_API_KEY (Proxy / CLI / Admin X-API-KEY)',
+    costAndLimits: 'Pay-as-you-go com nível gratuito inicial no painel Outscraper',
+    licensingNotes:
+      'Extrai dados e fotos reais do Google Maps para publicação piloto enquanto ocorre o contato de confirmação com cada estabelecimento.',
+  },
+  {
     id: 'google-places',
     name: 'Google Places API (New)',
     domain: 'maps',

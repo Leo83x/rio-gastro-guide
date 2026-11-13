@@ -3,10 +3,10 @@ import {
   Award,
   Bell,
   Building2,
-  CalendarDays,
   Compass,
   Crown,
   Download,
+  HeartHandshake,
   MapPin,
   Moon,
   MoreHorizontal,
@@ -21,7 +21,7 @@ import type { AppRoute } from '../services/router';
 import type { NotificationItem } from '../types/experience';
 import { BrandLogo } from './BrandLogo';
 
-export type AppTab = 'discover' | 'planner' | 'club' | 'agenda' | 'profile' | 'admin';
+export type AppTab = 'discover' | 'planner' | 'confia' | 'club' | 'profile' | 'admin';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -31,6 +31,7 @@ interface NavbarProps {
   onToggleTheme: () => void;
   totalCount: number;
   pointsBalance: number;
+  confiaBadgeCount?: number;
   notifications: NotificationItem[];
   onMarkNotificationsRead: () => void;
   isOnline?: boolean;
@@ -46,8 +47,8 @@ const MAIN_TABS: Array<{
 }> = [
   { id: 'discover', label: 'Descobrir', shortLabel: 'Descobrir', icon: Compass },
   { id: 'planner', label: 'Roteiros', shortLabel: 'Roteiros', icon: MapPin },
-  { id: 'club', label: 'Club', shortLabel: 'Club', icon: Crown },
-  { id: 'agenda', label: 'Agenda', shortLabel: 'Agenda', icon: CalendarDays },
+  { id: 'confia', label: 'Rede Confia', shortLabel: 'Confia', icon: HeartHandshake },
+  { id: 'club', label: 'Bora Club', shortLabel: 'Club', icon: Crown },
   { id: 'profile', label: 'Perfil', shortLabel: 'Perfil', icon: User },
 ];
 
@@ -59,6 +60,7 @@ export function Navbar({
   onToggleTheme,
   totalCount,
   pointsBalance,
+  confiaBadgeCount = 0,
   notifications,
   onMarkNotificationsRead,
   isOnline = true,
@@ -92,16 +94,20 @@ export function Navbar({
           </div>
 
           {/* Desktop 5-Tab Navigation */}
-          <nav className="hidden items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-1 lg:flex">
+          <nav
+            aria-label="Navegação principal desktop"
+            className="hidden items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-1 lg:flex"
+          >
             {MAIN_TABS.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
+              const badge = tab.id === 'confia' ? confiaBadgeCount : 0;
               return (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => onSelectTab(tab.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
+                  className={`relative inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
                     active
                       ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -109,6 +115,15 @@ export function Navbar({
                 >
                   <Icon className="h-3.5 w-3.5" />
                   <span>{tab.label}</span>
+                  {badge > 0 && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-extrabold ${
+                        active ? 'bg-white/25 text-white' : 'bg-[#397B68] text-white'
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -264,22 +279,23 @@ export function Navbar({
         </div>
       </header>
 
-      {/* Floating Glassmorphic Bottom Navigation Bar (Mobile) */}
+      {/* Floating Glassmorphic Bottom Navigation Bar (Mobile - 5 Tabs) */}
       {activeTab !== 'admin' && (
         <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 px-3 lg:hidden">
           <nav
-            aria-label="Navegação principal"
-            className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/40 bg-white/85 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#0D1E30]/85"
+            aria-label="Navegação principal mobile"
+            className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/40 bg-white/88 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#0D1E30]/90"
           >
             {MAIN_TABS.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
+              const badge = tab.id === 'confia' ? confiaBadgeCount : 0;
               return (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => onSelectTab(tab.id)}
-                  className={`flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[10px] font-bold transition-all ${
+                  className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[10px] font-bold transition-all ${
                     active
                       ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-md'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -287,6 +303,9 @@ export function Navbar({
                 >
                   <Icon className="h-4 w-4" />
                   <span>{tab.shortLabel}</span>
+                  {badge > 0 && (
+                    <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-[#397B68] ring-2 ring-white dark:ring-[#0D1E30]" />
+                  )}
                 </button>
               );
             })}

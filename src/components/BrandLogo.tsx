@@ -36,20 +36,22 @@ export function BrandLogo({
     <img
       src={logoPng}
       alt="BoraRio"
-      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain`}
+      style={
+        onDark
+          ? {
+              filter:
+                'brightness(1.2) drop-shadow(0 0 1px rgba(255,255,255,0.85)) drop-shadow(0 2px 8px rgba(255,255,255,0.2))',
+            }
+          : undefined
+      }
+      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain transition duration-200`}
     />
   );
 
   if (variant === 'vertical') {
     return (
       <div className={`inline-flex flex-col items-center gap-1.5 ${className}`}>
-        <div
-          className={`inline-flex items-center justify-center rounded-2xl transition-colors ${
-            onDark ? 'bg-white/95 px-3 py-1 shadow-sm' : ''
-          }`}
-        >
-          {imageEl}
-        </div>
+        {imageEl}
         {showTagline && (
           <span
             className={`text-[11px] font-semibold tracking-wide ${
@@ -65,13 +67,7 @@ export function BrandLogo({
 
   return (
     <div className={`inline-flex max-w-full items-center gap-2 ${className}`}>
-      <div
-        className={`inline-flex items-center rounded-xl transition-colors ${
-          onDark ? 'bg-white/95 px-2.5 py-0.5 shadow-sm' : ''
-        }`}
-      >
-        {imageEl}
-      </div>
+      {imageEl}
       {showTagline && (
         <span
           className={`hidden text-xs font-medium xl:inline ${

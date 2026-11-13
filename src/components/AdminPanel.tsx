@@ -2,6 +2,7 @@ import {
   AlertCircle,
   AlertTriangle,
   BarChart3,
+  Camera,
   CheckCircle2,
   Database,
   Download,
@@ -11,6 +12,7 @@ import {
   Loader2,
   MapPin,
   RefreshCw,
+  Search,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -40,6 +42,10 @@ import {
   type OverpassAmenityType,
 } from '../services/overpass';
 import { fetchFromGooglePlacesOfficial } from '../services/sources/googlePlaces';
+import {
+  buildOutscraperQuery,
+  fetchFromOutscraper,
+} from '../services/sources/outscraper';
 import { DATA_SOURCE_LABELS, findDuplicateInDatabase } from '../services/validator';
 import type { ReservationRequest } from '../types/experience';
 import type {
@@ -60,7 +66,7 @@ interface AdminPanelProps {
 }
 
 type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b';
-type LiveSource = 'openstreetmap' | 'google_places_api';
+type LiveSource = 'outscraper_api' | 'openstreetmap' | 'google_places_api';
 type StatusFilter = 'ALL' | ValidationStatus;
 
 interface StagedItem {
@@ -100,9 +106,16 @@ export function AdminPanel({
   const storageMode = getStorageMode();
 
   // Mode 1: Multi-Source Live Extractor State
-  const [liveSource, setLiveSource] = useState<LiveSource>('openstreetmap');
+  const [liveSource, setLiveSource] = useState<LiveSource>('outscraper_api');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('Botafogo');
   const [amenityType, setAmenityType] = useState<OverpassAmenityType>('restaurant');
+  const [outscraperKey, setOutscraperKey] = useState<string>('');
+  const [outscraperQuery, setOutscraperQuery] = useState<string>(() =>
+    buildOutscraperQuery('Botafogo', 'restaurant')
+  );
+  const [queryManuallyEdited, setQueryManuallyEdited] = useState<boolean>(false);
+  const [outscraperLimit, setOutscraperLimit] = useState<number>(10);
+  const [outscraperPhotosLimit, setOutscraperPhotosLimit] = useState<number>(3);
   const [googlePlacesKey, setGooglePlacesKey] = useState<string>('');
   const [geminiKey, setGeminiKey] = useState<string>('');
   const [overpassLoading, setOverpassLoading] = useState(false);
@@ -160,7 +173,20 @@ export function AdminPanel({
     try {
       let items: Array<Omit<Restaurant, 'id'>> = [];
 
-      if (liveSource === 'openstreetmap') {
+      if (liveSource === 'outscraper_api') {
+        items = await fetchFromOutscraper(
+          {
+            query: outscraperQuery,
+            neighborhood: selectedNeighborhood,
+            queryType: amenityType,
+            limit: outscraperLimit,
+            photosLimit: outscraperPhotosLimit,
+            enrichPhotos: true,
+            apiKey: outscraperKey,
+          },
+          (step) => setOverpassStatus(step)
+        );
+      } else if (liveSource === 'openstreetmap') {
         items = await fetchFromOverpass(selectedNeighborhood, amenityType, (step) => {
           setOverpassStatus(step);
         });
@@ -175,7 +201,7 @@ export function AdminPanel({
 
       if (items.length === 0) {
         setOverpassError(
-          `Nenhum estabelecimento encontrado em ${selectedNeighborhood} para este filtro. Tente outro bairro ou categoria.`
+          `Nenhum estabelecimento encontrado em ${selectedNeighborhood} para este filtro. Tente outro bairro ou consulta.`
         );
         setOverpassStatus('');
         return;
@@ -188,7 +214,7 @@ export function AdminPanel({
       }
 
       setOverpassStatus(
-        `${items.length} estabelecimentos carregados na Staging Area para revisão e validação.`
+        `${items.length} estabelecimentos carregados na Staging Area para revisão e publicação.`
       );
       setStaged(toStagedItems(items));
     } catch (err) {
@@ -216,17 +242,7 @@ export function AdminPanel({
       setCsvRawRows(rows);
       setColumnMapping(detected);
 
-      const mapped = mapRowsToRestaurants(rows, detected).map((r) => ({
-        ...r,
-        data_source: 'csv_import' as const,
-        is_redistribution_authorized: true,
-        validation_status: 'PENDENTE' as const,
-        operational_status: 'DESCONHECIDO' as const,
-        confidence_level: 'MÉDIA' as const,
-        last_verified_at: new Date().toISOString(),
-        image_origin: r.cover_image ? ('commercial_licensed' as const) : ('none' as const),
-        has_real_photo: Boolean(r.cover_image),
-      }));
+      const mapped = mapRowsToRestaurants(rows, detected);
       setStaged(toStagedItems(mapped));
     } catch (err) {
       setCsvError(err instanceof Error ? err.message : 'Falha ao ler o arquivo CSV/JSON.');
@@ -497,6 +513,7 @@ export function AdminPanel({
                 onChange={(e) => setLiveSource(e.target.value as LiveSource)}
                 className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
               >
+                <option value="outscraper_api">Outscraper (Google + Fotos)</option>
                 <option value="openstreetmap">OpenStreetMap (Overpass · ODbL)</option>
                 <option value="google_places_api">Google Places API (Oficial)</option>
               </select>
@@ -510,7 +527,13 @@ export function AdminPanel({
                 <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#E05A47]" />
                 <select
                   value={selectedNeighborhood}
-                  onChange={(e) => setSelectedNeighborhood(e.target.value)}
+                  onChange={(e) => {
+                    const nextNb = e.target.value;
+                    setSelectedNeighborhood(nextNb);
+                    if (!queryManuallyEdited) {
+                      setOutscraperQuery(buildOutscraperQuery(nextNb, amenityType));
+                    }
+                  }}
                   className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-2.5 pl-9 pr-3 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
                 >
                   {RIO_NEIGHBORHOODS_BBOX.map((b) => (
@@ -518,6 +541,9 @@ export function AdminPanel({
                       {b.name}
                     </option>
                   ))}
+                  {liveSource === 'outscraper_api' && (
+                    <option value="Todo o Rio">Todo o Rio (Geral)</option>
+                  )}
                 </select>
               </div>
             </div>
@@ -528,7 +554,13 @@ export function AdminPanel({
               </label>
               <select
                 value={amenityType}
-                onChange={(e) => setAmenityType(e.target.value as OverpassAmenityType)}
+                onChange={(e) => {
+                  const nextType = e.target.value as OverpassAmenityType;
+                  setAmenityType(nextType);
+                  if (!queryManuallyEdited) {
+                    setOutscraperQuery(buildOutscraperQuery(selectedNeighborhood, nextType));
+                  }
+                }}
                 className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
               >
                 <option value="restaurant">Restaurantes</option>
@@ -538,7 +570,24 @@ export function AdminPanel({
               </select>
             </div>
 
-            {liveSource === 'google_places_api' ? (
+            {liveSource === 'outscraper_api' ? (
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                  OUTSCRAPER X-API-KEY
+                </label>
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#E05A47]" />
+                  <input
+                    id="input-outscraper-key"
+                    type="password"
+                    value={outscraperKey}
+                    onChange={(e) => setOutscraperKey(e.target.value)}
+                    placeholder="Token api.outscraper.cloud (ou .env)"
+                    className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-2.5 pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:border-[#E05A47] focus:outline-none"
+                  />
+                </div>
+              </div>
+            ) : liveSource === 'google_places_api' ? (
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
                   GOOGLE_PLACES_API_KEY *
@@ -590,11 +639,88 @@ export function AdminPanel({
             </div>
           </div>
 
+          {liveSource === 'outscraper_api' && (
+            <div className="grid gap-4 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)]/70 p-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="lg:col-span-2">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[var(--text-primary)]">
+                    Consulta Outscraper (/google-maps-search)
+                  </label>
+                  {queryManuallyEdited && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQueryManuallyEdited(false);
+                        setOutscraperQuery(buildOutscraperQuery(selectedNeighborhood, amenityType));
+                      }}
+                      className="text-[11px] font-semibold text-[#E05A47] hover:underline"
+                    >
+                      Restaurar padrão
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+                  <input
+                    id="input-outscraper-query"
+                    type="text"
+                    value={outscraperQuery}
+                    onChange={(e) => {
+                      setQueryManuallyEdited(true);
+                      setOutscraperQuery(e.target.value);
+                    }}
+                    placeholder="Ex: restaurantes italianos em Ipanema, Rio de Janeiro"
+                    className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] py-2 pl-9 pr-3 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                  Quantidade de Locais
+                </label>
+                <select
+                  id="select-outscraper-limit"
+                  value={outscraperLimit}
+                  onChange={(e) => setOutscraperLimit(Number(e.target.value))}
+                  className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
+                >
+                  <option value={5}>5 estabelecimentos</option>
+                  <option value={10}>10 estabelecimentos</option>
+                  <option value={20}>20 estabelecimentos</option>
+                  <option value={40}>40 estabelecimentos</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                  Fotos Reais (/google-maps-photos)
+                </label>
+                <select
+                  id="select-outscraper-photos"
+                  value={outscraperPhotosLimit}
+                  onChange={(e) => setOutscraperPhotosLimit(Number(e.target.value))}
+                  className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
+                >
+                  <option value={1}>1 foto (capa apenas)</option>
+                  <option value={3}>Até 3 fotos reais por local</option>
+                  <option value={5}>Até 5 fotos reais por local</option>
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)]/60 px-4 py-2.5 text-xs text-[var(--text-secondary)]">
-            {liveSource === 'openstreetmap' ? (
+            {liveSource === 'outscraper_api' ? (
+              <span>
+                <strong>Integração Outscraper API:</strong> consulta{' '}
+                <code className="font-mono">GET /google-maps-search</code> e{' '}
+                <code className="font-mono">GET /google-maps-photos</code> via proxy seguro (<code className="font-mono">/api/outscraper</code>). Quando retornadas fotos reais, elas são publicadas diretamente no site (sem placeholder) enquanto o contato de confirmação com o estabelecimento é realizado em seguida.
+              </span>
+            ) : liveSource === 'openstreetmap' ? (
               <span>
                 <strong>Política de qualidade:</strong> registros do OpenStreetMap entram como{' '}
-                <strong>PENDENTE</strong> e recebem o <strong>placeholder visual do Rio Gastro Guide</strong> (sem fotos genéricas de terceiros e sem notas inventadas).
+                <strong>PENDENTE</strong> e recebem o <strong>placeholder visual do BoraRio</strong> (sem fotos genéricas de terceiros e sem notas inventadas).
               </span>
             ) : (
               <span>
@@ -966,6 +1092,15 @@ export function AdminPanel({
                           compact
                           className="h-14 w-24 rounded-lg object-cover"
                         />
+                        {item.data.has_real_photo && (item.data.gallery?.length || 0) > 0 && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                              <Camera className="h-2.5 w-2.5" />
+                              {item.data.gallery.length}{' '}
+                              {item.data.gallery.length === 1 ? 'foto real' : 'fotos reais'}
+                            </span>
+                          </div>
+                        )}
                         <input
                           type="url"
                           value={item.data.cover_image}
@@ -973,6 +1108,14 @@ export function AdminPanel({
                             const url = e.target.value.trim();
                             updateItem({
                               cover_image: url,
+                              gallery: url
+                                ? [
+                                    url,
+                                    ...(item.data.gallery || []).filter(
+                                      (g) => g !== url && g !== item.data.cover_image
+                                    ),
+                                  ]
+                                : [],
                               has_real_photo: Boolean(url),
                               image_origin: url ? 'establishment_authorized' : 'none',
                               image_license: url

@@ -117,6 +117,7 @@ export function SmartImage({
       src={src}
       alt={alt}
       loading="lazy"
+      referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
       className={className}
     />

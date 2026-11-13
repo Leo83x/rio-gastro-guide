@@ -117,9 +117,10 @@ export function findDuplicateInDatabase(
 export const DATA_SOURCE_LABELS: Record<DataSource, string> = {
   openstreetmap: 'OpenStreetMap (ODbL)',
   google_places_api: 'Google Places API (Oficial)',
+  outscraper_api: 'Outscraper (Google Maps + Fotos Reais)',
   commercial_provider: 'Provedor Comercial Licenciado',
   official_website: 'Site Oficial do Estabelecimento',
   owner_submitted: 'Enviado pelo Proprietário',
-  curated_seed: 'Curadoria Rio Gastro Guide',
+  curated_seed: 'Curadoria BoraRio',
   csv_import: 'Importação CSV / JSON',
 };

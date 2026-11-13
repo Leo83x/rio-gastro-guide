@@ -16,6 +16,7 @@ export type PriceRange = '$' | '$$' | '$$$' | '$$$$';
 export type DataSource =
   | 'openstreetmap'
   | 'google_places_api'
+  | 'outscraper_api'
   | 'commercial_provider'
   | 'official_website'
   | 'owner_submitted'

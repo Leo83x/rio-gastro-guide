@@ -82,7 +82,7 @@ export function LandingPage({
               Planejador IA
             </a>
             <a href="#club" className="hover:text-[var(--text-primary)]">
-              Rio Gastro Club
+              Bora Club
             </a>
             <button
               type="button"
@@ -362,12 +362,12 @@ export function LandingPage({
         </div>
       </section>
 
-      {/* 5. RIO GASTRO CLUB & 6. AGENDA VIVA & 7. RIO POINTS */}
+      {/* 5. BORA CLUB & 6. AGENDA VIVA & 7. RIO POINTS */}
       <section id="club" className="bg-borario-day py-16 text-white">
         <div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-3 lg:px-8">
           <div className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur-md">
             <Crown className="h-7 w-7 text-[#F1E8D8]" />
-            <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Rio Gastro Club</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Bora Club</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
               Benefícios exclusivos em restaurantes parceiros e drops curados, com transparência
               entre ofertas demonstrativas e ofertas confirmadas por parceiros.
@@ -409,7 +409,7 @@ export function LandingPage({
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
               Reivindique o perfil do seu estabelecimento, publique fotos oficiais, receba solicitações
-              de reserva e crie benefícios no Rio Gastro Club através de um painel exclusivo.
+              de reserva e crie benefícios no Bora Club através de um painel exclusivo.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

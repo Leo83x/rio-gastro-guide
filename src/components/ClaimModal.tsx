@@ -76,7 +76,7 @@ export function ClaimModal({ restaurant, onClose, onClaimed }: ClaimModalProps) 
               Reivindicar {restaurant.name}
             </h3>
             <p className="mt-1.5 text-sm text-[var(--text-secondary)]">
-              Atualize fotos, cardápio, horários e receba reservas diretas gratuitamente no Rio Gastro Guide.
+              Atualize fotos, cardápio, horários e receba reservas diretas gratuitamente no BoraRio.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">

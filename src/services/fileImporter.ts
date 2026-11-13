@@ -1,6 +1,13 @@
 import Papa from 'papaparse';
 import type { Restaurant } from '../types/restaurant';
-import { normalizeCategory, normalizePriceRange, slugify } from '../utils/slug';
+import { normalizeCategory, slugify } from '../utils/slug';
+import {
+  extractOutscraperPhotos,
+  formatOutscraperWorkingHours,
+  mapOutscraperPriceRange,
+  normalizeRioNeighborhood,
+  type OutscraperPhotoItem,
+} from './sources/outscraper';
 
 export type RawRow = Record<string, unknown>;
 
@@ -26,18 +33,28 @@ const KNOWN_ALIASES: Record<keyof ColumnMapping, string[]> = {
   external_id: ['external_id', 'place_id', 'placeId', 'cid', 'osm_id', 'id', 'google_id'],
   name: ['name', 'title', 'nome', 'estabelecimento', 'business_name', 'place_name'],
   category: ['category', 'categoryName', 'categories', 'cuisine', 'tipo', 'culinaria', 'type', 'subtypes'],
-  neighborhood: ['neighborhood', 'bairro', 'district', 'suburb', 'borough'],
+  neighborhood: ['neighborhood', 'bairro', 'district', 'suburb', 'borough', 'county'],
   address: ['address', 'full_address', 'street', 'endereco', 'formatted_address', 'location'],
   latitude: ['latitude', 'lat', 'y'],
   longitude: ['longitude', 'lng', 'lon', 'long', 'x'],
   description: ['description', 'descricao', 'about', 'summary', 'editorial'],
-  cover_image: ['cover_image', 'main_image', 'imageUrl', 'image', 'photo', 'thumbnail', 'featured_image'],
+  cover_image: [
+    'cover_image',
+    'main_image',
+    'imageUrl',
+    'image',
+    'photo',
+    'thumbnail',
+    'featured_image',
+    'photo_url_big',
+    'photo_url',
+  ],
   rating: ['rating', 'totalScore', 'stars', 'nota', 'score'],
   reviews_count: ['reviews_count', 'reviewsCount', 'reviews', 'avaliacoes', 'user_ratings_total'],
-  price_range: ['price_range', 'price', 'priceLevel', 'preco', 'faixa_preco'],
+  price_range: ['price_range', 'range', 'price', 'priceLevel', 'preco', 'faixa_preco'],
   phone: ['phone', 'phoneNumber', 'telefone', 'whatsapp', 'nationalPhoneNumber'],
   website: ['website', 'url', 'site', 'domain'],
-  opening_hours: ['opening_hours', 'hours', 'working_hours', 'horario'],
+  opening_hours: ['opening_hours', 'hours', 'working_hours', 'working_hours_old_format', 'horario'],
 };
 
 export function detectColumnMapping(headers: string[]): ColumnMapping {
@@ -79,12 +96,14 @@ export async function parseUploadedFile(file: File): Promise<{ headers: string[]
     const parsed = JSON.parse(text) as unknown;
     let rows: RawRow[] = [];
     if (Array.isArray(parsed)) {
-      rows = parsed as RawRow[];
+      rows = Array.isArray(parsed[0]) ? (parsed.flat() as RawRow[]) : (parsed as RawRow[]);
     } else if (parsed && typeof parsed === 'object') {
       const obj = parsed as Record<string, unknown>;
       const candidate = obj.data || obj.items || obj.results || obj.restaurants;
       if (Array.isArray(candidate)) {
-        rows = candidate as RawRow[];
+        rows = Array.isArray(candidate[0])
+          ? (candidate.flat() as RawRow[])
+          : (candidate as RawRow[]);
       }
     }
     const headerSet = new Set<string>();
@@ -105,29 +124,42 @@ export async function parseUploadedFile(file: File): Promise<{ headers: string[]
   });
 }
 
-function inferNeighborhoodFromAddress(address: string): string {
-  const known = [
-    'Leblon',
-    'Ipanema',
-    'Botafogo',
-    'Copacabana',
-    'Barra da Tijuca',
-    'Santa Teresa',
-    'Jardim Botânico',
-    'Lapa',
-    'Urca',
-    'Centro',
-    'Flamengo',
-    'Tijuca',
-    'Gávea',
-    'Laranjeiras',
-    'Humaitá',
-  ];
-  const lower = address.toLowerCase();
-  for (const k of known) {
-    if (lower.includes(k.toLowerCase())) return k;
+function collectRowGallery(row: RawRow, coverCandidate: string): string[] {
+  const seen = new Set<string>();
+  const addUrl = (val: unknown) => {
+    if (typeof val !== 'string') return;
+    const t = val.trim();
+    if (t.startsWith('http://') || t.startsWith('https://')) {
+      seen.add(t);
+    }
+  };
+
+  addUrl(coverCandidate);
+
+  const outscraperGallery = extractOutscraperPhotos({
+    photo: typeof row.photo === 'string' ? row.photo : undefined,
+    photos_data: row.photos_data as OutscraperPhotoItem[] | string | undefined,
+  });
+  outscraperGallery.forEach(addUrl);
+
+  const rawGallery = row.gallery;
+  if (Array.isArray(rawGallery)) {
+    rawGallery.forEach(addUrl);
+  } else if (typeof rawGallery === 'string' && rawGallery.trim()) {
+    const parts = rawGallery.trim().startsWith('[')
+      ? (() => {
+          try {
+            const p = JSON.parse(rawGallery) as unknown;
+            return Array.isArray(p) ? p : [];
+          } catch {
+            return rawGallery.split('|');
+          }
+        })()
+      : rawGallery.split('|');
+    parts.forEach(addUrl);
   }
-  return 'Rio de Janeiro';
+
+  return Array.from(seen);
 }
 
 export function mapRowsToRestaurants(
@@ -151,7 +183,7 @@ export function mapRowsToRestaurants(
     if (!name) return;
 
     const address = getVal('address') || 'Rio de Janeiro - RJ';
-    const neighborhood = getVal('neighborhood') || inferNeighborhoodFromAddress(address);
+    const neighborhood = normalizeRioNeighborhood(getVal('neighborhood'), address);
     const category = normalizeCategory(getVal('category'), 'Contemporâneo');
 
     const rawLat = parseFloat(getVal('latitude').replace(',', '.'));
@@ -167,8 +199,9 @@ export function mapRowsToRestaurants(
     const reviews_count = Number.isFinite(rawReviews) ? rawReviews : 0;
 
     const coverCandidate = getVal('cover_image');
-    const hasRealPhoto = Boolean(coverCandidate && coverCandidate.startsWith('http'));
-    const cover_image = hasRealPhoto ? coverCandidate : '';
+    const gallery = collectRowGallery(row, coverCandidate);
+    const hasRealPhoto = gallery.length > 0;
+    const cover_image = hasRealPhoto ? gallery[0] : '';
 
     const rawDesc = getVal('description');
     const description =
@@ -179,6 +212,13 @@ export function mapRowsToRestaurants(
     const phone = getVal('phone') || undefined;
     const externalId = getVal('external_id') || slugify(`import-${name}-${neighborhood}`);
 
+    const rawHoursVal = mapping.opening_hours ? row[mapping.opening_hours] : undefined;
+    const opening_hours =
+      formatOutscraperWorkingHours(rawHoursVal) ||
+      formatOutscraperWorkingHours(row.working_hours_old_format);
+
+    const { priceRange } = mapOutscraperPriceRange(getVal('price_range'));
+
     const rawBusinessStatus = String(
       row['business_status'] ?? row['businessStatus'] ?? row['status'] ?? ''
     ).toUpperCase();
@@ -187,8 +227,14 @@ export function mapRowsToRestaurants(
       rawBusinessStatus.includes('CLOSED_TEMPORARILY') ||
       rawBusinessStatus.includes('FECHADO');
 
+    const isOutscraperExport = Boolean(
+      row['place_id'] || row['google_id'] || row['photos_data'] || row['location_link']
+    );
+
     results.push({
-      external_id: externalId,
+      external_id: isOutscraperExport && !externalId.startsWith('outscraper-')
+        ? `outscraper-${externalId}`
+        : externalId,
       name,
       slug: slugify(`${name}-${neighborhood}`),
       category,
@@ -198,17 +244,17 @@ export function mapRowsToRestaurants(
       longitude,
       description,
       cover_image,
-      gallery: hasRealPhoto ? [cover_image] : [],
+      gallery,
       rating,
       reviews_count,
-      price_range: normalizePriceRange(getVal('price_range')),
+      price_range: priceRange,
       phone,
       whatsapp: phone ? phone.replace(/\D/g, '') : undefined,
       website: getVal('website') || undefined,
-      opening_hours: getVal('opening_hours') || undefined,
+      opening_hours,
       is_claimed: false,
       is_featured: false,
-      data_source: 'csv_import',
+      data_source: isOutscraperExport ? 'outscraper_api' : 'csv_import',
       is_redistribution_authorized: true,
       validation_status: isClosed ? 'FECHADO/INVÁLIDO' : 'PENDENTE',
       operational_status: isClosed
@@ -221,7 +267,9 @@ export function mapRowsToRestaurants(
       rating_source: hasRating ? 'authorized_source' : 'none',
       image_origin: hasRealPhoto ? 'commercial_licensed' : 'none',
       image_license: hasRealPhoto
-        ? 'Importado via planilha (aguardando confirmação do estabelecimento)'
+        ? isOutscraperExport
+          ? 'Outscraper Google Maps Photos API (publicação piloto pré-confirmação do estabelecimento)'
+          : 'Importado via planilha (aguardando confirmação do estabelecimento)'
         : 'Sem fotografia oficial disponível',
       has_real_photo: hasRealPhoto,
     });

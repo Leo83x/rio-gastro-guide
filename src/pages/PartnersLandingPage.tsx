@@ -76,7 +76,7 @@ export function PartnersLandingPage({
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#F1E8D8]/90 sm:text-base">
             Gerencie suas informações oficiais, publique fotografias autorizadas, receba
-            solicitações de reserva e ative benefícios no Rio Gastro Club sem perder o controle da
+            solicitações de reserva e ative benefícios no Bora Club sem perder o controle da
             sua marca.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -131,7 +131,7 @@ export function PartnersLandingPage({
 
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <Crown className="h-7 w-7 text-[#D49B27]" />
-            <h3 className="font-sans tracking-tight mt-4 text-lg font-bold">Rio Gastro Club</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-lg font-bold">Bora Club</h3>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
               Crie benefícios em horários estratégicos (ex: terça a quinta) para atrair novos
               clientes qualificados.

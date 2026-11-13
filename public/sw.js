@@ -1,4 +1,4 @@
-const CACHE_NAME = 'borario-pwa-v1';
+const CACHE_NAME = 'borario-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/app',

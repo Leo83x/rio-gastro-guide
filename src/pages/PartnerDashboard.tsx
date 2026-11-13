@@ -336,7 +336,7 @@ export function PartnerDashboard({
                 <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
                   <div className="flex items-center gap-2">
                     <Crown className="h-5 w-5 text-[#D49B27]" />
-                    <h2 className="font-sans tracking-tight text-lg font-bold">Proposta Rio Gastro Club</h2>
+                    <h2 className="font-sans tracking-tight text-lg font-bold">Proposta Bora Club</h2>
                   </div>
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     Rascunho demonstrativo para campanha exclusiva de membros.

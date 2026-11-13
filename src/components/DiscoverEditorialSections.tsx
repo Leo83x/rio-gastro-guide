@@ -3,33 +3,43 @@ import {
   Compass,
   Crown,
   Heart,
+  HeartHandshake,
   MapPin,
   Sparkles,
 } from 'lucide-react';
+import type { UserPreferences } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
+import { calculateMatchScore } from './PersonalizeModal';
 import { SmartImage } from './SmartImage';
 
 interface DiscoverEditorialSectionsProps {
   experiences: Restaurant[];
-  locationConsent: boolean;
+  preferences: UserPreferences;
+  vaultCount: number;
+  confiaConnectionsCount: number;
   onSelectExperience: (item: Restaurant) => void;
   onGoToExploreMap: () => void;
   onGoToClub: () => void;
   onGoToPlanner: () => void;
+  onGoToConfia: () => void;
 }
 
 export function DiscoverEditorialSections({
   experiences,
-  locationConsent,
+  preferences,
+  vaultCount,
+  confiaConnectionsCount,
   onSelectExperience,
   onGoToExploreMap,
   onGoToClub,
   onGoToPlanner,
+  onGoToConfia,
 }: DiscoverEditorialSectionsProps) {
   if (experiences.length === 0) return null;
 
   const spotlight = experiences.find((e) => e.is_featured) || experiences[0];
   const nearby = experiences.filter((e) => e.id !== spotlight.id).slice(0, 4);
+  const spotlightMatch = calculateMatchScore(spotlight, preferences);
 
   return (
     <div className="mb-10 space-y-8">
@@ -71,10 +81,12 @@ export function DiscoverEditorialSections({
                 <Compass className="h-3.5 w-3.5" />
                 Experiência em destaque
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#397B68]/90 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-md">
-                <Heart className="h-3 w-3 fill-current" />
-                98% Match
-              </span>
+              {spotlightMatch !== null && spotlightMatch >= 65 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#397B68]/90 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-md">
+                  <Heart className="h-3 w-3 fill-current" />
+                  {spotlightMatch}% Match
+                </span>
+              )}
             </div>
           </div>
 
@@ -111,7 +123,7 @@ export function DiscoverEditorialSections({
               Perto de você
             </h2>
             <p className="text-[11px] text-[var(--text-secondary)]">
-              {locationConsent
+              {preferences.lgpd_consents.location
                 ? 'Ordenado com permissão de localização ativa'
                 : 'Destaques curados no Rio (ative a localização em Perfil para distância exata)'}
             </p>
@@ -154,17 +166,40 @@ export function DiscoverEditorialSections({
         </div>
       </div>
 
-      {/* 3. Bora Club VIP + Roteiros com IA */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* 3. Rede Confia & Cofre + Bora Club + Roteiros Bora IA */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="flex items-center justify-between gap-4 rounded-3xl border border-[#397B68]/30 bg-[#397B68]/10 p-5 shadow-xs">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#397B68] text-white">
+              <HeartHandshake className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-sans text-lg font-bold tracking-tight text-[var(--text-primary)]">
+                Rede Confia &amp; Cofre
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)]">
+                {vaultCount} no Cofre · {confiaConnectionsCount} conexões privadas
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onGoToConfia}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#397B68] px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95"
+          >
+            Abrir <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
         <div className="flex items-center justify-between gap-4 rounded-3xl bg-borario-night p-5 text-white shadow-md">
           <div className="flex items-center gap-3.5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#D49B27]/20 text-[#E5B342]">
               <Crown className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-sans text-lg font-bold tracking-tight">Bora Club VIP</h3>
+              <h3 className="font-sans text-lg font-bold tracking-tight">Bora Club</h3>
               <p className="text-xs text-[#F1E8D8]/85">
-                Descontos exclusivos e experiências únicas no Rio.
+                Vantagens e drops no Rio (Demo).
               </p>
             </div>
           </div>
@@ -183,9 +218,9 @@ export function DiscoverEditorialSections({
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="font-sans text-lg font-bold tracking-tight">Planeje seu Dia com IA</h3>
+              <h3 className="font-sans text-lg font-bold tracking-tight">Roteiros com Bora IA</h3>
               <p className="text-xs text-[#F1E8D8]/90">
-                Monte roteiros com orçamento, modo chuva e votação em grupo.
+                Catálogo + Cofre + Clima ao vivo.
               </p>
             </div>
           </div>

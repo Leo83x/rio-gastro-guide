@@ -1,7 +1,7 @@
 {
   "name": "BoraRio — Superapp de Experiências do Rio",
   "short_name": "BoraRio",
-  "description": "A cidade acontece. Você aproveita. Gastronomia, eventos, roteiros com IA e Rio Gastro Club no Rio de Janeiro.",
+  "description": "A cidade acontece. Você aproveita. Experiências, Cofre de Intenções, Rede Confia, Bora IA e Bora Club no Rio de Janeiro.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",

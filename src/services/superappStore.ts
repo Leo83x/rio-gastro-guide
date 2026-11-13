@@ -20,16 +20,16 @@ const KEYS = {
 };
 
 const DEFAULT_PREFERENCES: UserPreferences = {
-  favorite_macro_categories: ['Gastronomia', 'Cultura & Museus'],
-  favorite_neighborhoods: ['Botafogo', 'Ipanema', 'Leblon'],
-  preferred_moments: ['couple', 'friends'],
-  budget_tier: '$$$',
+  favorite_macro_categories: [],
+  favorite_neighborhoods: [],
+  preferred_moments: [],
+  budget_tier: '$$',
   lgpd_consents: {
-    location: true,
-    personalization: true,
+    location: false,
+    personalization: false,
     whatsapp: false,
     notifications: true,
-    calendar: true,
+    calendar: false,
   },
 };
 
@@ -37,7 +37,15 @@ export function getUserPreferences(): UserPreferences {
   try {
     const raw = localStorage.getItem(KEYS.PREFS);
     if (!raw) return DEFAULT_PREFERENCES;
-    return { ...DEFAULT_PREFERENCES, ...(JSON.parse(raw) as Partial<UserPreferences>) };
+    const parsed = JSON.parse(raw) as Partial<UserPreferences>;
+    return {
+      ...DEFAULT_PREFERENCES,
+      ...parsed,
+      lgpd_consents: {
+        ...DEFAULT_PREFERENCES.lgpd_consents,
+        ...(parsed.lgpd_consents || {}),
+      },
+    };
   } catch {
     return DEFAULT_PREFERENCES;
   }
@@ -58,7 +66,7 @@ export function getPointTransactions(): PointTransaction[] {
           type: 'CREDIT',
           amount: 100,
           origin: 'welcome_bonus',
-          description: 'Bônus de boas-vindas ao Rio Gastro Club (Demonstrativo)',
+          description: 'Bônus de boas-vindas ao Bora Club (Demonstrativo)',
           created_at: new Date().toISOString(),
         },
       ];

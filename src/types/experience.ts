@@ -138,3 +138,69 @@ export interface GroupDrop {
   joined: boolean;
   reliability: DataReliability;
 }
+
+export interface UserProfileIdentity {
+  id: string;
+  display_name: string;
+  avatar_initials: string;
+  home_neighborhood: string;
+  email?: string;
+  storage_origin: 'local_device' | 'supabase_auth';
+  updated_at: string;
+}
+
+export type ItinerarySourceOrigin = 'catalog' | 'cofre' | 'confia' | 'club';
+
+export interface SavedItineraryStep {
+  time: string;
+  label: string;
+  experience_id: string;
+  experience_name: string;
+  neighborhood: string;
+  macro_category?: MacroCategory | string;
+  estimated_cost_brl: number;
+  source_origin: ItinerarySourceOrigin;
+}
+
+export interface SavedItinerary {
+  id: string;
+  title: string;
+  prompt: string;
+  rain_mode: boolean;
+  total_estimated_brl: number;
+  sources_used: ItinerarySourceOrigin[];
+  steps: SavedItineraryStep[];
+  created_at: string;
+}
+
+export interface ClubRedemption {
+  id: string;
+  offer_id: string;
+  experience_id: string;
+  experience_name: string;
+  offer_title: string;
+  discount_label: string;
+  voucher_code: string;
+  status: 'ACTIVE' | 'USED' | 'EXPIRED';
+  is_demonstrative: boolean;
+  redeemed_at: string;
+}
+
+export interface PassportMilestone {
+  id: string;
+  title: string;
+  description: string;
+  unlocked: boolean;
+  current: number;
+  target: number;
+}
+
+export interface PassportSummary {
+  verified_checkins_count: number;
+  verified_reviews_count: number;
+  vault_visited_count: number;
+  unique_neighborhoods: string[];
+  level_label: string;
+  milestones: PassportMilestone[];
+}
+

@@ -8,13 +8,14 @@ import {
   ParkingCircle,
   TrainFront,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createReservationRequest } from '../services/superappStore';
 import type { ReservationRequest } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
 
 interface ExperienceIntelligenceBlocksProps {
   experience: Restaurant;
+  locationConsent?: boolean;
   onReservationCreated?: (req: ReservationRequest) => void;
 }
 
@@ -46,6 +47,7 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 export function ExperienceIntelligenceBlocks({
   experience,
+  locationConsent = false,
   onReservationCreated,
 }: ExperienceIntelligenceBlocksProps) {
   // 3-Click Quick Reservation State
@@ -55,11 +57,27 @@ export function ExperienceIntelligenceBlocks({
   const [resGuests, setResGuests] = useState<number>(2);
   const [whatsappReminder, setWhatsappReminder] = useState<boolean>(true);
   const [resSaved, setResSaved] = useState<boolean>(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
 
-  // Reference: Copacabana / Zona Sul central point (-22.966, -43.185)
+  useEffect(() => {
+    if (!locationConsent || typeof navigator === 'undefined' || !navigator.geolocation) {
+      setUserCoords(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+      },
+      () => setUserCoords(null),
+      { enableHighAccuracy: false, timeout: 4000, maximumAge: 300000 }
+    );
+  }, [locationConsent]);
+
+  const refLat = userCoords?.lat ?? -22.966;
+  const refLon = userCoords?.lon ?? -43.185;
   const distKm = Math.max(
-    0.8,
-    Number(haversineKm(-22.966, -43.185, experience.latitude, experience.longitude).toFixed(1))
+    0.4,
+    Number(haversineKm(refLat, refLon, experience.latitude, experience.longitude).toFixed(1))
   );
   const carMinutes = Math.max(6, Math.round(distKm * 3.1));
   const transitMinutes = Math.max(10, Math.round(distKm * 4.5));
@@ -152,7 +170,9 @@ export function ExperienceIntelligenceBlocks({
             Comparador de Mobilidade &amp; Custo
           </span>
           <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-            ~{distKm} km do ponto de referência
+            {userCoords
+              ? `~${distKm} km da sua localização`
+              : `~${distKm} km (ref. Copacabana · ative GPS no Perfil)`}
           </span>
         </div>
 
@@ -224,7 +244,7 @@ export function ExperienceIntelligenceBlocks({
             Reserva Rápida em 3 Cliques
           </span>
           <span className="text-[10px] text-[var(--text-secondary)]">
-            Salva em Minha Agenda
+            Salva em Perfil › Minha Agenda
           </span>
         </div>
 
@@ -232,7 +252,7 @@ export function ExperienceIntelligenceBlocks({
           <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/15 px-3.5 py-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>
-              Solicitação pendente registrada para {resDate} às {resTime} ({resGuests} pessoas) e adicionada à sua Agenda!
+              Solicitação pendente registrada para {resDate} às {resTime} ({resGuests} pessoas) e adicionada em Perfil › Minha Agenda!
             </span>
           </div>
         ) : (

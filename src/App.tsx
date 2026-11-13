@@ -1,10 +1,11 @@
-import { UtensilsCrossed } from 'lucide-react';
+import { Bookmark, CheckCircle2, UtensilsCrossed, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminPanel } from './components/AdminPanel';
-import { AgendaView } from './components/AgendaView';
 import { BrandLogo } from './components/BrandLogo';
 import { ClubView } from './components/ClubView';
 import { ConciergeWidget } from './components/ConciergeWidget';
+import { ConfiaHubView } from './components/confia/ConfiaHubView';
+import { IntentCaptureModal } from './components/confia/IntentCaptureModal';
 import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
@@ -16,7 +17,13 @@ import { RestaurantDetailModal } from './components/RestaurantDetailModal';
 import { LandingPage } from './pages/LandingPage';
 import { PartnerDashboard } from './pages/PartnerDashboard';
 import { PartnersLandingPage } from './pages/PartnersLandingPage';
+import {
+  getTrustCircles,
+  getTrustConnections,
+  getVisibleConfiaRecommendations,
+} from './services/confiaStore';
 import { getAllRestaurants, getClaimRequests } from './services/database';
+import { addIntentVaultItem, getIntentVaultItems } from './services/intentVaultStore';
 import { usePwaStatus } from './services/pwa';
 import { useAppRoute } from './services/router';
 import {
@@ -27,7 +34,9 @@ import {
   markAllNotificationsRead,
   saveUserPreferences,
 } from './services/superappStore';
+import type { ConfiaRecommendation, TrustCircle, TrustConnection } from './types/confia';
 import type { NotificationItem, ReservationRequest, UserPreferences } from './types/experience';
+import type { IntentVaultItem } from './types/intention';
 import type { ClaimRequest, Restaurant, RestaurantCategory } from './types/restaurant';
 
 export function App() {
@@ -46,6 +55,22 @@ export function App() {
   const [pointsBalance, setPointsBalance] = useState<number>(() => getPointsBalance());
   const [reservations, setReservations] = useState<ReservationRequest[]>(() => getReservations());
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => getNotifications());
+
+  // Cofre de Intenções & Rede Confia State
+  const [vaultItems, setVaultItems] = useState<IntentVaultItem[]>(() => getIntentVaultItems());
+  const [circles, setCircles] = useState<TrustCircle[]>(() => getTrustCircles());
+  const [connections, setConnections] = useState<TrustConnection[]>(() => getTrustConnections());
+  const [confiaPosts, setConfiaPosts] = useState<ConfiaRecommendation[]>(() =>
+    getVisibleConfiaRecommendations()
+  );
+
+  const [confiaSubTab, setConfiaSubTab] = useState<'vault' | 'network'>('vault');
+  const [showCaptureModal, setShowCaptureModal] = useState(false);
+  const [captureInitialVenue, setCaptureInitialVenue] = useState<Restaurant | null>(null);
+  const [externalShareVenue, setExternalShareVenue] = useState<Restaurant | null>(null);
+  const [pendingBoraIaPrompt, setPendingBoraIaPrompt] = useState<string | null>(null);
+  const [pendingPlannerPrompt, setPendingPlannerPrompt] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; showVaultAction?: boolean } | null>(null);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
@@ -80,6 +105,12 @@ export function App() {
     }
   }, [isDark]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -100,6 +131,44 @@ export function App() {
     restaurants.forEach((r) => set.add(r.category));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [restaurants]);
+
+  const activeVaultCount = useMemo(
+    () => vaultItems.filter((i) => i.status !== 'ARCHIVED').length,
+    [vaultItems]
+  );
+
+  const acceptedConnectionsCount = useMemo(
+    () => connections.filter((c) => c.status === 'ACCEPTED').length,
+    [connections]
+  );
+
+  const confiaBadgeCount = useMemo(() => {
+    const needsReviewVault = vaultItems.filter(
+      (i) =>
+        i.status !== 'ARCHIVED' &&
+        (i.processing_status === 'NEEDS_CONFIRMATION' || i.processing_status === 'UNIDENTIFIED')
+    ).length;
+    const pendingFriends = connections.filter((c) => c.status === 'PENDING').length;
+    return needsReviewVault + pendingFriends;
+  }, [vaultItems, connections]);
+
+  const vaultVenueIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of vaultItems) {
+      if (item.status !== 'ARCHIVED' && item.linked_venue_id) {
+        set.add(item.linked_venue_id);
+      }
+    }
+    return set;
+  }, [vaultItems]);
+
+  const confiaCountsByVenue = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const post of confiaPosts) {
+      map.set(post.venue_id, (map.get(post.venue_id) || 0) + 1);
+    }
+    return map;
+  }, [confiaPosts]);
 
   const filteredRestaurants = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
@@ -168,6 +237,45 @@ export function App() {
     setPreferences(next);
   };
 
+  const handleSaveVenueToVault = (venue: Restaurant) => {
+    if (vaultVenueIds.has(venue.id)) {
+      setToast({
+        text: `"${venue.name}" já está salvo no seu Cofre de Intenções.`,
+        showVaultAction: true,
+      });
+      return;
+    }
+
+    const next = addIntentVaultItem({
+      title: venue.name,
+      source_type: 'catalog_bookmark',
+      category_tag: venue.macro_category || 'Gastronomia',
+      neighborhood_tag: venue.neighborhood,
+      linked_venue_id: venue.id,
+      linked_venue_name: venue.name,
+      status: 'SAVED',
+      processing_status: 'COMPLETED',
+      processing_message: 'Adicionado diretamente do catálogo BoraRio.',
+    });
+    setVaultItems(next);
+    setToast({
+      text: `"${venue.name}" guardado no seu Cofre de Intenções!`,
+      showVaultAction: true,
+    });
+  };
+
+  const handleShareVenueToConfia = (venue: Restaurant) => {
+    setSelectedRestaurant(null);
+    setExternalShareVenue(venue);
+    setConfiaSubTab('network');
+    setActiveTab('confia');
+  };
+
+  const openVaultHub = () => {
+    setConfiaSubTab('vault');
+    setActiveTab('confia');
+  };
+
   // 1. Public Landing Page (/)
   if (route === '/') {
     return (
@@ -231,6 +339,7 @@ export function App() {
         onToggleTheme={() => setIsDark((prev) => !prev)}
         totalCount={restaurants.length}
         pointsBalance={pointsBalance}
+        confiaBadgeCount={confiaBadgeCount}
         notifications={notifications}
         onMarkNotificationsRead={() => setNotifications(markAllNotificationsRead())}
         isOnline={isOnline}
@@ -256,6 +365,14 @@ export function App() {
             resultCount={filteredRestaurants.length}
             onOpenPersonalize={() => setShowPersonalize(true)}
             personalizationActive={preferences.lgpd_consents.personalization}
+            locationConsent={preferences.lgpd_consents.location}
+            vaultCount={activeVaultCount}
+            onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
+            onOpenVault={openVaultHub}
+            onOpenVaultCapture={() => {
+              setCaptureInitialVenue(null);
+              setShowCaptureModal(true);
+            }}
             isDark={isDark}
           />
 
@@ -263,11 +380,14 @@ export function App() {
             {showEditorialDiscover && !loading && (
               <DiscoverEditorialSections
                 experiences={restaurants}
-                locationConsent={preferences.lgpd_consents.location}
+                preferences={preferences}
+                vaultCount={activeVaultCount}
+                confiaConnectionsCount={acceptedConnectionsCount}
                 onSelectExperience={setSelectedRestaurant}
                 onGoToExploreMap={() => setActiveTab('planner')}
                 onGoToClub={() => setActiveTab('club')}
                 onGoToPlanner={() => setActiveTab('planner')}
+                onGoToConfia={openVaultHub}
               />
             )}
 
@@ -336,6 +456,9 @@ export function App() {
                       restaurant={restaurant}
                       index={idx}
                       matchScore={calculateMatchScore(restaurant, preferences)}
+                      inVault={vaultVenueIds.has(restaurant.id)}
+                      confiaCount={confiaCountsByVenue.get(restaurant.id) || 0}
+                      onSaveToVault={handleSaveVenueToVault}
                       onSelect={setSelectedRestaurant}
                     />
                   ))}
@@ -349,7 +472,41 @@ export function App() {
       {effectiveTab === 'planner' && (
         <PlannerView
           experiences={restaurants}
+          vaultItems={vaultItems}
+          confiaPosts={confiaPosts}
+          initialPrompt={pendingPlannerPrompt}
+          onConsumeInitialPrompt={() => setPendingPlannerPrompt(null)}
+          onItinerarySaved={() =>
+            setToast({ text: 'Roteiro salvo em Perfil › Minha Agenda & Roteiros!' })
+          }
           onSelectExperience={setSelectedRestaurant}
+        />
+      )}
+
+      {effectiveTab === 'confia' && (
+        <ConfiaHubView
+          catalog={restaurants}
+          vaultItems={vaultItems}
+          circles={circles}
+          connections={connections}
+          posts={confiaPosts}
+          activeSubTab={confiaSubTab}
+          onChangeSubTab={setConfiaSubTab}
+          externalShareVenue={externalShareVenue}
+          onClearExternalShareVenue={() => setExternalShareVenue(null)}
+          onVaultItemsChanged={setVaultItems}
+          onCirclesAndConnectionsChanged={(nextCircles, nextConnections) => {
+            setCircles(nextCircles);
+            setConnections(nextConnections);
+            setConfiaPosts(getVisibleConfiaRecommendations());
+          }}
+          onPostsChanged={setConfiaPosts}
+          onOpenCaptureModal={() => {
+            setCaptureInitialVenue(null);
+            setShowCaptureModal(true);
+          }}
+          onPlanWithBoraIa={(promptText) => setPendingBoraIaPrompt(promptText)}
+          onSelectVenue={setSelectedRestaurant}
         />
       )}
 
@@ -360,20 +517,20 @@ export function App() {
         />
       )}
 
-      {effectiveTab === 'agenda' && (
-        <AgendaView
-          experiences={restaurants}
-          reservations={reservations}
-          onReservationsUpdated={setReservations}
-          onSelectExperience={setSelectedRestaurant}
-        />
-      )}
-
       {effectiveTab === 'profile' && (
         <ProfileWalletView
           experiences={restaurants}
           preferences={preferences}
+          reservations={reservations}
+          vaultCount={activeVaultCount}
+          confiaConnectionsCount={acceptedConnectionsCount}
           onSavePreferences={handleSavePreferences}
+          onReservationsUpdated={setReservations}
+          onOpenPersonalize={() => setShowPersonalize(true)}
+          onOpenConfiaHub={() => {
+            setConfiaSubTab('network');
+            setActiveTab('confia');
+          }}
           onPointsChanged={() => {
             setPointsBalance(getPointsBalance());
             setNotifications(getNotifications());
@@ -401,9 +558,47 @@ export function App() {
         </div>
       </footer>
 
+      {toast && (
+        <div className="fixed left-1/2 top-20 z-50 flex w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-[#123B56]/25 bg-[#123B56] px-4 py-3 text-xs text-white shadow-2xl">
+          <div className="flex min-w-0 items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#4CA188]" />
+            <span className="truncate font-semibold">{toast.text}</span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {toast.showVaultAction && (
+              <button
+                type="button"
+                onClick={() => {
+                  setToast(null);
+                  openVaultHub();
+                }}
+                className="inline-flex items-center gap-1 rounded-lg bg-[#FF6B35] px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-95"
+              >
+                <Bookmark className="h-3 w-3" />
+                Abrir Cofre
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              aria-label="Fechar aviso"
+              className="rounded p-0.5 text-white/70 hover:text-white"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {effectiveTab !== 'admin' && (
         <ConciergeWidget
           experiences={restaurants}
+          externalPrompt={pendingBoraIaPrompt}
+          onConsumeExternalPrompt={() => setPendingBoraIaPrompt(null)}
+          onSendToPlanner={(promptText) => {
+            setPendingPlannerPrompt(promptText);
+            setActiveTab('planner');
+          }}
           onSelectExperience={setSelectedRestaurant}
         />
       )}
@@ -416,9 +611,31 @@ export function App() {
         />
       )}
 
+      {showCaptureModal && (
+        <IntentCaptureModal
+          catalog={restaurants}
+          initialVenue={captureInitialVenue}
+          onClose={() => {
+            setShowCaptureModal(false);
+            setCaptureInitialVenue(null);
+          }}
+          onSaved={(nextItems) => {
+            setVaultItems(nextItems);
+            setToast({
+              text: 'Intenção guardada no seu Cofre privado!',
+              showVaultAction: effectiveTab !== 'confia',
+            });
+          }}
+        />
+      )}
+
       {selectedRestaurant && (
         <RestaurantDetailModal
           restaurant={selectedRestaurant}
+          inVault={vaultVenueIds.has(selectedRestaurant.id)}
+          locationConsent={preferences.lgpd_consents.location}
+          onSaveToVault={handleSaveVenueToVault}
+          onShareToConfia={handleShareVenueToConfia}
           onClose={() => setSelectedRestaurant(null)}
           onRestaurantClaimed={handleRestaurantClaimed}
           onReservationCreated={(req) => {
@@ -432,3 +649,4 @@ export function App() {
 }
 
 export default App;
+

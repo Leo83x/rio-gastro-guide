@@ -1,9 +1,11 @@
 import {
   BadgeCheck,
+  Bookmark,
   Camera,
   Clock,
   ExternalLink,
   Globe,
+  HeartHandshake,
   MapPin,
   MessageCircle,
   Navigation,
@@ -22,6 +24,10 @@ import { SmartImage } from './SmartImage';
 
 interface RestaurantDetailModalProps {
   restaurant: Restaurant;
+  inVault?: boolean;
+  locationConsent?: boolean;
+  onSaveToVault?: (restaurant: Restaurant) => void;
+  onShareToConfia?: (restaurant: Restaurant) => void;
   onClose: () => void;
   onRestaurantClaimed: (restaurantId: string) => void;
   onReservationCreated?: (req: ReservationRequest) => void;
@@ -29,15 +35,32 @@ interface RestaurantDetailModalProps {
 
 export function RestaurantDetailModal({
   restaurant,
+  inVault = false,
+  locationConsent = false,
+  onSaveToVault,
+  onShareToConfia,
   onClose,
   onRestaurantClaimed,
   onReservationCreated,
 }: RestaurantDetailModalProps) {
-  const photos =
-    restaurant.gallery && restaurant.gallery.length > 0
-      ? restaurant.gallery
-      : [restaurant.cover_image];
-  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const validPhotos = Array.from(
+    new Set(
+      [restaurant.cover_image, ...(restaurant.gallery || [])]
+        .map((p) => (typeof p === 'string' ? p.trim() : ''))
+        .filter((p) => p.length > 0)
+    )
+  );
+  const photos = validPhotos.length > 0 ? validPhotos : [''];
+  const [photoState, setPhotoState] = useState<{ restaurantId: string; idx: number }>({
+    restaurantId: restaurant.id,
+    idx: 0,
+  });
+  const activePhotoIdx =
+    photoState.restaurantId === restaurant.id
+      ? Math.min(photoState.idx, photos.length - 1)
+      : 0;
+  const setActivePhotoIdx = (idx: number) =>
+    setPhotoState({ restaurantId: restaurant.id, idx });
   const [showClaimModal, setShowClaimModal] = useState(false);
 
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -74,7 +97,7 @@ export function RestaurantDetailModal({
         {/* Gallery Hero */}
         <div className="relative aspect-[16/9] max-h-[380px] w-full overflow-hidden bg-[var(--bg-subtle)]">
           <SmartImage
-            src={photos[activePhotoIdx] || restaurant.cover_image}
+            src={photos[activePhotoIdx] ?? photos[0] ?? restaurant.cover_image}
             alt={restaurant.name}
             name={restaurant.name}
             category={restaurant.category}
@@ -181,6 +204,32 @@ export function RestaurantDetailModal({
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2.5">
+              {onSaveToVault && (
+                <button
+                  type="button"
+                  onClick={() => onSaveToVault(restaurant)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-colors sm:text-sm ${
+                    inVault
+                      ? 'bg-[#FF6B35] text-white'
+                      : 'border border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white'
+                  }`}
+                >
+                  <Bookmark className={`h-4 w-4 ${inVault ? 'fill-current' : ''}`} />
+                  {inVault ? 'Salvo no Cofre' : 'Guardar no Cofre'}
+                </button>
+              )}
+
+              {onShareToConfia && (
+                <button
+                  type="button"
+                  onClick={() => onShareToConfia(restaurant)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#397B68]/40 bg-[#397B68]/10 px-4 py-2.5 text-xs font-semibold text-[#397B68] transition-colors hover:bg-[#397B68] hover:text-white sm:text-sm"
+                >
+                  <HeartHandshake className="h-4 w-4" />
+                  Indicar na Rede Confia
+                </button>
+              )}
+
               <a
                 href={googleMapsUrl}
                 target="_blank"
@@ -241,6 +290,7 @@ export function RestaurantDetailModal({
 
             <ExperienceIntelligenceBlocks
               experience={restaurant}
+              locationConsent={locationConsent}
               onReservationCreated={onReservationCreated}
             />
 
