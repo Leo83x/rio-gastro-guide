@@ -1,5 +1,4 @@
 import {
-  Car,
   CloudRain,
   Compass,
   Heart,
@@ -26,7 +25,6 @@ import rioHeroNight from '../assets/brand/rio-hero-night.jpg';
 import { fetchRioWeatherLive, type RioWeatherSnapshot } from '../services/integrations/registry';
 import type { MacroCategory, MomentMode } from '../types/experience';
 import type { PriceRange, RestaurantCategory } from '../types/restaurant';
-import { BrandLogo } from './BrandLogo';
 
 export interface FilterState {
   search: string;
@@ -110,8 +108,6 @@ export function HeroSection({
   const [hour] = useState(() => new Date().getHours());
   const greeting =
     hour < 12 ? 'BOM DIA NO RIO!' : hour < 18 ? 'BOA TARDE NO RIO!' : 'BOA NOITE NO RIO!';
-  const deBoaScore = hour >= 19 && hour <= 22 ? '86%' : hour >= 12 && hour <= 14 ? '82%' : '94%';
-  const deBoaLabel = hour >= 19 && hour <= 22 ? 'Agito noturno' : 'Sem fila';
 
   const hasActiveFilters =
     Boolean(filters.search) ||
@@ -137,17 +133,15 @@ export function HeroSection({
   };
 
   return (
-    <section className="relative">
-      {/* 1. TOPO ATMOSFÉRICO COM LOGO, SAUDAÇÃO E FILTROS DE MOMENTO */}
-      <div className="relative overflow-hidden pb-14 pt-6 text-white sm:pb-16 sm:pt-8">
-        {/* Scenic Rio Background Image (Day Sunset vs Night) */}
+    <section className="relative w-full overflow-x-clip">
+      {/* 1. TOPO ATMOSFÉRICO COM SAUDAÇÃO E FILTROS DE MOMENTO */}
+      <div className="relative overflow-hidden pb-9 pt-4 text-white sm:pb-11 sm:pt-6">
         <img
           src={isDark ? rioHeroNight : rioHeroDay}
           alt="Paisagem atmosférica do Rio de Janeiro"
           className="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-500"
         />
 
-        {/* Atmospheric Gradient Overlay ensuring crisp white text contrast */}
         <div
           className={`absolute inset-0 ${
             isDark
@@ -156,26 +150,22 @@ export function HeroSection({
           }`}
         />
 
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Atmospheric Hero Brand & Greeting Row */}
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <div className="mb-2 flex items-center gap-3">
-                <BrandLogo variant="horizontal" size="lg" onDark showEmblem={false} />
-              </div>
-              <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[#F1E8D8] drop-shadow-xs sm:text-xs">
-                <MapPin className="h-3.5 w-3.5 text-[#FF6B35]" />
-                {greeting} · A CIDADE ACONTECE. VOCÊ APROVEITA.
+        <div className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+          <div className="flex flex-col justify-between gap-2.5 sm:flex-row sm:items-end">
+            <div className="min-w-0">
+              <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#F1E8D8] drop-shadow-xs sm:text-xs">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-[#FF6B35]" />
+                <span className="truncate">{greeting} · A CIDADE ACONTECE. VOCÊ APROVEITA.</span>
               </p>
-              <h1 className="mt-1.5 text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow-sm sm:text-4xl">
-                A cidade acontece. Você aproveita.
+              <h1 className="mt-1 text-xl font-extrabold leading-tight tracking-tight text-white drop-shadow-sm sm:text-3xl">
+                O que você quer viver hoje no Rio?
               </h1>
             </div>
 
             <button
               type="button"
               onClick={onOpenPersonalize}
-              className="inline-flex shrink-0 items-center gap-2 self-start rounded-full border border-white/30 bg-white/15 px-4 py-2 text-xs font-bold text-white backdrop-blur-md transition hover:border-transparent hover:bg-gradient-to-r hover:from-[#FF4B2B] hover:via-[#FF6B35] hover:to-[#F7931E] md:self-auto"
+              className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white backdrop-blur-md transition hover:border-transparent hover:bg-gradient-to-r hover:from-[#FF4B2B] hover:via-[#FF6B35] hover:to-[#F7931E] sm:self-auto"
             >
               <Wand2 className="h-3.5 w-3.5" />
               Personalizar Perfil
@@ -187,8 +177,8 @@ export function HeroSection({
             </button>
           </div>
 
-          {/* 1-Click Moment Modes (Glassmorphic Icon + Label Pills) */}
-          <div className="mt-6 flex items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+          {/* 1-Click Moment Modes */}
+          <div className="mt-4 flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
             {MOMENT_MODES.map((m) => {
               const Icon = m.icon;
               const active = filters.momentMode === m.id;
@@ -197,13 +187,13 @@ export function HeroSection({
                   key={m.id}
                   type="button"
                   onClick={() => onChange({ ...filters, momentMode: m.id })}
-                  className={`flex min-w-[74px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-3.5 py-2.5 text-xs font-bold transition-all backdrop-blur-md ${
+                  className={`flex min-w-[66px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-2 text-[11px] font-bold transition-all backdrop-blur-md sm:min-w-[74px] sm:text-xs ${
                     active
                       ? 'border-transparent bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-lg shadow-[#FF4B2B]/25'
                       : 'border-white/25 bg-[#0A1E30]/55 text-white/90 hover:bg-[#0A1E30]/75'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span>{m.label}</span>
                 </button>
               );
@@ -213,11 +203,11 @@ export function HeroSection({
       </div>
 
       {/* CONTENT CONTAINER BELOW HERO */}
-      <div className="relative z-20 mx-auto -mt-9 max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
-        {/* 2. BARRA DE BUSCA INTELIGENTE ("Bora IA: O que você quer viver hoje?") */}
-        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 p-2 shadow-xl backdrop-blur-xl">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs">
+      <div className="relative z-20 mx-auto -mt-6 max-w-7xl space-y-3 px-3 sm:px-6 lg:px-8">
+        {/* 2. BARRA DE BUSCA INTELIGENTE */}
+        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 p-1.5 shadow-xl backdrop-blur-xl sm:p-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs sm:h-9 sm:w-9">
               <Sparkles className="h-4 w-4" />
             </div>
 
@@ -226,8 +216,8 @@ export function HeroSection({
               type="text"
               value={filters.search}
               onChange={(e) => onChange({ ...filters, search: e.target.value })}
-              placeholder="Bora IA: O que você quer viver hoje? Ex: sushi no Leblon, museu..."
-              className="w-full bg-transparent py-2 text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/75 focus:outline-none"
+              placeholder="Bora IA: O que você quer viver hoje?"
+              className="min-w-0 flex-1 bg-transparent py-1.5 text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/75 focus:outline-none"
             />
 
             {filters.search && (
@@ -235,7 +225,7 @@ export function HeroSection({
                 type="button"
                 onClick={() => onChange({ ...filters, search: '' })}
                 aria-label="Limpar busca"
-                className="rounded-full p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                className="shrink-0 rounded-full p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -245,7 +235,7 @@ export function HeroSection({
               type="button"
               onClick={() => setShowAdvancedFilters((prev) => !prev)}
               title="Filtros avançados"
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition ${
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border transition sm:h-9 sm:w-9 ${
                 showAdvancedFilters || filters.category || filters.priceRange || filters.minRating > 0
                   ? 'border-[#FF6B35] bg-[#FF6B35]/10 text-[#FF6B35]'
                   : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -256,7 +246,7 @@ export function HeroSection({
           </div>
 
           {showAdvancedFilters && (
-            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--border-hairline)] pt-2.5">
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--border-hairline)] pt-2">
               <select
                 aria-label="Filtrar por subcategoria"
                 value={filters.category}
@@ -309,64 +299,45 @@ export function HeroSection({
           )}
         </div>
 
-        {/* 3. PAINEL DE STATUS EM PÍLULAS ("Seu Rio, agora") */}
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          {/* Pill 1: Clima ao vivo */}
-          <div className="flex items-center gap-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 shadow-xs">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F7931E]/15">
-              {weather?.isRaining ? (
-                <CloudRain className="h-5 w-5 text-[#FF4B2B]" />
-              ) : (
-                <Sun className="h-5 w-5 text-[#F7931E]" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-[var(--text-primary)]">
-                {weather ? `${weather.temperatureC}°C · ${weather.weatherLabel}` : '27°C · Clima ideal'}
-              </p>
-              <p className="truncate text-[10px] text-[var(--text-secondary)]">
-                {weather?.source === 'open-meteo-live'
-                  ? 'Open-Meteo ao vivo'
-                  : 'Referência climática local'}
-              </p>
-            </div>
+        {/* 3. FAIXA COMPACTA DE CLIMA AO VIVO (1 linha econômica no mobile e desktop) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2 text-xs shadow-xs">
+          <div className="flex min-w-0 items-center gap-2">
+            {weather?.isRaining ? (
+              <CloudRain className="h-4 w-4 shrink-0 text-[#FF4B2B]" />
+            ) : (
+              <Sun className="h-4 w-4 shrink-0 text-[#F7931E]" />
+            )}
+            <span className="truncate font-bold text-[var(--text-primary)]">
+              {weather ? `${weather.temperatureC}°C · ${weather.weatherLabel}` : 'Clima ao vivo no Rio'}
+            </span>
+            <span className="hidden rounded bg-[var(--bg-subtle)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] sm:inline">
+              {weather?.source === 'open-meteo-live' ? 'Open-Meteo ao vivo' : 'Estimativa local'}
+            </span>
           </div>
 
-          {/* Pill 2: Índice "De Boa" */}
-          <div className="flex items-center gap-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 shadow-xs">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
-              <span className="h-3 w-3 rounded-full bg-emerald-500 shadow-xs shadow-emerald-500/50" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-[var(--text-primary)]">
-                Índice De Boa: {deBoaScore}
-              </p>
-              <p className="truncate text-[10px] text-[var(--text-secondary)]">
-                {deBoaLabel} · Estimativa plataforma
-              </p>
-            </div>
-          </div>
-
-          {/* Pill 3: Estimativa de Deslocamento / Uber */}
-          <div className="flex items-center gap-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 shadow-xs">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#123B56]/10 dark:bg-white/10">
-              <Car className="h-4.5 w-4.5 text-[var(--text-primary)]" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-[var(--text-primary)]">
-                Uber ~R$ 28 (8 min)
-              </p>
-              <p className="truncate text-[10px] text-[var(--text-secondary)]">
-                Estimativa Zona Sul / Centro
-              </p>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                ...filters,
+                momentMode: filters.momentMode === 'rainy' ? 'all' : 'rainy',
+              })
+            }
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
+              filters.momentMode === 'rainy'
+                ? 'bg-[#123B56] text-white dark:bg-[#FF6B35]'
+                : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <CloudRain className="h-3 w-3" />
+            {filters.momentMode === 'rainy' ? 'Modo Chuva ativo' : 'Ver locais cobertos'}
+          </button>
         </div>
 
         {/* 4. FILTROS DE CATEGORIA E BAIRROS */}
-        <div className="space-y-3 pt-1">
+        <div className="space-y-2.5 pt-0.5">
           {/* Circular Macro Categories */}
-          <div className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar sm:gap-5">
+          <div className="flex w-full min-w-0 items-center gap-3 overflow-x-auto pb-1 no-scrollbar sm:gap-5">
             {MACRO_CATEGORIES.map((mc) => {
               const Icon = mc.icon;
               const active = filters.macroCategory === mc.value;
@@ -375,16 +346,16 @@ export function HeroSection({
                   key={mc.label}
                   type="button"
                   onClick={() => onChange({ ...filters, macroCategory: mc.value })}
-                  className="group flex shrink-0 flex-col items-center gap-1.5"
+                  className="group flex shrink-0 flex-col items-center gap-1"
                 >
                   <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${mc.gradient} text-white shadow-sm transition-all group-hover:scale-105 ${
+                    className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br ${mc.gradient} text-white shadow-sm transition-all group-hover:scale-105 ${
                       active
                         ? 'ring-2 ring-[#FF6B35] ring-offset-2 ring-offset-[var(--bg-canvas)] scale-105 shadow-md'
                         : 'opacity-85 hover:opacity-100'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-4.5 w-4.5" />
                   </div>
                   <span
                     className={`text-[11px] font-bold ${
@@ -399,8 +370,8 @@ export function HeroSection({
           </div>
 
           {/* Neighborhood Pills */}
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border-hairline)] pb-3">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+          <div className="flex min-w-0 items-center justify-between gap-2 border-b border-[var(--border-hairline)] pb-2.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
               {NEIGHBORHOOD_PILLS.map((pill) => {
                 const Icon = pill.icon;
                 const active = filters.neighborhood === pill.value;
@@ -409,7 +380,7 @@ export function HeroSection({
                     key={pill.label}
                     type="button"
                     onClick={() => onChange({ ...filters, neighborhood: pill.value })}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all ${
                       active
                         ? 'border-transparent bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs'
                         : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'

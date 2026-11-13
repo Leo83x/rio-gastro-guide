@@ -1,18 +1,17 @@
 import logoPng from '../assets/brand/borario-logo.png';
 
 interface BrandLogoProps {
-  variant?: 'horizontal' | 'vertical' | 'symbol' | 'graphic';
+  variant?: 'horizontal' | 'vertical' | 'symbol';
   size?: 'sm' | 'md' | 'lg';
   onDark?: boolean;
   showTagline?: boolean;
-  showEmblem?: boolean;
   className?: string;
 }
 
-const TEXT_SIZES = {
-  sm: 'text-xl',
-  md: 'text-2xl',
-  lg: 'text-3xl sm:text-4xl',
+const PNG_HEIGHTS = {
+  sm: 'h-7 sm:h-8',
+  md: 'h-8 sm:h-9',
+  lg: 'h-10 sm:h-12',
 };
 
 export function BrandLogo({
@@ -20,7 +19,6 @@ export function BrandLogo({
   size = 'md',
   onDark = false,
   showTagline = false,
-  showEmblem = true,
   className = '',
 }: BrandLogoProps) {
   if (variant === 'symbol') {
@@ -34,41 +32,23 @@ export function BrandLogo({
     );
   }
 
-  if (variant === 'graphic') {
-    const height = size === 'sm' ? 'h-7' : size === 'lg' ? 'h-12' : 'h-9';
-    return (
-      <img
-        src={logoPng}
-        alt="BoraRio"
-        className={`${height} w-auto object-contain ${className}`}
-      />
-    );
-  }
-
-  const boraColor = onDark ? 'text-white' : 'text-[#102F46] dark:text-white';
-  const emblemSize = size === 'sm' ? 'h-7 w-7' : size === 'lg' ? 'h-10 w-10' : 'h-8 w-8';
-
-  const wordmark = (
-    <span className={`font-sans font-extrabold tracking-tight leading-none ${TEXT_SIZES[size]}`}>
-      <span className={boraColor}>Bora</span>
-      <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent">
-        Rio
-      </span>
-    </span>
+  const imageEl = (
+    <img
+      src={logoPng}
+      alt="BoraRio"
+      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain`}
+    />
   );
 
   if (variant === 'vertical') {
     return (
       <div className={`inline-flex flex-col items-center gap-1.5 ${className}`}>
-        <div className="inline-flex items-center gap-2">
-          {showEmblem && (
-            <img
-              src="/brand/borario-icon-192.png"
-              alt=""
-              className={`${emblemSize} rounded-xl object-contain shadow-sm`}
-            />
-          )}
-          {wordmark}
+        <div
+          className={`inline-flex items-center justify-center rounded-2xl transition-colors ${
+            onDark ? 'bg-white/95 px-3 py-1 shadow-sm' : ''
+          }`}
+        >
+          {imageEl}
         </div>
         {showTagline && (
           <span
@@ -84,15 +64,14 @@ export function BrandLogo({
   }
 
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
-      {showEmblem && (
-        <img
-          src="/brand/borario-icon-192.png"
-          alt=""
-          className={`${emblemSize} shrink-0 rounded-xl object-contain shadow-sm`}
-        />
-      )}
-      {wordmark}
+    <div className={`inline-flex max-w-full items-center gap-2 ${className}`}>
+      <div
+        className={`inline-flex items-center rounded-xl transition-colors ${
+          onDark ? 'bg-white/95 px-2.5 py-0.5 shadow-sm' : ''
+        }`}
+      >
+        {imageEl}
+      </div>
       {showTagline && (
         <span
           className={`hidden text-xs font-medium xl:inline ${

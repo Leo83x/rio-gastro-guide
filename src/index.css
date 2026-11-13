@@ -54,11 +54,15 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: clip;
+    max-width: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
+    overflow-x: clip;
+    max-width: 100%;
     background-color: var(--bg-canvas);
     color: var(--text-primary);
     transition: background-color 0.25s ease, color 0.25s ease;

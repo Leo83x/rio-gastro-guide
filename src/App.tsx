@@ -219,7 +219,7 @@ export function App() {
     filters.minRating === 0;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] pb-24 text-[var(--text-primary)] lg:pb-0">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[var(--bg-canvas)] pb-24 text-[var(--text-primary)] lg:pb-0">
       <Navbar
         activeTab={effectiveTab}
         onSelectTab={(tab) => {
