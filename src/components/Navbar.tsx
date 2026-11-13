@@ -9,6 +9,7 @@ import {
   Download,
   MapPin,
   Moon,
+  MoreHorizontal,
   Sparkles,
   Sun,
   User,
@@ -65,25 +66,23 @@ export function Navbar({
   onInstallPwa,
 }: NavbarProps) {
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full overflow-x-clip border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 w-full border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
           {/* Brand */}
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
               onClick={() => onNavigateRoute('/')}
               title="Ir para a página inicial do BoraRio"
-              className="group flex min-w-0 shrink-0 items-center text-left focus:outline-none"
+              className="group flex shrink-0 items-center text-left focus:outline-none"
             >
               <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
             </button>
-            <span className="hidden rounded-full border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)] xl:inline-block">
-              {totalCount} locais
-            </span>
             {!isOnline && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-300">
                 <WifiOff className="h-3 w-3" />
@@ -115,37 +114,15 @@ export function Navbar({
             })}
           </nav>
 
-          {/* Right Utilities */}
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            {/* Bora Points Pill */}
+          {/* Clean Right Utilities */}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => onSelectTab('profile')}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-1 text-[11px] font-bold text-[var(--text-primary)] shadow-xs transition hover:border-[#FF6B35] sm:gap-1.5 sm:px-2.5 sm:py-1.5"
+              className="hidden items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 text-xs font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35] sm:inline-flex"
             >
               <Award className="h-3.5 w-3.5 text-[#F7931E]" />
-              <span>{pointsBalance.toLocaleString('pt-BR')}</span>
-              <span className="hidden text-[var(--text-secondary)] sm:inline">Bora Points</span>
-            </button>
-
-            {canInstallPwa && onInstallPwa && (
-              <button
-                type="button"
-                onClick={onInstallPwa}
-                className="hidden items-center gap-1 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-1.5 text-[11px] font-bold text-white shadow-xs sm:inline-flex"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Instalar App
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => onNavigateRoute('/parceiros')}
-              className="hidden items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] hover:border-[#FF6B35]/60 hover:text-[var(--text-primary)] xl:inline-flex"
-            >
-              <Building2 className="h-3.5 w-3.5 text-[#397B68]" />
-              Parceiros
+              <span>{pointsBalance.toLocaleString('pt-BR')} pts</span>
             </button>
 
             {/* Notifications Bell */}
@@ -154,13 +131,14 @@ export function Navbar({
                 type="button"
                 aria-label="Central de Notificações"
                 onClick={() => {
+                  setShowMoreMenu(false);
                   const next = !showNotifs;
                   setShowNotifs(next);
                   if (next && unreadCount > 0) onMarkNotificationsRead();
                 }}
-                className="relative flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)] sm:h-9 sm:w-9"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
               >
-                <Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#FF4B2B] text-[10px] font-bold text-white">
                     {unreadCount}
@@ -204,32 +182,83 @@ export function Navbar({
               onClick={onToggleTheme}
               title={isDark ? 'Modo Rio de dia' : 'Modo Rio à noite'}
               aria-label="Alternar tema Rio de dia / Rio à noite"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)] sm:h-9 sm:w-9"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
             >
-              {isDark ? <Sun className="h-3.5 w-3.5 text-[#F7931E] sm:h-4 sm:w-4" /> : <Moon className="h-3.5 w-3.5 text-[#123B56] sm:h-4 sm:w-4" />}
+              {isDark ? <Sun className="h-4 w-4 text-[#F7931E]" /> : <Moon className="h-4 w-4 text-[#123B56]" />}
             </button>
 
-            {activeTab !== 'admin' ? (
-              <button
-                id="btn-open-admin"
-                type="button"
-                aria-label="Administração"
-                onClick={() => onNavigateRoute('/admin')}
-                className="inline-flex h-8 items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 text-xs font-semibold text-[var(--text-primary)] shadow-xs transition-all hover:border-[#FF6B35]/60 hover:text-[#FF6B35] sm:h-9 sm:px-2.5"
-              >
-                <Zap className="h-3.5 w-3.5 text-[#FF6B35]" />
-                <span className="hidden sm:inline">Admin</span>
-              </button>
-            ) : (
+            {activeTab === 'admin' ? (
               <button
                 id="btn-back-guide"
                 type="button"
                 onClick={() => onNavigateRoute('/app')}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-1.5 text-xs font-bold text-white shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-bold text-white shadow-sm"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Voltar ao App
               </button>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="Mais opções"
+                  onClick={() => {
+                    setShowNotifs(false);
+                    setShowMoreMenu((prev) => !prev);
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+
+                {showMoreMenu && (
+                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-1.5 shadow-xl">
+                    <div className="px-3 py-2 text-[11px] font-semibold text-[var(--text-secondary)]">
+                      {totalCount} locais no catálogo · {pointsBalance} pts
+                    </div>
+                    <div className="my-1 border-t border-[var(--border-hairline)]" />
+
+                    {canInstallPwa && onInstallPwa && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMoreMenu(false);
+                          onInstallPwa();
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                      >
+                        <Download className="h-4 w-4 text-[#FF6B35]" />
+                        Instalar App (PWA)
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        onNavigateRoute('/parceiros');
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                    >
+                      <Building2 className="h-4 w-4 text-[#397B68]" />
+                      Área de Parceiros
+                    </button>
+
+                    <button
+                      id="btn-open-admin"
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        onNavigateRoute('/admin');
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                    >
+                      <Zap className="h-4 w-4 text-[#FF6B35]" />
+                      Administração
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -240,7 +269,7 @@ export function Navbar({
         <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 px-3 lg:hidden">
           <nav
             aria-label="Navegação principal"
-            className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/40 bg-white/80 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#0D1E30]/85"
+            className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/40 bg-white/85 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#0D1E30]/85"
           >
             {MAIN_TABS.map((tab) => {
               const Icon = tab.icon;
