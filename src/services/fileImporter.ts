@@ -1,5 +1,4 @@
 import Papa from 'papaparse';
-import { getCuratedCoverImage, getCuratedGallery } from '../data/curatedImages';
 import type { Restaurant } from '../types/restaurant';
 import { normalizeCategory, normalizePriceRange, slugify } from '../utils/slug';
 
@@ -161,16 +160,15 @@ export function mapRowsToRestaurants(
     const longitude = Number.isFinite(rawLng) ? rawLng : -43.2105 + (index % 5) * 0.005;
 
     const rawRating = parseFloat(getVal('rating').replace(',', '.'));
-    const rating = Number.isFinite(rawRating) ? Math.min(5, Math.max(1, rawRating)) : 4.5;
+    const hasRating = Number.isFinite(rawRating) && rawRating > 0;
+    const rating = hasRating ? Math.min(5, Math.max(1, rawRating)) : 0;
 
     const rawReviews = parseInt(getVal('reviews_count').replace(/\D/g, ''), 10);
-    const reviews_count = Number.isFinite(rawReviews) ? rawReviews : 120;
+    const reviews_count = Number.isFinite(rawReviews) ? rawReviews : 0;
 
     const coverCandidate = getVal('cover_image');
-    const cover_image =
-      coverCandidate && coverCandidate.startsWith('http')
-        ? coverCandidate
-        : getCuratedCoverImage(category, index);
+    const hasRealPhoto = Boolean(coverCandidate && coverCandidate.startsWith('http'));
+    const cover_image = hasRealPhoto ? coverCandidate : '';
 
     const rawDesc = getVal('description');
     const description =
@@ -180,6 +178,14 @@ export function mapRowsToRestaurants(
 
     const phone = getVal('phone') || undefined;
     const externalId = getVal('external_id') || slugify(`import-${name}-${neighborhood}`);
+
+    const rawBusinessStatus = String(
+      row['business_status'] ?? row['businessStatus'] ?? row['status'] ?? ''
+    ).toUpperCase();
+    const isClosed =
+      rawBusinessStatus.includes('CLOSED_PERMANENTLY') ||
+      rawBusinessStatus.includes('CLOSED_TEMPORARILY') ||
+      rawBusinessStatus.includes('FECHADO');
 
     results.push({
       external_id: externalId,
@@ -192,7 +198,7 @@ export function mapRowsToRestaurants(
       longitude,
       description,
       cover_image,
-      gallery: [cover_image, ...getCuratedGallery(category, index).slice(1)],
+      gallery: hasRealPhoto ? [cover_image] : [],
       rating,
       reviews_count,
       price_range: normalizePriceRange(getVal('price_range')),
@@ -202,6 +208,22 @@ export function mapRowsToRestaurants(
       opening_hours: getVal('opening_hours') || undefined,
       is_claimed: false,
       is_featured: false,
+      data_source: 'csv_import',
+      is_redistribution_authorized: true,
+      validation_status: isClosed ? 'FECHADO/INVÁLIDO' : 'PENDENTE',
+      operational_status: isClosed
+        ? 'FECHADO'
+        : rawBusinessStatus.includes('OPERATIONAL')
+          ? 'OPERACIONAL'
+          : 'DESCONHECIDO',
+      confidence_level: hasRealPhoto && hasRating ? 'ALTA' : 'MÉDIA',
+      last_verified_at: new Date().toISOString(),
+      rating_source: hasRating ? 'authorized_source' : 'none',
+      image_origin: hasRealPhoto ? 'commercial_licensed' : 'none',
+      image_license: hasRealPhoto
+        ? 'Importado via planilha (aguardando confirmação do estabelecimento)'
+        : 'Sem fotografia oficial disponível',
+      has_real_photo: hasRealPhoto,
     });
   });
 
