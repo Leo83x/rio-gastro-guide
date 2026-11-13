@@ -19,6 +19,8 @@ import {
   Vote,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import rioHeroDay from '../assets/brand/rio-hero-day.jpg';
+import rioHeroNight from '../assets/brand/rio-hero-night.jpg';
 import { BrandLogo } from '../components/BrandLogo';
 import { fetchRioWeatherLive, type RioWeatherSnapshot } from '../services/integrations/registry';
 import type { AppRoute } from '../services/router';
@@ -105,7 +107,7 @@ export function LandingPage({
             <button
               type="button"
               onClick={() => onNavigate('/app')}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#FF765E] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#e8634c]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-95"
             >
               Abrir App
               <ArrowRight className="h-3.5 w-3.5" />
@@ -115,27 +117,34 @@ export function LandingPage({
       </header>
 
       {/* 1. HERO CINEMATOGRÁFICO */}
-      <section className="relative overflow-hidden bg-borario-night text-white">
-        <div
-          className="absolute inset-0 opacity-25"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 20% 25%, #FF765E 0%, transparent 45%), radial-gradient(circle at 80% 70%, #397B68 0%, transparent 45%)',
-          }}
+      <section className="relative overflow-hidden text-white">
+        <img
+          src={isDark ? rioHeroNight : rioHeroDay}
+          alt="Rio de Janeiro"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:px-8 lg:py-24">
+        <div
+          className={`absolute inset-0 ${
+            isDark
+              ? 'bg-gradient-to-b from-[#06101B]/85 via-[#0A1D30]/75 to-[#07111C]'
+              : 'bg-gradient-to-b from-[#0A2036]/80 via-[#123B56]/65 to-[#0F2A42]/90'
+          }`}
+        />
+        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:px-8 lg:py-24">
           <div className="lg:col-span-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-[#F1E8D8] backdrop-blur-sm">
-              <Sparkles className="h-3.5 w-3.5 text-[#FF765E]" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-[#F1E8D8] backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5 text-[#F7931E]" />
               Superapp de Experiências & Concierge do Rio de Janeiro
             </div>
 
-            <h1 className="font-editorial mt-5 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="font-sans mt-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
               A cidade acontece.{' '}
-              <span className="text-[#FF765E]">Você aproveita.</span>
+              <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent">
+                Você aproveita.
+              </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#F1E8D8]/90 sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#F1E8D8]/95 sm:text-lg">
               Do almoço de família em Santa Teresa ao rooftop no Leblon, passando por shows,
               museus e roteiros inteligentes que se adaptam ao clima do Rio em tempo real.
             </p>
@@ -144,7 +153,7 @@ export function LandingPage({
               <button
                 type="button"
                 onClick={() => onNavigate('/app')}
-                className="inline-flex items-center gap-2 rounded-2xl bg-[#FF765E] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#FF765E]/25 transition hover:bg-[#eb634b]"
+                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#FF4B2B]/30 transition hover:opacity-95"
               >
                 <Compass className="h-4 w-4" />
                 Explorar o App Agora
@@ -153,7 +162,7 @@ export function LandingPage({
               <button
                 type="button"
                 onClick={() => onNavigate('/parceiros')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/15 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/25"
               >
                 <Building2 className="h-4 w-4" />
                 Para Estabelecimentos
@@ -163,7 +172,7 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onInstallPwa}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-[#397B68] bg-[#397B68]/30 px-4 py-3.5 text-xs font-bold text-white transition hover:bg-[#397B68]/50"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-[#397B68] bg-[#397B68]/40 px-4 py-3.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-[#397B68]/60"
                 >
                   <Smartphone className="h-4 w-4" />
                   Instalar PWA
@@ -171,13 +180,13 @@ export function LandingPage({
               )}
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-[#F1E8D8]/80">
+            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-[#F1E8D8]/90">
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-[#397B68]" />
+                <CheckCircle2 className="h-4 w-4 text-[#4CA188]" />
                 {totalExperiences}+ locais e experiências no catálogo
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-[#FF765E]" />
+                <ShieldCheck className="h-4 w-4 text-[#FF6B35]" />
                 Curadoria com origem de dados transparente
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -189,17 +198,17 @@ export function LandingPage({
 
           {/* Visual App Preview Card */}
           <div className="lg:col-span-5">
-            <div className="rounded-3xl border border-white/15 bg-[#123B56]/80 p-5 shadow-2xl backdrop-blur-md">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="rounded-3xl border border-white/20 bg-[#0A1E30]/75 p-5 shadow-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-white/15 pb-3">
                 <BrandLogo variant="horizontal" size="sm" onDark />
-                <span className="rounded-full bg-[#397B68]/30 px-2.5 py-1 text-[11px] font-semibold text-[#A7E3CE]">
+                <span className="rounded-full bg-[#397B68]/40 px-2.5 py-1 text-[11px] font-semibold text-[#A7E3CE]">
                   {weather ? `${weather.temperatureC}°C · ${weather.weatherLabel}` : 'Rio ao vivo'}
                 </span>
               </div>
 
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-white/10 p-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#FF765E]">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#F7931E]">
                     Seu Rio, agora
                   </p>
                   <p className="mt-1 text-sm font-medium text-white">
@@ -210,13 +219,13 @@ export function LandingPage({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-[#102F46] p-3.5">
-                    <UtensilsCrossed className="h-5 w-5 text-[#FF765E]" />
+                  <div className="rounded-2xl bg-[#102F46]/90 p-3.5">
+                    <UtensilsCrossed className="h-5 w-5 text-[#FF6B35]" />
                     <p className="mt-2 text-xs font-bold text-white">Gastronomia</p>
                     <p className="mt-0.5 text-[11px] text-[#B4C2CB]">Botecos, bistrôs &amp; alta cozinha</p>
                   </div>
-                  <div className="rounded-2xl bg-[#102F46] p-3.5">
-                    <Vote className="h-5 w-5 text-[#397B68]" />
+                  <div className="rounded-2xl bg-[#102F46]/90 p-3.5">
+                    <Vote className="h-5 w-5 text-[#4CA188]" />
                     <p className="mt-2 text-xs font-bold text-white">Onde Vamos?</p>
                     <p className="mt-0.5 text-[11px] text-[#B4C2CB]">Votação em grupo + dividir conta</p>
                   </div>
@@ -225,7 +234,7 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={() => onNavigate('/app')}
-                  className="flex w-full items-center justify-between rounded-2xl bg-[#FF765E] px-4 py-3 text-xs font-bold text-white hover:bg-[#e8634c]"
+                  className="flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-3 text-xs font-bold text-white shadow-md hover:opacity-95"
                 >
                   <span>Entrar no Superapp BoraRio</span>
                   <ArrowRight className="h-4 w-4" />
@@ -242,7 +251,7 @@ export function LandingPage({
           <span className="text-xs font-bold uppercase tracking-widest text-[#FF765E]">
             Descoberta Inteligente
           </span>
-          <h2 className="font-editorial mt-2 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
+          <h2 className="font-sans tracking-tight mt-2 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
             Descubra o Rio do seu jeito
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
@@ -257,7 +266,7 @@ export function LandingPage({
               key={item.label}
               className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 shadow-sm transition hover:border-[#FF765E]/60"
             >
-              <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
+              <h3 className="font-sans tracking-tight text-lg font-bold text-[var(--text-primary)]">
                 {item.label}
               </h3>
               <p className="mt-1.5 text-sm text-[var(--text-secondary)]">{item.desc}</p>
@@ -273,7 +282,7 @@ export function LandingPage({
             <span className="text-xs font-bold uppercase tracking-widest text-[#397B68]">
               Seu Rio, Agora
             </span>
-            <h2 className="font-editorial mt-2 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
+            <h2 className="font-sans tracking-tight mt-2 text-3xl font-bold text-[var(--text-primary)] sm:text-4xl">
               Contexto real da cidade, sem promessas falsas
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)] sm:text-base">
@@ -328,7 +337,7 @@ export function LandingPage({
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <Sparkles className="h-7 w-7 text-[#FF765E]" />
-            <h3 className="font-editorial mt-4 text-xl font-bold">Roteiro do Dia com IA</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-xl font-bold">Roteiro do Dia com IA</h3>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
               Monte uma linha do tempo completa com custo estimado por parada e botão{' '}
               <strong>Recalcular se Chover</strong>.
@@ -336,7 +345,7 @@ export function LandingPage({
           </div>
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <Users className="h-7 w-7 text-[#123B56] dark:text-[#FF765E]" />
-            <h3 className="font-editorial mt-4 text-xl font-bold">Votação "Onde Vamos?"</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-xl font-bold">Votação "Onde Vamos?"</h3>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
               Selecione 3 a 5 opções, gere um link compartilhável para os amigos votarem e decida
               sem discussão no grupo.
@@ -344,7 +353,7 @@ export function LandingPage({
           </div>
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <MapPin className="h-7 w-7 text-[#397B68]" />
-            <h3 className="font-editorial mt-4 text-xl font-bold">Mapa Interativo do Rio</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-xl font-bold">Mapa Interativo do Rio</h3>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
               Visualize todos os estabelecimentos e experiências georreferenciados com OpenStreetMap
               &amp; Leaflet.
@@ -358,7 +367,7 @@ export function LandingPage({
         <div className="mx-auto grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-3 lg:px-8">
           <div className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur-md">
             <Crown className="h-7 w-7 text-[#F1E8D8]" />
-            <h3 className="font-editorial mt-4 text-2xl font-bold">Rio Gastro Club</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Rio Gastro Club</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
               Benefícios exclusivos em restaurantes parceiros e drops curados, com transparência
               entre ofertas demonstrativas e ofertas confirmadas por parceiros.
@@ -367,7 +376,7 @@ export function LandingPage({
 
           <div className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur-md">
             <CalendarDays className="h-7 w-7 text-[#FF765E]" />
-            <h3 className="font-editorial mt-4 text-2xl font-bold">Agenda Viva da Cidade</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Agenda Viva da Cidade</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
               Shows, exposições, feiras gastronômicas e programação infantil no Rio com solicitação
               de reserva registrada e rastreável.
@@ -379,7 +388,7 @@ export function LandingPage({
               <Award className="h-7 w-7 text-[#F1E8D8]" />
               <QrCode className="h-5 w-5 text-[#FF765E]" />
             </div>
-            <h3 className="font-editorial mt-4 text-2xl font-bold">Rio Points &amp; Passaporte</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Rio Points &amp; Passaporte</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
               Check-in por QR Code com proteção antifraude (limite diário por local e nonce único)
               para acumular pontos no Passaporte Carioca.
@@ -395,7 +404,7 @@ export function LandingPage({
             <span className="text-xs font-bold uppercase tracking-widest text-[#397B68]">
               Área de Parceiros B2B
             </span>
-            <h2 className="font-editorial mt-2 text-3xl font-bold text-[var(--text-primary)]">
+            <h2 className="font-sans tracking-tight mt-2 text-3xl font-bold text-[var(--text-primary)]">
               Tem um restaurante, bar ou espaço cultural no Rio?
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
@@ -426,7 +435,7 @@ export function LandingPage({
       {/* 9. CTA FINAL */}
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="rounded-3xl bg-borario-coral px-6 py-12 text-center text-white shadow-xl sm:px-12">
-          <h2 className="font-editorial text-3xl font-bold sm:text-4xl">
+          <h2 className="font-sans tracking-tight text-3xl font-bold sm:text-4xl">
             Pronto para viver o melhor do Rio hoje?
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-sm text-white/90 sm:text-base">
@@ -519,7 +528,7 @@ export function LandingPage({
       {legalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="max-w-lg rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-2xl">
-            <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+            <h3 className="font-sans tracking-tight text-2xl font-bold text-[var(--text-primary)]">
               {legalModal === 'about'
                 ? 'Sobre o BoraRio'
                 : legalModal === 'terms'

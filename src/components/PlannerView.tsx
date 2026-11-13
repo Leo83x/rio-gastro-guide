@@ -171,7 +171,7 @@ export function PlannerView({ experiences, onSelectExperience }: PlannerViewProp
               <MapPin className="h-3.5 w-3.5" />
               Mapa Interativo do Rio
             </p>
-            <h2 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)]">
+            <h2 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
               Explore experiências geolocalizadas
             </h2>
           </div>
@@ -190,7 +190,7 @@ export function PlannerView({ experiences, onSelectExperience }: PlannerViewProp
               <Sparkles className="h-3.5 w-3.5" />
               Roteiro Inteligente do Dia
             </p>
-            <h2 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+            <h2 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
               Planeje seu dia perfeito no Rio
             </h2>
           </div>
@@ -267,7 +267,7 @@ export function PlannerView({ experiences, onSelectExperience }: PlannerViewProp
               <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                 {step.label}
               </p>
-              <h3 className="font-editorial mt-1 text-lg font-bold text-[var(--text-primary)] group-hover:text-[#E05A47]">
+              <h3 className="font-sans tracking-tight mt-1 text-lg font-bold text-[var(--text-primary)] group-hover:text-[#E05A47]">
                 {step.item.name}
               </h3>
               <p className="mt-1 text-xs text-[var(--text-secondary)]">
@@ -298,7 +298,7 @@ export function PlannerView({ experiences, onSelectExperience }: PlannerViewProp
             <Users className="h-4 w-4" />
             Decisão em Grupo · Onde Vamos?
           </div>
-          <h3 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
             Votação Rápida com Amigos
           </h3>
 
@@ -408,7 +408,7 @@ export function PlannerView({ experiences, onSelectExperience }: PlannerViewProp
             <Calculator className="h-4 w-4" />
             Dividir Conta
           </div>
-          <h3 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
             Calculadora do Rolê
           </h3>
 
@@ -459,7 +459,7 @@ export function PlannerView({ experiences, onSelectExperience }: PlannerViewProp
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                 Valor por pessoa
               </p>
-              <p className="font-editorial mt-1 text-3xl font-bold text-[#E05A47]">
+              <p className="font-sans tracking-tight mt-1 text-3xl font-bold text-[#E05A47]">
                 R$ {perPerson.toFixed(2).replace('.', ',')}
               </p>
               <p className="mt-1 text-[11px] text-[var(--text-secondary)]">

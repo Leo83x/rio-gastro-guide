@@ -53,7 +53,7 @@ export function ClaimModal({ restaurant, onClose, onClaimed }: ClaimModalProps) 
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h3 className="font-editorial mt-4 text-2xl font-bold text-[var(--text-primary)]">
+            <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold text-[var(--text-primary)]">
               Solicitação Recebida!
             </h3>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
@@ -72,7 +72,7 @@ export function ClaimModal({ restaurant, onClose, onClaimed }: ClaimModalProps) 
             <p className="text-xs font-semibold uppercase tracking-widest text-[#E05A47]">
               Área do Parceiro
             </p>
-            <h3 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)]">
+            <h3 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
               Reivindicar {restaurant.name}
             </h3>
             <p className="mt-1.5 text-sm text-[var(--text-secondary)]">

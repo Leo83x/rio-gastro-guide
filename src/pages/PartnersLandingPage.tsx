@@ -71,7 +71,7 @@ export function PartnersLandingPage({
             <Building2 className="h-3.5 w-3.5 text-[#FF765E]" />
             BoraRio para Negócios &amp; Cultura
           </span>
-          <h1 className="font-editorial mt-4 text-4xl font-bold leading-tight sm:text-5xl">
+          <h1 className="font-sans tracking-tight mt-4 text-4xl font-bold leading-tight sm:text-5xl">
             Conecte seu estabelecimento ao público que realmente sai no Rio.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#F1E8D8]/90 sm:text-base">
@@ -104,7 +104,7 @@ export function PartnersLandingPage({
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <ShieldCheck className="h-7 w-7 text-[#397B68]" />
-            <h3 className="font-editorial mt-4 text-lg font-bold">Perfil Verificado</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-lg font-bold">Perfil Verificado</h3>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
               Substitua dados genéricos por informações confirmadas pelo próprio estabelecimento,
               com selo de confiança no guia.
@@ -113,7 +113,7 @@ export function PartnersLandingPage({
 
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <Camera className="h-7 w-7 text-[#FF765E]" />
-            <h3 className="font-editorial mt-4 text-lg font-bold">Fotos Oficiais Reais</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-lg font-bold">Fotos Oficiais Reais</h3>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
               Nunca usamos fotos genéricas para enganar o cliente. Envie suas fotos reais para
               destaque imediato no feed.
@@ -122,7 +122,7 @@ export function PartnersLandingPage({
 
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <CalendarCheck className="h-7 w-7 text-[#123B56] dark:text-[#FF765E]" />
-            <h3 className="font-editorial mt-4 text-lg font-bold">Solicitações de Reserva</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-lg font-bold">Solicitações de Reserva</h3>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
               Receba pedidos de reserva com data, horário e tamanho do grupo no seu painel
               exclusivo de parceiro.
@@ -131,7 +131,7 @@ export function PartnersLandingPage({
 
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <Crown className="h-7 w-7 text-[#D49B27]" />
-            <h3 className="font-editorial mt-4 text-lg font-bold">Rio Gastro Club</h3>
+            <h3 className="font-sans tracking-tight mt-4 text-lg font-bold">Rio Gastro Club</h3>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
               Crie benefícios em horários estratégicos (ex: terça a quinta) para atrair novos
               clientes qualificados.
@@ -140,7 +140,7 @@ export function PartnersLandingPage({
         </div>
 
         <div className="mt-12 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-8">
-          <h2 className="font-editorial text-2xl font-bold">Como funciona a adesão</h2>
+          <h2 className="font-sans tracking-tight text-2xl font-bold">Como funciona a adesão</h2>
           <div className="mt-6 grid gap-6 md:grid-cols-3">
             {[
               {

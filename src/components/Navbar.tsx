@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  Award,
   Bell,
   Building2,
   CalendarDays,
@@ -10,7 +11,7 @@ import {
   Moon,
   Sparkles,
   Sun,
-  UserCheck,
+  User,
   WifiOff,
   Zap,
 } from 'lucide-react';
@@ -43,10 +44,10 @@ const MAIN_TABS: Array<{
   icon: typeof Compass;
 }> = [
   { id: 'discover', label: 'Descobrir', shortLabel: 'Descobrir', icon: Compass },
-  { id: 'planner', label: 'Explorar & IA', shortLabel: 'Explorar', icon: MapPin },
+  { id: 'planner', label: 'Roteiros', shortLabel: 'Roteiros', icon: MapPin },
   { id: 'club', label: 'Club', shortLabel: 'Club', icon: Crown },
   { id: 'agenda', label: 'Agenda', shortLabel: 'Agenda', icon: CalendarDays },
-  { id: 'profile', label: 'Perfil', shortLabel: 'Perfil', icon: UserCheck },
+  { id: 'profile', label: 'Perfil', shortLabel: 'Perfil', icon: User },
 ];
 
 export function Navbar({
@@ -68,7 +69,7 @@ export function Navbar({
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-2.5 sm:px-6 lg:px-8">
           {/* Brand */}
           <div className="flex items-center gap-2.5">
@@ -76,9 +77,9 @@ export function Navbar({
               type="button"
               onClick={() => onNavigateRoute('/')}
               title="Ir para a página inicial do BoraRio"
-              className="group flex shrink-0 items-center gap-2 text-left focus:outline-none"
+              className="group flex shrink-0 items-center text-left focus:outline-none"
             >
-              <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
+              <BrandLogo variant="horizontal" size="md" onDark={isDark} />
             </button>
             <span className="hidden rounded-full border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)] xl:inline-block">
               {totalCount} locais
@@ -101,25 +102,14 @@ export function Navbar({
                   key={tab.id}
                   type="button"
                   onClick={() => onSelectTab(tab.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
                     active
-                      ? 'bg-[#FF765E] text-white shadow-xs'
+                      ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
                   <span>{tab.label}</span>
-                  {tab.id === 'profile' && (
-                    <span
-                      className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                        active
-                          ? 'bg-white/20 text-white'
-                          : 'bg-[#397B68]/15 text-[#397B68] dark:text-[#6fd1b4]'
-                      }`}
-                    >
-                      {pointsBalance} RP
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -127,11 +117,22 @@ export function Navbar({
 
           {/* Right Utilities */}
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Bora Points Pill */}
+            <button
+              type="button"
+              onClick={() => onSelectTab('profile')}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-primary)] shadow-xs transition hover:border-[#FF6B35]"
+            >
+              <Award className="h-3.5 w-3.5 text-[#F7931E]" />
+              <span>{pointsBalance.toLocaleString('pt-BR')}</span>
+              <span className="hidden text-[var(--text-secondary)] sm:inline">Bora Points</span>
+            </button>
+
             {canInstallPwa && onInstallPwa && (
               <button
                 type="button"
                 onClick={onInstallPwa}
-                className="hidden items-center gap-1 rounded-full bg-[#397B68] px-3 py-1.5 text-[11px] font-bold text-white shadow-xs hover:bg-[#2e6656] sm:inline-flex"
+                className="hidden items-center gap-1 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-1.5 text-[11px] font-bold text-white shadow-xs sm:inline-flex"
               >
                 <Download className="h-3.5 w-3.5" />
                 Instalar App
@@ -141,7 +142,7 @@ export function Navbar({
             <button
               type="button"
               onClick={() => onNavigateRoute('/parceiros')}
-              className="hidden items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] hover:border-[#FF765E]/60 hover:text-[var(--text-primary)] xl:inline-flex"
+              className="hidden items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)] hover:border-[#FF6B35]/60 hover:text-[var(--text-primary)] xl:inline-flex"
             >
               <Building2 className="h-3.5 w-3.5 text-[#397B68]" />
               Parceiros
@@ -157,11 +158,11 @@ export function Navbar({
                   setShowNotifs(next);
                   if (next && unreadCount > 0) onMarkNotificationsRead();
                 }}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF765E]/50 hover:text-[var(--text-primary)]"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
               >
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#FF765E] text-[10px] font-bold text-white">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#FF4B2B] text-[10px] font-bold text-white">
                     {unreadCount}
                   </span>
                 )}
@@ -173,7 +174,7 @@ export function Navbar({
                     <p className="text-xs font-bold text-[var(--text-primary)]">
                       Central de Notificações
                     </p>
-                    <Sparkles className="h-3.5 w-3.5 text-[#FF765E]" />
+                    <Sparkles className="h-3.5 w-3.5 text-[#FF6B35]" />
                   </div>
                   <div className="max-h-72 divide-y divide-[var(--border-hairline)] overflow-y-auto">
                     {notifications.length === 0 ? (
@@ -203,9 +204,9 @@ export function Navbar({
               onClick={onToggleTheme}
               title={isDark ? 'Modo Rio de dia' : 'Modo Rio à noite'}
               aria-label="Alternar tema Rio de dia / Rio à noite"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF765E]/50 hover:text-[var(--text-primary)]"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
             >
-              {isDark ? <Sun className="h-4 w-4 text-[#FF765E]" /> : <Moon className="h-4 w-4 text-[#123B56]" />}
+              {isDark ? <Sun className="h-4 w-4 text-[#F7931E]" /> : <Moon className="h-4 w-4 text-[#123B56]" />}
             </button>
 
             {activeTab !== 'admin' ? (
@@ -213,9 +214,9 @@ export function Navbar({
                 id="btn-open-admin"
                 type="button"
                 onClick={() => onNavigateRoute('/admin')}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-xs transition-all hover:border-[#FF765E]/60 hover:text-[#FF765E]"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-primary)] shadow-xs transition-all hover:border-[#FF6B35]/60 hover:text-[#FF6B35]"
               >
-                <Zap className="h-3.5 w-3.5 text-[#FF765E]" />
+                <Zap className="h-3.5 w-3.5 text-[#FF6B35]" />
                 <span className="hidden sm:inline">Admin</span>
               </button>
             ) : (
@@ -223,7 +224,7 @@ export function Navbar({
                 id="btn-back-guide"
                 type="button"
                 onClick={() => onNavigateRoute('/app')}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#123B56] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#FF765E]"
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-bold text-white shadow-sm"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Voltar ao App
@@ -233,27 +234,34 @@ export function Navbar({
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation (5 Tabs) */}
+      {/* Floating Glassmorphic Bottom Navigation Bar (Mobile) */}
       {activeTab !== 'admin' && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 px-1 py-1.5 backdrop-blur-md lg:hidden">
-          {MAIN_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => onSelectTab(tab.id)}
-                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold transition-colors ${
-                  active ? 'text-[#FF765E]' : 'text-[var(--text-secondary)]'
-                }`}
-              >
-                <Icon className="h-4.5 w-4.5" />
-                <span>{tab.shortLabel}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 px-3 lg:hidden">
+          <nav
+            aria-label="Navegação principal"
+            className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/40 bg-white/80 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#0D1E30]/85"
+          >
+            {MAIN_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onSelectTab(tab.id)}
+                  className={`flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[10px] font-bold transition-all ${
+                    active
+                      ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-md'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{tab.shortLabel}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       )}
     </>
   );

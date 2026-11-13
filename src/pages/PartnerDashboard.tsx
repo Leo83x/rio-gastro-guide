@@ -152,7 +152,7 @@ export function PartnerDashboard({
                 <Lock className="h-5 w-5" />
               </div>
               <div>
-                <h1 className="font-editorial text-2xl font-bold">Acesso do Parceiro</h1>
+                <h1 className="font-sans tracking-tight text-2xl font-bold">Acesso do Parceiro</h1>
                 <p className="text-xs text-[var(--text-secondary)]">
                   Ambiente isolado por estabelecimento (tenant) — separado do Admin global.
                 </p>
@@ -207,7 +207,7 @@ export function PartnerDashboard({
                   <ShieldCheck className="h-3.5 w-3.5 text-[#A7E3CE]" />
                   Sessão isolada · {partnerEmail}
                 </div>
-                <h1 className="font-editorial mt-2 text-2xl font-bold sm:text-3xl">
+                <h1 className="font-sans tracking-tight mt-2 text-2xl font-bold sm:text-3xl">
                   {activeTenant.name}
                 </h1>
                 <p className="text-xs text-[#F1E8D8]">
@@ -234,7 +234,7 @@ export function PartnerDashboard({
               >
                 <div className="flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-[#FF765E]" />
-                  <h2 className="font-editorial text-xl font-bold">
+                  <h2 className="font-sans tracking-tight text-xl font-bold">
                     Dados Oficiais do Estabelecimento
                   </h2>
                 </div>
@@ -304,7 +304,7 @@ export function PartnerDashboard({
                 <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
                   <div className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-[#397B68]" />
-                    <h2 className="font-editorial text-lg font-bold">
+                    <h2 className="font-sans tracking-tight text-lg font-bold">
                       Solicitações de Reserva ({tenantReservations.length})
                     </h2>
                   </div>
@@ -336,7 +336,7 @@ export function PartnerDashboard({
                 <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
                   <div className="flex items-center gap-2">
                     <Crown className="h-5 w-5 text-[#D49B27]" />
-                    <h2 className="font-editorial text-lg font-bold">Proposta Rio Gastro Club</h2>
+                    <h2 className="font-sans tracking-tight text-lg font-bold">Proposta Rio Gastro Club</h2>
                   </div>
                   <p className="mt-1 text-xs text-[var(--text-secondary)]">
                     Rascunho demonstrativo para campanha exclusiva de membros.

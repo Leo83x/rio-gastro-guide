@@ -77,7 +77,7 @@ export function PersonalizeModal({ preferences, onSave, onClose }: PersonalizeMo
           <Sparkles className="h-4 w-4" />
           Personalização Inteligente
         </div>
-        <h3 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)]">
+        <h3 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
           Personalizar meu Perfil no Rio
         </h3>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">

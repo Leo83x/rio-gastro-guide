@@ -6,7 +6,7 @@
     /* BoraRio Official Palette */
     --br-ocean: #123B56;
     --br-deep: #102F46;
-    --br-coral: #FF765E;
+    --br-coral: #FF6B35;
     --br-mata: #397B68;
     --br-sand: #F1E8D8;
     --br-white: #FFFFFF;
@@ -20,7 +20,7 @@
     --text-primary: #102F46;
     --text-secondary: #5B6B76;
     --border-hairline: #E5DDD0;
-    --accent-terracotta: #FF765E;
+    --accent-terracotta: #FF6B35;
     --accent-ocean: #123B56;
     --accent-mata: #397B68;
     --accent-gold: #D49B27;
@@ -28,21 +28,31 @@
 
   .dark {
     /* Dark Mode ("Rio à noite") */
-    --bg-canvas: #0A1824;
-    --bg-surface: #102F46;
-    --bg-subtle: #123B56;
-    --bg-elevated: #153750;
+    --bg-canvas: #07111C;
+    --bg-surface: #0E2235;
+    --bg-subtle: #122C44;
+    --bg-elevated: #14324D;
     --text-primary: #FFFFFF;
     --text-secondary: #B4C2CB;
-    --border-hairline: #1E4663;
-    --accent-terracotta: #FF765E;
+    --border-hairline: #1C3D5A;
+    --accent-terracotta: #FF6B35;
     --accent-ocean: #1D557A;
     --accent-mata: #4CA188;
     --accent-gold: #E5B342;
   }
 
+  html,
+  body,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+
   html {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -53,26 +63,23 @@
     color: var(--text-primary);
     transition: background-color 0.25s ease, color 0.25s ease;
   }
-
-  h1,
-  h2,
-  h3,
-  .font-editorial {
-    font-family: 'Playfair Display', Georgia, serif;
-  }
 }
 
-/* BoraRio signature gradients */
+/* Official BoraRio Sunset Gradient */
+.bg-sunset {
+  background: linear-gradient(90deg, #FF4B2B 0%, #FF6B35 50%, #F7931E 100%);
+}
+
 .bg-borario-day {
-  background: linear-gradient(135deg, #123B56 0%, #1B5276 52%, #FF765E 120%);
+  background: linear-gradient(135deg, #123B56 0%, #1B5276 52%, #FF6B35 120%);
 }
 
 .bg-borario-night {
-  background: linear-gradient(135deg, #07131D 0%, #102F46 55%, #123B56 100%);
+  background: linear-gradient(135deg, #07111C 0%, #0E2235 55%, #123B56 100%);
 }
 
 .bg-borario-coral {
-  background: linear-gradient(135deg, #FF765E 0%, #F25C43 100%);
+  background: linear-gradient(90deg, #FF4B2B 0%, #FF6B35 50%, #F7931E 100%);
 }
 
 /* Hide scrollbar for horizontal chips */
@@ -86,6 +93,6 @@
 
 /* Leaflet map container fix */
 .leaflet-container {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   z-index: 1;
 }

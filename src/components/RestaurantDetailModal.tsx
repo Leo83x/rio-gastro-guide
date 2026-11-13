@@ -104,7 +104,7 @@ export function RestaurantDetailModal({
               )}
             </div>
 
-            <h2 className="font-editorial text-2xl font-bold text-white sm:text-4xl">
+            <h2 className="font-sans tracking-tight text-2xl font-bold text-white sm:text-4xl">
               {restaurant.name}
             </h2>
           </div>
@@ -171,7 +171,7 @@ export function RestaurantDetailModal({
             </div>
 
             <div>
-              <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+              <h3 className="font-sans tracking-tight text-xl font-bold text-[var(--text-primary)]">
                 Nota do Curador
               </h3>
               <p className="mt-2.5 text-base leading-relaxed text-[var(--text-secondary)]">
@@ -272,7 +272,7 @@ export function RestaurantDetailModal({
 
           {/* Right Column: Interactive Map */}
           <div className="space-y-3 lg:col-span-2">
-            <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
+            <h3 className="font-sans tracking-tight text-lg font-bold text-[var(--text-primary)]">
               Localização no Mapa
             </h3>
             <LeafletMap

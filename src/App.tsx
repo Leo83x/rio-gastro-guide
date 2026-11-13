@@ -219,7 +219,7 @@ export function App() {
     filters.minRating === 0;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] pb-16 text-[var(--text-primary)] lg:pb-0">
+    <div className="min-h-screen bg-[var(--bg-canvas)] pb-24 text-[var(--text-primary)] lg:pb-0">
       <Navbar
         activeTab={effectiveTab}
         onSelectTab={(tab) => {
@@ -256,6 +256,7 @@ export function App() {
             resultCount={filteredRestaurants.length}
             onOpenPersonalize={() => setShowPersonalize(true)}
             personalizationActive={preferences.lgpd_consents.personalization}
+            isDark={isDark}
           />
 
           <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -264,7 +265,6 @@ export function App() {
                 experiences={restaurants}
                 locationConsent={preferences.lgpd_consents.location}
                 onSelectExperience={setSelectedRestaurant}
-                onSelectMacroCategory={(cat) => setFilters({ ...filters, macroCategory: cat })}
                 onGoToExploreMap={() => setActiveTab('planner')}
                 onGoToClub={() => setActiveTab('club')}
                 onGoToPlanner={() => setActiveTab('planner')}
@@ -285,7 +285,7 @@ export function App() {
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#FF765E]/15 text-[#FF765E]">
                   <UtensilsCrossed className="h-6 w-6" />
                 </div>
-                <h2 className="font-editorial mt-4 text-2xl font-bold text-[var(--text-primary)]">
+                <h2 className="font-sans tracking-tight mt-4 text-2xl font-bold text-[var(--text-primary)]">
                   Nenhuma experiência encontrada
                 </h2>
                 <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-secondary)]">
@@ -326,7 +326,7 @@ export function App() {
               </div>
             ) : (
               <div>
-                <h2 className="font-editorial mb-4 text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
+                <h2 className="font-sans tracking-tight mb-4 text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
                   {showEditorialDiscover ? 'Em alta no Rio' : 'Resultados para você'}
                 </h2>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

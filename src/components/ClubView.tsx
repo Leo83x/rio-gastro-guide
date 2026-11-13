@@ -30,7 +30,7 @@ export function ClubView({ experiences, onSelectExperience }: ClubViewProps) {
             <Crown className="h-4 w-4" />
             Rio Gastro Club
           </p>
-          <h2 className="font-editorial mt-1 text-3xl font-bold text-[var(--text-primary)]">
+          <h2 className="font-sans tracking-tight mt-1 text-3xl font-bold text-[var(--text-primary)]">
             Vantagens Exclusivas &amp; Ofertas Coletivas
           </h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -48,7 +48,7 @@ export function ClubView({ experiences, onSelectExperience }: ClubViewProps) {
 
       {/* Exclusive Benefits */}
       <section>
-        <h3 className="font-editorial mb-4 text-xl font-bold text-[var(--text-primary)]">
+        <h3 className="font-sans tracking-tight mb-4 text-xl font-bold text-[var(--text-primary)]">
           Benefícios de Membro &amp; Off-Peak
         </h3>
         <div className="grid gap-5 md:grid-cols-3">
@@ -72,7 +72,7 @@ export function ClubView({ experiences, onSelectExperience }: ClubViewProps) {
                   </span>
                 </div>
 
-                <h4 className="font-editorial mt-3 text-lg font-bold text-[var(--text-primary)]">
+                <h4 className="font-sans tracking-tight mt-3 text-lg font-bold text-[var(--text-primary)]">
                   {offer.experience_name}
                 </h4>
                 <p className="text-xs font-medium text-[var(--text-secondary)]">
@@ -105,7 +105,7 @@ export function ClubView({ experiences, onSelectExperience }: ClubViewProps) {
       <section>
         <div className="mb-4 flex items-center gap-2">
           <Flame className="h-5 w-5 text-[#E05A47]" />
-          <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight text-xl font-bold text-[var(--text-primary)]">
             Ofertas Coletivas (Drops de Grupo)
           </h3>
         </div>
@@ -132,7 +132,7 @@ export function ClubView({ experiences, onSelectExperience }: ClubViewProps) {
                   </span>
                 </div>
 
-                <h4 className="font-editorial mt-3 text-xl font-bold text-[var(--text-primary)]">
+                <h4 className="font-sans tracking-tight mt-3 text-xl font-bold text-[var(--text-primary)]">
                   {drop.title}
                 </h4>
                 <p className="mt-0.5 text-xs text-[var(--text-secondary)]">

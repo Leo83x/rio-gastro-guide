@@ -119,7 +119,7 @@ export function AgendaView({
             <CalendarDays className="h-4 w-4" />
             Agenda da Cidade &amp; Pessoal
           </p>
-          <h2 className="font-editorial mt-1 text-3xl font-bold text-[var(--text-primary)]">
+          <h2 className="font-sans tracking-tight mt-1 text-3xl font-bold text-[var(--text-primary)]">
             Calendário Vivo do Rio de Janeiro
           </h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -157,7 +157,7 @@ export function AgendaView({
       <div className="grid gap-8 lg:grid-cols-3">
         {/* City Calendar */}
         <section className="space-y-4 lg:col-span-2">
-          <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight text-xl font-bold text-[var(--text-primary)]">
             Programação Cultural &amp; Eventos ({cityEvents.length})
           </h3>
 
@@ -188,7 +188,7 @@ export function AgendaView({
 
                       <h4
                         onClick={() => onSelectExperience(ev)}
-                        className="font-editorial mt-2 cursor-pointer text-xl font-bold text-[var(--text-primary)] hover:text-[#E05A47]"
+                        className="font-sans tracking-tight mt-2 cursor-pointer text-xl font-bold text-[var(--text-primary)] hover:text-[#E05A47]"
                       >
                         {ev.name}
                       </h4>
@@ -241,7 +241,7 @@ export function AgendaView({
 
         {/* Personal Agenda */}
         <section className="space-y-4">
-          <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight text-xl font-bold text-[var(--text-primary)]">
             Minha Agenda Pessoal ({activeReservations.length})
           </h3>
 

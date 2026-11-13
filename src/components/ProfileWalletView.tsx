@@ -114,7 +114,7 @@ export function ProfileWalletView({
             </span>
           </div>
 
-          <p className="font-editorial mt-4 text-4xl font-bold">
+          <p className="font-sans tracking-tight mt-4 text-4xl font-bold">
             {balance.toLocaleString('pt-BR')} <span className="text-lg text-[#E5B342]">RP</span>
           </p>
           <p className="mt-1 text-xs text-white/70">
@@ -137,7 +137,7 @@ export function ProfileWalletView({
             <QrCode className="h-4 w-4" />
             Check-in QR Code Dinâmico &amp; Antifraude
           </div>
-          <h3 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
             Validar Visita na Mesa (+50 RP) &amp; Avaliação Verificada (+30 RP)
           </h3>
 

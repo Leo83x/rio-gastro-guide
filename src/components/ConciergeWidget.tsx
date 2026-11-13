@@ -1,4 +1,4 @@
-import { ExternalLink, MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { ExternalLink, Send, Sparkles, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import type { Restaurant } from '../types/restaurant';
 
@@ -111,25 +111,25 @@ export function ConciergeWidget({ experiences, onSelectExperience }: ConciergeWi
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-xs font-bold text-white shadow-xl transition-transform hover:scale-105 lg:bottom-6 lg:right-6"
+        className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-[#FF4B2B]/30 transition-transform hover:scale-105 lg:bottom-6 lg:right-6"
       >
-        <MessageCircle className="h-4.5 w-4.5" />
-        <span>Rio Concierge IA</span>
+        <Sparkles className="h-4 w-4" />
+        <span>Bora IA Concierge</span>
       </button>
 
-      {/* WhatsApp-Style Chat Window */}
+      {/* Concierge Chat Window */}
       {open && (
         <div className="fixed bottom-36 right-4 z-50 flex h-[480px] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-2xl lg:bottom-20 lg:right-6">
-          {/* WhatsApp Header */}
-          <div className="flex items-center justify-between bg-[#075E54] px-4 py-3 text-white">
+          {/* Header */}
+          <div className="flex items-center justify-between bg-gradient-to-r from-[#123B56] via-[#102F46] to-[#FF6B35] px-4 py-3 text-white">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
-                <Sparkles className="h-4.5 w-4.5 text-[#25D366]" />
+                <Sparkles className="h-4.5 w-4.5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold leading-tight">Rio Gastro Concierge</p>
-                <p className="text-[11px] text-emerald-200">
-                  Online · Busca no catálogo real (Simulador Web)
+                <p className="text-sm font-bold leading-tight">Bora IA Concierge</p>
+                <p className="text-[11px] text-[#F1E8D8]">
+                  Online · Busca direta no catálogo real
                 </p>
               </div>
             </div>

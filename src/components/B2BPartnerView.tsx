@@ -55,7 +55,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
             <p className="text-xs font-bold uppercase tracking-wider text-[#E05A47]">
               Painel do Parceiro
             </p>
-            <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+            <h3 className="font-sans tracking-tight text-2xl font-bold text-[var(--text-primary)]">
               {selected?.name || 'Selecione um estabelecimento'}
             </h3>
             <p className="text-xs text-[var(--text-secondary)]">
@@ -83,7 +83,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
               <Eye className="h-3.5 w-3.5 text-[#E05A47]" />
               Visualizações (Demo)
             </p>
-            <p className="font-editorial mt-2 text-2xl font-bold text-[var(--text-primary)]">
+            <p className="font-sans tracking-tight mt-2 text-2xl font-bold text-[var(--text-primary)]">
               Indisponível
             </p>
             <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
@@ -96,7 +96,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
               <Navigation className="h-3.5 w-3.5 text-sky-500" />
               Cliques "Como Chegar"
             </p>
-            <p className="font-editorial mt-2 text-2xl font-bold text-[var(--text-primary)]">
+            <p className="font-sans tracking-tight mt-2 text-2xl font-bold text-[var(--text-primary)]">
               Indisponível
             </p>
             <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
@@ -109,7 +109,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
               <BarChart3 className="h-3.5 w-3.5 text-emerald-500" />
               Reservas Solicitadas
             </p>
-            <p className="font-editorial mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            <p className="font-sans tracking-tight mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {realReservationsCount}
             </p>
             <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
@@ -122,7 +122,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
               <Ticket className="h-3.5 w-3.5 text-[#D49B27]" />
               Cupons Club (Demo)
             </p>
-            <p className="font-editorial mt-2 text-2xl font-bold text-[var(--text-primary)]">
+            <p className="font-sans tracking-tight mt-2 text-2xl font-bold text-[var(--text-primary)]">
               0
             </p>
             <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
@@ -135,7 +135,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
               <ShieldCheck className="h-3.5 w-3.5 text-[#E05A47]" />
               Check-ins QR Mesa
             </p>
-            <p className="font-editorial mt-2 text-2xl font-bold text-[var(--text-primary)]">
+            <p className="font-sans tracking-tight mt-2 text-2xl font-bold text-[var(--text-primary)]">
               Ativo
             </p>
             <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">

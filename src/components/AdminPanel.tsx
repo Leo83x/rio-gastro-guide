@@ -354,7 +354,7 @@ export function AdminPanel({
               {restaurants.length} estabelecimentos ativos
             </span>
           </div>
-          <h1 className="font-editorial mt-3 text-3xl font-bold text-[var(--text-primary)]">
+          <h1 className="font-sans tracking-tight mt-3 text-3xl font-bold text-[var(--text-primary)]">
             Motor de Extração &amp; Validação Multi-Fonte
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -640,7 +640,7 @@ export function AdminPanel({
             }`}
           >
             <Upload className="h-10 w-10 text-[#E05A47]" />
-            <h3 className="font-editorial mt-3 text-xl font-bold text-[var(--text-primary)]">
+            <h3 className="font-sans tracking-tight mt-3 text-xl font-bold text-[var(--text-primary)]">
               Arraste seu CSV ou JSON (Importador Universal)
             </h3>
             <p className="mt-1 max-w-lg text-xs text-[var(--text-secondary)]">
@@ -725,7 +725,7 @@ export function AdminPanel({
       {/* Tab 3: 1-Click Seed */}
       {activeTab === 'seed' && (
         <div className="mt-6 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
-          <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight text-2xl font-bold text-[var(--text-primary)]">
             Carga Inicial de Demonstração (1-Click Seed RJ)
           </h3>
           <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
@@ -745,7 +745,7 @@ export function AdminPanel({
       {/* Tab 4: Claimed Leads */}
       {activeTab === 'claims' && (
         <div className="mt-6 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
-          <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+          <h3 className="font-sans tracking-tight text-xl font-bold text-[var(--text-primary)]">
             Solicitações de Reivindicação de Perfil
           </h3>
           {claims.length === 0 ? (

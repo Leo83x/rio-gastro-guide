@@ -97,7 +97,7 @@ export function SmartImage({
                 {category}
               </span>
               {name && (
-                <span className="font-editorial mt-0.5 line-clamp-1 max-w-[220px] text-sm font-semibold text-white/90">
+                <span className="font-sans tracking-tight mt-0.5 line-clamp-1 max-w-[220px] text-sm font-semibold text-white/90">
                   {name}
                 </span>
               )}
