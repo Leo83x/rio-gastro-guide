@@ -207,8 +207,8 @@ export function HeroSection({
 
   return (
     <section className="relative w-full overflow-x-clip">
-      {/* 1. TOPO ATMOSFÉRICO DO RIO */}
-      <div className="relative overflow-hidden pb-11 pt-6 text-white sm:pb-14 sm:pt-9">
+      {/* 1. TOPO ATMOSFÉRICO DO RIO (Abrange até o topo atrás do Header transparente) */}
+      <div className="relative overflow-hidden pb-12 pt-22 text-white sm:pb-14 sm:pt-28 lg:pb-16 lg:pt-30">
         <img
           src={isDark ? rioHeroNight : rioHeroDay}
           alt="Paisagem atmosférica do Rio de Janeiro"
@@ -218,28 +218,28 @@ export function HeroSection({
         <div
           className={`absolute inset-0 ${
             isDark
-              ? 'bg-gradient-to-b from-[#06101B]/70 via-[#0A1D30]/50 to-[#07111C]'
-              : 'bg-gradient-to-b from-[#0A2036]/70 via-[#123B56]/45 to-[#F8F5EF]'
+              ? 'bg-gradient-to-b from-[#06101B]/45 via-[#08192B]/25 to-[#07111C]/75'
+              : 'bg-gradient-to-b from-[#071829]/40 via-[#0A2036]/20 to-[#0C2742]/55'
           }`}
         />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#F7931E]">
+              <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#F7931E] [text-shadow:0_1px_4px_rgba(0,0,0,0.45)]">
                 <Sparkles className="h-3 w-3" />
                 {greeting}
               </p>
-              <h1 className="mt-1 text-2xl font-bold leading-snug tracking-tight text-white drop-shadow-sm sm:text-4xl">
+              <h1 className="mt-1 text-2xl font-bold leading-snug tracking-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.4)] sm:text-4xl">
                 A cidade acontece.
                 <br />
                 Você aproveita.
               </h1>
             </div>
 
-            {/* Compact 3-Pill Status Panel (sem inflar altura vertical nem simular preço fixo) */}
+            {/* Compact 3-Pill Status Panel with Translucent Frosted Glass */}
             <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#0A1E30]/60 px-2.5 py-1 text-[11px] font-medium text-[#F1E8D8] backdrop-blur-md">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">
                 {weather?.source === 'open-meteo-live' ? (
                   <>
                     {weather.isRaining ? (
@@ -253,7 +253,7 @@ export function HeroSection({
                   </>
                 ) : (
                   <>
-                    <Sun className="h-3.5 w-3.5 text-white/60" />
+                    <Sun className="h-3.5 w-3.5 text-white/75" />
                     <span>Clima indisponível</span>
                   </>
                 )}
@@ -264,11 +264,11 @@ export function HeroSection({
                 onClick={() =>
                   setActivePillInfo((prev) => (prev === 'deboa' ? null : 'deboa'))
                 }
-                className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-[#0A1E30]/60 px-2.5 py-1 text-[11px] font-medium text-[#F1E8D8] backdrop-blur-md hover:border-[#F7931E]"
+                className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]"
               >
                 <Activity className="h-3 w-3 text-[#4CA188]" />
                 <span>{deBoa.label}</span>
-                <Info className="h-3 w-3 opacity-70" />
+                <Info className="h-3 w-3 opacity-80" />
               </button>
 
               <button
@@ -276,17 +276,17 @@ export function HeroSection({
                 onClick={() =>
                   setActivePillInfo((prev) => (prev === 'mobility' ? null : 'mobility'))
                 }
-                className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-[#0A1E30]/60 px-2.5 py-1 text-[11px] font-medium text-[#F1E8D8] backdrop-blur-md hover:border-[#F7931E]"
+                className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]"
               >
                 <Car className="h-3 w-3 text-[#FF6B35]" />
                 <span>{locationConsent ? 'Rotas via GPS' : 'Uber / Rotas sob demanda'}</span>
-                <Info className="h-3 w-3 opacity-70" />
+                <Info className="h-3 w-3 opacity-80" />
               </button>
             </div>
           </div>
 
           {activePillInfo && (
-            <div className="mt-2.5 flex items-start justify-between gap-2 rounded-2xl border border-white/20 bg-[#0A1E30]/85 px-3.5 py-2.5 text-[11px] text-[#F1E8D8] backdrop-blur-md">
+            <div className="mt-2.5 flex items-start justify-between gap-2 rounded-2xl border border-white/30 bg-white/15 px-3.5 py-2.5 text-[11px] font-medium text-white shadow-lg backdrop-blur-xl [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
               <p>
                 {activePillInfo === 'deboa'
                   ? deBoa.detail
@@ -296,7 +296,7 @@ export function HeroSection({
                 type="button"
                 onClick={() => setActivePillInfo(null)}
                 aria-label="Fechar explicação"
-                className="shrink-0 text-white/70 hover:text-white"
+                className="shrink-0 text-white/80 hover:text-white"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -313,10 +313,10 @@ export function HeroSection({
                   key={m.id}
                   type="button"
                   onClick={() => onChange({ ...filters, momentMode: m.id })}
-                  className={`flex min-w-[70px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-3.5 py-2.5 text-xs font-semibold transition-all backdrop-blur-md sm:min-w-[82px] ${
+                  className={`flex min-w-[70px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-3.5 py-2.5 text-xs font-semibold backdrop-blur-md transition-all sm:min-w-[82px] ${
                     active
-                      ? 'border-transparent bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-lg shadow-[#FF4B2B]/25'
-                      : 'border-white/25 bg-[#0A1E30]/55 text-white/95 hover:bg-[#0A1E30]/75'
+                      ? 'border-white/25 bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-lg shadow-[#FF4B2B]/25'
+                      : 'border-white/30 bg-white/15 text-white shadow-[0_6px_20px_rgba(0,0,0,0.14)] hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -331,8 +331,8 @@ export function HeroSection({
               onClick={() => setShowFiltersPanel((prev) => !prev)}
               className={`flex h-[58px] w-14 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-md transition ${
                 showFiltersPanel || activeFilterCount > 0
-                  ? 'border-[#FF6B35] bg-[#FF6B35]/30 text-white'
-                  : 'border-white/25 bg-[#0A1E30]/55 text-white/95 hover:bg-[#0A1E30]/75'
+                  ? 'border-[#FF6B35] bg-[#FF6B35]/35 text-white shadow-lg'
+                  : 'border-white/30 bg-white/15 text-white shadow-[0_6px_20px_rgba(0,0,0,0.14)] hover:border-white/50 hover:bg-white/25'
               }`}
             >
               <MoreHorizontal className="h-5 w-5" />
@@ -343,7 +343,7 @@ export function HeroSection({
 
       {/* 2. BARRA DE INTENÇÃO DA IA ("O que você quer viver hoje?") */}
       <div className="relative z-20 mx-auto -mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 p-2 shadow-lg backdrop-blur-xl">
+        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 p-2 shadow-lg backdrop-blur-xl">
           <div className="flex min-w-0 items-center gap-2 px-1">
             <Search className="h-4.5 w-4.5 shrink-0 text-[var(--text-secondary)]" />
 
@@ -525,7 +525,7 @@ export function HeroSection({
         </div>
 
         {/* Direct Access Bar to Cofre de Intenções */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-xs shadow-xs">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 px-3.5 py-2.5 text-xs shadow-xs backdrop-blur-md">
           <button
             type="button"
             onClick={onOpenVault}

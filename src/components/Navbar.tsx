@@ -16,7 +16,7 @@ import {
   WifiOff,
   Zap,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AppRoute } from '../services/router';
 import type { NotificationItem } from '../types/experience';
 import { BrandLogo } from './BrandLogo';
@@ -37,6 +37,7 @@ interface NavbarProps {
   isOnline?: boolean;
   canInstallPwa?: boolean;
   onInstallPwa?: () => void;
+  overlayHero?: boolean;
 }
 
 const MAIN_TABS: Array<{
@@ -66,27 +67,52 @@ export function Navbar({
   isOnline = true,
   canInstallPwa = false,
   onInstallPwa,
+  overlayHero = false,
 }: NavbarProps) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 36);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const isOverHero = overlayHero && !isScrolled;
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
+      <header
+        className={`${
+          overlayHero ? 'fixed inset-x-0 top-0' : 'sticky top-0'
+        } z-40 w-full transition-all duration-300 ${
+          isOverHero
+            ? 'border-b border-transparent bg-gradient-to-b from-[#061524]/35 via-[#061524]/10 to-transparent'
+            : 'border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 shadow-xs backdrop-blur-xl'
+        }`}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-2.5 sm:gap-3 sm:px-6 lg:px-8">
           {/* Brand */}
-          <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               onClick={() => onNavigateRoute('/')}
               title="Ir para a página inicial do BoraRio"
               className="group flex shrink-0 items-center text-left focus:outline-none"
             >
-              <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
+              <BrandLogo variant="horizontal" size="md" onDark={isDark || isOverHero} />
             </button>
             {!isOnline && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-300">
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  isOverHero
+                    ? 'border border-amber-300/35 bg-amber-500/20 text-amber-100 backdrop-blur-md'
+                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-300'
+                }`}
+              >
                 <WifiOff className="h-3 w-3" />
                 Offline
               </span>
@@ -96,7 +122,11 @@ export function Navbar({
           {/* Desktop 5-Tab Navigation */}
           <nav
             aria-label="Navegação principal desktop"
-            className="hidden items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-1 lg:flex"
+            className={`hidden items-center gap-1 rounded-full border p-1 transition-all lg:flex ${
+              isOverHero
+                ? 'border-white/30 bg-white/14 shadow-[0_4px_18px_rgba(0,0,0,0.12)] backdrop-blur-md'
+                : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)]'
+            }`}
           >
             {MAIN_TABS.map((tab) => {
               const Icon = tab.icon;
@@ -110,7 +140,9 @@ export function Navbar({
                   className={`relative inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
                     active
                       ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      : isOverHero
+                        ? 'text-white/90 hover:bg-white/15 hover:text-white'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -134,7 +166,11 @@ export function Navbar({
             <button
               type="button"
               onClick={() => onSelectTab('profile')}
-              className="hidden items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 text-xs font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35] sm:inline-flex"
+              className={`hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition sm:inline-flex ${
+                isOverHero
+                  ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                  : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]'
+              }`}
             >
               <Award className="h-3.5 w-3.5 text-[#F7931E]" />
               <span>{pointsBalance.toLocaleString('pt-BR')} pts</span>
@@ -151,7 +187,11 @@ export function Navbar({
                   setShowNotifs(next);
                   if (next && unreadCount > 0) onMarkNotificationsRead();
                 }}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
+                className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                  isOverHero
+                    ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                    : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
+                }`}
               >
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
@@ -162,7 +202,7 @@ export function Navbar({
               </button>
 
               {showNotifs && (
-                <div className="absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-xl sm:w-80">
+                <div className="absolute right-0 mt-2 w-72 overflow-hidden rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/92 shadow-xl backdrop-blur-xl sm:w-80">
                   <div className="flex items-center justify-between border-b border-[var(--border-hairline)] px-4 py-3">
                     <p className="text-xs font-bold text-[var(--text-primary)]">
                       Central de Notificações
@@ -197,9 +237,17 @@ export function Navbar({
               onClick={onToggleTheme}
               title={isDark ? 'Modo Rio de dia' : 'Modo Rio à noite'}
               aria-label="Alternar tema Rio de dia / Rio à noite"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
+              className={`flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                isOverHero
+                  ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                  : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
+              }`}
             >
-              {isDark ? <Sun className="h-4 w-4 text-[#F7931E]" /> : <Moon className="h-4 w-4 text-[#123B56]" />}
+              {isDark ? (
+                <Sun className="h-4 w-4 text-[#F7931E]" />
+              ) : (
+                <Moon className={`h-4 w-4 ${isOverHero ? 'text-white' : 'text-[#123B56]'}`} />
+              )}
             </button>
 
             {activeTab === 'admin' ? (
@@ -221,13 +269,17 @@ export function Navbar({
                     setShowNotifs(false);
                     setShowMoreMenu((prev) => !prev);
                   }}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] transition-colors hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]"
+                  className={`flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+                    isOverHero
+                      ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                      : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
+                  }`}
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
 
                 {showMoreMenu && (
-                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-1.5 shadow-xl">
+                  <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/92 p-1.5 shadow-xl backdrop-blur-xl">
                     <div className="px-3 py-2 text-[11px] font-semibold text-[var(--text-secondary)]">
                       {totalCount} locais no catálogo · {pointsBalance} pts
                     </div>

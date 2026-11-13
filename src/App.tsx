@@ -345,6 +345,7 @@ export function App() {
         isOnline={isOnline}
         canInstallPwa={canInstall}
         onInstallPwa={() => void promptInstall()}
+        overlayHero={effectiveTab === 'discover'}
       />
 
       {effectiveTab === 'admin' && (

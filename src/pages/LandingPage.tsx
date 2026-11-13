@@ -53,41 +53,75 @@ export function LandingPage({
 }: LandingPageProps) {
   const [weather, setWeather] = useState<RioWeatherSnapshot | null>(null);
   const [legalModal, setLegalModal] = useState<'terms' | 'privacy' | 'about' | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     fetchRioWeatherLive().then(setWeather).catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 36);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const isOverHero = !isScrolled;
+
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 backdrop-blur-md">
+      <header
+        className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
+          isOverHero
+            ? 'border-b border-transparent bg-gradient-to-b from-[#061524]/35 via-[#061524]/10 to-transparent'
+            : 'border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 shadow-xs backdrop-blur-xl'
+        }`}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <button
             type="button"
             onClick={() => onNavigate('/')}
             className="flex items-center gap-2 text-left"
           >
-            <BrandLogo variant="horizontal" size="md" onDark={isDark} />
+            <BrandLogo variant="horizontal" size="md" onDark={isDark || isOverHero} />
           </button>
 
-          <nav className="hidden items-center gap-6 text-sm font-semibold text-[var(--text-secondary)] md:flex">
-            <a href="#descubra" className="hover:text-[var(--text-primary)]">
+          <nav
+            className={`hidden items-center gap-5 text-sm font-semibold transition-all md:flex ${
+              isOverHero
+                ? 'rounded-full border border-white/30 bg-white/14 px-5 py-1.5 text-white/95 shadow-[0_4px_18px_rgba(0,0,0,0.12)] backdrop-blur-md'
+                : 'text-[var(--text-secondary)]'
+            }`}
+          >
+            <a
+              href="#descubra"
+              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+            >
               Descubra
             </a>
-            <a href="#inteligencia" className="hover:text-[var(--text-primary)]">
+            <a
+              href="#inteligencia"
+              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+            >
               Seu Rio, agora
             </a>
-            <a href="#planeje" className="hover:text-[var(--text-primary)]">
+            <a
+              href="#planeje"
+              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+            >
               Planejador IA
             </a>
-            <a href="#club" className="hover:text-[var(--text-primary)]">
+            <a
+              href="#club"
+              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+            >
               Bora Club
             </a>
             <button
               type="button"
               onClick={() => onNavigate('/parceiros')}
-              className="hover:text-[var(--text-primary)]"
+              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
             >
               Para Estabelecimentos
             </button>
@@ -98,9 +132,17 @@ export function LandingPage({
               type="button"
               onClick={onToggleTheme}
               title={isDark ? 'Mudar para Rio de dia' : 'Mudar para Rio à noite'}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF765E]"
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                isOverHero
+                  ? 'border-white/30 bg-white/14 text-white backdrop-blur-md hover:border-white/50 hover:bg-white/24'
+                  : 'border-[var(--border-hairline)] bg-[var(--bg-subtle)] text-[var(--text-primary)] hover:border-[#FF765E]'
+              }`}
             >
-              {isDark ? <Sun className="h-3.5 w-3.5 text-[#FF765E]" /> : <Moon className="h-3.5 w-3.5 text-[#123B56]" />}
+              {isDark ? (
+                <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
+              ) : (
+                <Moon className={`h-3.5 w-3.5 ${isOverHero ? 'text-white' : 'text-[#123B56]'}`} />
+              )}
               <span className="hidden sm:inline">{isDark ? 'Rio de dia' : 'Rio à noite'}</span>
             </button>
 
@@ -126,25 +168,25 @@ export function LandingPage({
         <div
           className={`absolute inset-0 ${
             isDark
-              ? 'bg-gradient-to-b from-[#06101B]/85 via-[#0A1D30]/75 to-[#07111C]'
-              : 'bg-gradient-to-b from-[#0A2036]/80 via-[#123B56]/65 to-[#0F2A42]/90'
+              ? 'bg-gradient-to-b from-[#06101B]/55 via-[#0A1D30]/40 to-[#07111C]/85'
+              : 'bg-gradient-to-b from-[#071829]/45 via-[#0D2B45]/30 to-[#0A1E30]/65'
           }`}
         />
-        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:px-8 lg:py-24">
+        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-28 sm:px-6 sm:pt-32 lg:grid-cols-12 lg:px-8 lg:pb-24 lg:pt-36">
           <div className="lg:col-span-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-[#F1E8D8] backdrop-blur-md">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">
               <Sparkles className="h-3.5 w-3.5 text-[#F7931E]" />
               Superapp de Experiências & Concierge do Rio de Janeiro
             </div>
 
             <h1 className="font-sans mt-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              A cidade acontece.{' '}
-              <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent">
+              <span className="[text-shadow:0_2px_10px_rgba(0,0,0,0.4)]">A cidade acontece.</span>{' '}
+              <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
                 Você aproveita.
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#F1E8D8]/95 sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#F1E8D8]/95 [text-shadow:0_1px_4px_rgba(0,0,0,0.35)] sm:text-lg">
               Do almoço de família em Santa Teresa ao rooftop no Leblon, passando por shows,
               museus e roteiros inteligentes que se adaptam ao clima do Rio em tempo real.
             </p>
@@ -162,7 +204,7 @@ export function LandingPage({
               <button
                 type="button"
                 onClick={() => onNavigate('/parceiros')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/15 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/25"
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/15 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]"
               >
                 <Building2 className="h-4 w-4" />
                 Para Estabelecimentos
@@ -172,7 +214,7 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onInstallPwa}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-[#397B68] bg-[#397B68]/40 px-4 py-3.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-[#397B68]/60"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-[#4CA188]/50 bg-[#397B68]/35 px-4 py-3.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-[#397B68]/55"
                 >
                   <Smartphone className="h-4 w-4" />
                   Instalar PWA
@@ -180,7 +222,7 @@ export function LandingPage({
               )}
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-[#F1E8D8]/90">
+            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-[#F1E8D8]/95 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]">
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-[#4CA188]" />
                 {totalExperiences}+ locais e experiências no catálogo
@@ -198,20 +240,20 @@ export function LandingPage({
 
           {/* Visual App Preview Card */}
           <div className="lg:col-span-5">
-            <div className="rounded-3xl border border-white/20 bg-[#0A1E30]/75 p-5 shadow-2xl backdrop-blur-xl">
-              <div className="flex items-center justify-between border-b border-white/15 pb-3">
+            <div className="rounded-3xl border border-white/30 bg-white/14 p-5 shadow-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-white/20 pb-3">
                 <BrandLogo variant="horizontal" size="sm" onDark />
-                <span className="rounded-full bg-[#397B68]/40 px-2.5 py-1 text-[11px] font-semibold text-[#A7E3CE]">
+                <span className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
                   {weather ? `${weather.temperatureC}°C · ${weather.weatherLabel}` : 'Rio ao vivo'}
                 </span>
               </div>
 
               <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-white/10 p-3.5">
+                <div className="rounded-2xl border border-white/20 bg-[#0A1E30]/25 p-3.5 backdrop-blur-md">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-[#F7931E]">
                     Seu Rio, agora
                   </p>
-                  <p className="mt-1 text-sm font-medium text-white">
+                  <p className="mt-1 text-sm font-medium text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.4)]">
                     {weather
                       ? `${weather.isRaining ? 'Dia chuvoso — Modo Chuva ativado com locais cobertos.' : 'Tempo firme para rooftops, praias e passeios ao ar livre.'}`
                       : 'Clima em tempo real integrado via Open-Meteo.'}
@@ -219,15 +261,15 @@ export function LandingPage({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-[#102F46]/90 p-3.5">
+                  <div className="rounded-2xl border border-white/20 bg-[#0A1E30]/25 p-3.5 backdrop-blur-md">
                     <UtensilsCrossed className="h-5 w-5 text-[#FF6B35]" />
-                    <p className="mt-2 text-xs font-bold text-white">Gastronomia</p>
-                    <p className="mt-0.5 text-[11px] text-[#B4C2CB]">Botecos, bistrôs &amp; alta cozinha</p>
+                    <p className="mt-2 text-xs font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">Gastronomia</p>
+                    <p className="mt-0.5 text-[11px] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">Botecos, bistrôs &amp; alta cozinha</p>
                   </div>
-                  <div className="rounded-2xl bg-[#102F46]/90 p-3.5">
+                  <div className="rounded-2xl border border-white/20 bg-[#0A1E30]/25 p-3.5 backdrop-blur-md">
                     <Vote className="h-5 w-5 text-[#4CA188]" />
-                    <p className="mt-2 text-xs font-bold text-white">Onde Vamos?</p>
-                    <p className="mt-0.5 text-[11px] text-[#B4C2CB]">Votação em grupo + dividir conta</p>
+                    <p className="mt-2 text-xs font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">Onde Vamos?</p>
+                    <p className="mt-0.5 text-[11px] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">Votação em grupo + dividir conta</p>
                   </div>
                 </div>
 

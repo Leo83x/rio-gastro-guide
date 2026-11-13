@@ -9,9 +9,9 @@ interface BrandLogoProps {
 }
 
 const PNG_HEIGHTS = {
-  sm: 'h-7 sm:h-8',
-  md: 'h-8 sm:h-9',
-  lg: 'h-10 sm:h-12',
+  sm: 'h-10 sm:h-12',
+  md: 'h-11 sm:h-14',
+  lg: 'h-14 sm:h-16',
 };
 
 export function BrandLogo({
@@ -22,12 +22,12 @@ export function BrandLogo({
   className = '',
 }: BrandLogoProps) {
   if (variant === 'symbol') {
-    const dim = size === 'sm' ? 'h-8 w-8' : size === 'lg' ? 'h-12 w-12' : 'h-10 w-10';
+    const dim = size === 'sm' ? 'h-9 w-9' : size === 'lg' ? 'h-14 w-14' : 'h-11 w-11';
     return (
       <img
         src="/brand/borario-icon-192.png"
         alt="BoraRio"
-        className={`${dim} shrink-0 rounded-xl object-contain shadow-sm ${className}`}
+        className={`${dim} shrink-0 rounded-xl object-contain ${className}`}
       />
     );
   }
@@ -36,15 +36,7 @@ export function BrandLogo({
     <img
       src={logoPng}
       alt="BoraRio"
-      style={
-        onDark
-          ? {
-              filter:
-                'brightness(1.2) drop-shadow(0 0 1px rgba(255,255,255,0.85)) drop-shadow(0 2px 8px rgba(255,255,255,0.2))',
-            }
-          : undefined
-      }
-      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain transition duration-200`}
+      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain`}
     />
   );
 
