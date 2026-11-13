@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg-canvas: #faf8f5;
+    --bg-surface: #ffffff;
+    --bg-subtle: #f3efe8;
+    --text-primary: #1c1917;
+    --text-secondary: #6e655e;
+    --border-hairline: #e7e0d6;
+    --accent-terracotta: #e05a47;
+    --accent-gold: #d49b27;
+  }
+
+  .dark {
+    --bg-canvas: #0f1115;
+    --bg-surface: #171a21;
+    --bg-subtle: #1e222b;
+    --text-primary: #f5f2eb;
+    --text-secondary: #9ca3af;
+    --border-hairline: #272b36;
+    --accent-terracotta: #e05a47;
+    --accent-gold: #e5b342;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-editorial {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+/* Hide scrollbar for horizontal neighborhood pills */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Leaflet map container fix */
+.leaflet-container {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  z-index: 1;
+}
