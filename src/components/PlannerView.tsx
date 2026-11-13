@@ -3,6 +3,7 @@ import {
   Check,
   CloudRain,
   Copy,
+  MapPin,
   Sparkles,
   Sun,
   ThumbsDown,
@@ -14,6 +15,7 @@ import { fetchRioWeatherLive, type RioWeatherSnapshot } from '../services/integr
 import { getGroupVoteSession, saveGroupVoteSession } from '../services/superappStore';
 import type { GroupVoteSession } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
+import { MultiPinMap } from './MultiPinMap';
 
 interface PlannerViewProps {
   experiences: Restaurant[];
@@ -161,6 +163,25 @@ export function PlannerView({ experiences, onSelectExperience }: PlannerViewProp
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      {/* Section 0: Interactive Rio Map */}
+      <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
+        <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+          <div>
+            <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#397B68]">
+              <MapPin className="h-3.5 w-3.5" />
+              Mapa Interativo do Rio
+            </p>
+            <h2 className="font-editorial mt-1 text-2xl font-bold text-[var(--text-primary)]">
+              Explore experiências geolocalizadas
+            </h2>
+          </div>
+          <span className="text-xs text-[var(--text-secondary)]">
+            OpenStreetMap &amp; Leaflet · Clique em um pino para abrir detalhes
+          </span>
+        </div>
+        <MultiPinMap experiences={experiences} onSelectExperience={onSelectExperience} />
+      </section>
+
       {/* Section 1: AI Day Itinerary Generator */}
       <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">

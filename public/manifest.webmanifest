@@ -1,0 +1,27 @@
+{
+  "name": "BoraRio — Superapp de Experiências do Rio",
+  "short_name": "BoraRio",
+  "description": "A cidade acontece. Você aproveita. Gastronomia, eventos, roteiros com IA e Rio Gastro Club no Rio de Janeiro.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#102F46",
+  "theme_color": "#123B56",
+  "lang": "pt-BR",
+  "categories": ["food", "travel", "lifestyle", "entertainment"],
+  "icons": [
+    {
+      "src": "/brand/borario-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/borario-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

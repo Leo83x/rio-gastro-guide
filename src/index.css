@@ -3,25 +3,42 @@
 
 @layer base {
   :root {
-    --bg-canvas: #faf8f5;
-    --bg-surface: #ffffff;
-    --bg-subtle: #f3efe8;
-    --text-primary: #1c1917;
-    --text-secondary: #6e655e;
-    --border-hairline: #e7e0d6;
-    --accent-terracotta: #e05a47;
-    --accent-gold: #d49b27;
+    /* BoraRio Official Palette */
+    --br-ocean: #123B56;
+    --br-deep: #102F46;
+    --br-coral: #FF765E;
+    --br-mata: #397B68;
+    --br-sand: #F1E8D8;
+    --br-white: #FFFFFF;
+    --br-gray: #82919A;
+
+    /* Light Mode ("Rio de dia") */
+    --bg-canvas: #F8F5EF;
+    --bg-surface: #FFFFFF;
+    --bg-subtle: #F1E8D8;
+    --bg-elevated: #FFFFFF;
+    --text-primary: #102F46;
+    --text-secondary: #5B6B76;
+    --border-hairline: #E5DDD0;
+    --accent-terracotta: #FF765E;
+    --accent-ocean: #123B56;
+    --accent-mata: #397B68;
+    --accent-gold: #D49B27;
   }
 
   .dark {
-    --bg-canvas: #0f1115;
-    --bg-surface: #171a21;
-    --bg-subtle: #1e222b;
-    --text-primary: #f5f2eb;
-    --text-secondary: #9ca3af;
-    --border-hairline: #272b36;
-    --accent-terracotta: #e05a47;
-    --accent-gold: #e5b342;
+    /* Dark Mode ("Rio à noite") */
+    --bg-canvas: #0A1824;
+    --bg-surface: #102F46;
+    --bg-subtle: #123B56;
+    --bg-elevated: #153750;
+    --text-primary: #FFFFFF;
+    --text-secondary: #B4C2CB;
+    --border-hairline: #1E4663;
+    --accent-terracotta: #FF765E;
+    --accent-ocean: #1D557A;
+    --accent-mata: #4CA188;
+    --accent-gold: #E5B342;
   }
 
   html {
@@ -45,7 +62,20 @@
   }
 }
 
-/* Hide scrollbar for horizontal neighborhood pills */
+/* BoraRio signature gradients */
+.bg-borario-day {
+  background: linear-gradient(135deg, #123B56 0%, #1B5276 52%, #FF765E 120%);
+}
+
+.bg-borario-night {
+  background: linear-gradient(135deg, #07131D 0%, #102F46 55%, #123B56 100%);
+}
+
+.bg-borario-coral {
+  background: linear-gradient(135deg, #FF765E 0%, #F25C43 100%);
+}
+
+/* Hide scrollbar for horizontal chips */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

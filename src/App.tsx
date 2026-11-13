@@ -2,8 +2,10 @@ import { UtensilsCrossed } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminPanel } from './components/AdminPanel';
 import { AgendaView } from './components/AgendaView';
+import { BrandLogo } from './components/BrandLogo';
 import { ClubView } from './components/ClubView';
 import { ConciergeWidget } from './components/ConciergeWidget';
+import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
 import { calculateMatchScore, PersonalizeModal } from './components/PersonalizeModal';
@@ -11,7 +13,12 @@ import { PlannerView } from './components/PlannerView';
 import { ProfileWalletView } from './components/ProfileWalletView';
 import { RestaurantCard } from './components/RestaurantCard';
 import { RestaurantDetailModal } from './components/RestaurantDetailModal';
+import { LandingPage } from './pages/LandingPage';
+import { PartnerDashboard } from './pages/PartnerDashboard';
+import { PartnersLandingPage } from './pages/PartnersLandingPage';
 import { getAllRestaurants, getClaimRequests } from './services/database';
+import { usePwaStatus } from './services/pwa';
+import { useAppRoute } from './services/router';
 import {
   getNotifications,
   getPointsBalance,
@@ -24,6 +31,9 @@ import type { NotificationItem, ReservationRequest, UserPreferences } from './ty
 import type { ClaimRequest, Restaurant, RestaurantCategory } from './types/restaurant';
 
 export function App() {
+  const [route, navigate] = useAppRoute();
+  const { isOnline, canInstall, promptInstall } = usePwaStatus();
+
   const [activeTab, setActiveTab] = useState<AppTab>('discover');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [claims, setClaims] = useState<ClaimRequest[]>([]);
@@ -39,7 +49,10 @@ export function App() {
 
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('rio_gastro_theme') === 'dark';
+      const saved = localStorage.getItem('rio_gastro_theme');
+      if (saved === 'dark') return true;
+      if (saved === 'light') return false;
+      return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
     } catch {
       return false;
     }
@@ -155,20 +168,77 @@ export function App() {
     setPreferences(next);
   };
 
+  // 1. Public Landing Page (/)
+  if (route === '/') {
+    return (
+      <LandingPage
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((prev) => !prev)}
+        onNavigate={navigate}
+        totalExperiences={restaurants.length}
+        canInstallPwa={canInstall}
+        onInstallPwa={() => void promptInstall()}
+      />
+    );
+  }
+
+  // 2. Partners Commercial Landing (/parceiros)
+  if (route === '/parceiros') {
+    return (
+      <PartnersLandingPage
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((prev) => !prev)}
+        onNavigate={navigate}
+      />
+    );
+  }
+
+  // 3. Independent Partner Dashboard (/parceiros/painel)
+  if (route === '/parceiros/painel') {
+    return (
+      <PartnerDashboard
+        restaurants={restaurants}
+        reservations={reservations}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((prev) => !prev)}
+        onNavigate={navigate}
+        onDatabaseUpdated={loadData}
+      />
+    );
+  }
+
+  const effectiveTab: AppTab = route === '/admin' ? 'admin' : activeTab;
+  const showEditorialDiscover =
+    effectiveTab === 'discover' &&
+    !filters.search &&
+    !filters.neighborhood &&
+    !filters.category &&
+    !filters.macroCategory &&
+    filters.momentMode === 'all' &&
+    !filters.priceRange &&
+    filters.minRating === 0;
+
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] pb-16 text-[var(--text-primary)] lg:pb-0">
       <Navbar
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        activeTab={effectiveTab}
+        onSelectTab={(tab) => {
+          if (route === '/admin') navigate('/app');
+          setActiveTab(tab);
+        }}
+        onNavigateRoute={navigate}
         isDark={isDark}
         onToggleTheme={() => setIsDark((prev) => !prev)}
         totalCount={restaurants.length}
         pointsBalance={pointsBalance}
         notifications={notifications}
         onMarkNotificationsRead={() => setNotifications(markAllNotificationsRead())}
+        isOnline={isOnline}
+        canInstallPwa={canInstall}
+        onInstallPwa={() => void promptInstall()}
       />
 
-      {activeTab === 'admin' && (
+      {effectiveTab === 'admin' && (
         <AdminPanel
           restaurants={restaurants}
           claims={claims}
@@ -177,7 +247,7 @@ export function App() {
         />
       )}
 
-      {activeTab === 'discover' && (
+      {effectiveTab === 'discover' && (
         <>
           <HeroSection
             filters={filters}
@@ -189,6 +259,18 @@ export function App() {
           />
 
           <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            {showEditorialDiscover && !loading && (
+              <DiscoverEditorialSections
+                experiences={restaurants}
+                locationConsent={preferences.lgpd_consents.location}
+                onSelectExperience={setSelectedRestaurant}
+                onSelectMacroCategory={(cat) => setFilters({ ...filters, macroCategory: cat })}
+                onGoToExploreMap={() => setActiveTab('planner')}
+                onGoToClub={() => setActiveTab('club')}
+                onGoToPlanner={() => setActiveTab('planner')}
+              />
+            )}
+
             {loading ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, idx) => (
@@ -200,7 +282,7 @@ export function App() {
               </div>
             ) : filteredRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-6 py-16 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#E05A47]/15 text-[#E05A47]">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#FF765E]/15 text-[#FF765E]">
                   <UtensilsCrossed className="h-6 w-6" />
                 </div>
                 <h2 className="font-editorial mt-4 text-2xl font-bold text-[var(--text-primary)]">
@@ -215,8 +297,8 @@ export function App() {
                   {restaurants.length === 0 ? (
                     <button
                       type="button"
-                      onClick={() => setActiveTab('admin')}
-                      className="rounded-xl bg-[#E05A47] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#c84b39]"
+                      onClick={() => navigate('/admin')}
+                      className="rounded-xl bg-[#FF765E] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#e8634c]"
                     >
                       Abrir Painel Admin
                     </button>
@@ -235,7 +317,7 @@ export function App() {
                           onlyFeatured: false,
                         })
                       }
-                      className="rounded-xl bg-[#E05A47] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#c84b39]"
+                      className="rounded-xl bg-[#FF765E] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#e8634c]"
                     >
                       Ver todas as experiências
                     </button>
@@ -243,37 +325,42 @@ export function App() {
                 </div>
               </div>
             ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredRestaurants.map((restaurant, idx) => (
-                  <RestaurantCard
-                    key={restaurant.id}
-                    restaurant={restaurant}
-                    index={idx}
-                    matchScore={calculateMatchScore(restaurant, preferences)}
-                    onSelect={setSelectedRestaurant}
-                  />
-                ))}
+              <div>
+                <h2 className="font-editorial mb-4 text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
+                  {showEditorialDiscover ? 'Em alta no Rio' : 'Resultados para você'}
+                </h2>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredRestaurants.map((restaurant, idx) => (
+                    <RestaurantCard
+                      key={restaurant.id}
+                      restaurant={restaurant}
+                      index={idx}
+                      matchScore={calculateMatchScore(restaurant, preferences)}
+                      onSelect={setSelectedRestaurant}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </main>
         </>
       )}
 
-      {activeTab === 'planner' && (
+      {effectiveTab === 'planner' && (
         <PlannerView
           experiences={restaurants}
           onSelectExperience={setSelectedRestaurant}
         />
       )}
 
-      {activeTab === 'club' && (
+      {effectiveTab === 'club' && (
         <ClubView
           experiences={restaurants}
           onSelectExperience={setSelectedRestaurant}
         />
       )}
 
-      {activeTab === 'agenda' && (
+      {effectiveTab === 'agenda' && (
         <AgendaView
           experiences={restaurants}
           reservations={reservations}
@@ -282,7 +369,7 @@ export function App() {
         />
       )}
 
-      {activeTab === 'profile' && (
+      {effectiveTab === 'profile' && (
         <ProfileWalletView
           experiences={restaurants}
           preferences={preferences}
@@ -295,18 +382,26 @@ export function App() {
       )}
 
       <footer className="mt-16 border-t border-[var(--border-hairline)] bg-[var(--bg-surface)] py-8">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 text-xs text-[var(--text-secondary)] sm:flex-row sm:px-6 lg:px-8">
-          <p>
-            <strong className="font-editorial text-sm text-[var(--text-primary)]">
-              Rio Gastro Guide
-            </strong>{' '}
-            · Superapp de Experiências e Concierge do Rio de Janeiro.
-          </p>
-          <p>Mapas OpenStreetMap &amp; Leaflet · Clima Open-Meteo · Persistência Híbrida</p>
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-xs text-[var(--text-secondary)] sm:flex-row sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
+            <span>· A cidade acontece. Você aproveita.</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <button type="button" onClick={() => navigate('/')} className="hover:text-[#FF765E]">
+              Site Institucional
+            </button>
+            <button type="button" onClick={() => navigate('/parceiros')} className="hover:text-[#FF765E]">
+              Área de Parceiros
+            </button>
+            <button type="button" onClick={() => navigate('/admin')} className="hover:text-[#FF765E]">
+              Administração
+            </button>
+          </div>
         </div>
       </footer>
 
-      {activeTab !== 'admin' && (
+      {effectiveTab !== 'admin' && (
         <ConciergeWidget
           experiences={restaurants}
           onSelectExperience={setSelectedRestaurant}
