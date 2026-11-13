@@ -37,6 +37,7 @@ export interface Restaurant {
   is_claimed: boolean;
   is_featured: boolean;
   created_at?: string;
+  source_updated_at?: string;
 }
 
 export interface ClaimRequest {

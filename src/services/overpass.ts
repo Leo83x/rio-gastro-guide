@@ -31,6 +31,7 @@ interface OverpassElement {
   id: number;
   lat?: number;
   lon?: number;
+  timestamp?: string;
   center?: { lat: number; lon: number };
   tags?: Record<string, string>;
 }
@@ -182,7 +183,29 @@ out center 45;
 
   onProgress?.('Enriquecendo fotos, categorias e descrições editoriais...');
 
-  const elements = (responseData.elements || []).filter((el) => el.tags?.name);
+  const elements = (responseData.elements || [])
+    .filter((el) => {
+      const t = el.tags || {};
+      if (!t.name) return false;
+      if (t['disused:amenity'] || t['abandoned:amenity'] || t.closed === 'yes' || t.end_date) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const timeA = a.timestamp ? Date.parse(a.timestamp) : 0;
+      const timeB = b.timestamp ? Date.parse(b.timestamp) : 0;
+      if (timeB !== timeA) return timeB - timeA;
+      const score = (el: OverpassElement) => {
+        const t = el.tags || {};
+        return (t.phone || t['contact:phone'] ? 1 : 0) +
+          (t.website || t['contact:website'] ? 1 : 0) +
+          (t.opening_hours ? 1 : 0) +
+          (t['addr:street'] ? 1 : 0);
+      };
+      return score(b) - score(a);
+    });
+
   const seenNames = new Set<string>();
   const results: Omit<Restaurant, 'id'>[] = [];
 
@@ -234,6 +257,7 @@ out center 45;
       opening_hours: tags.opening_hours || 'Consultar horário local',
       is_claimed: false,
       is_featured: false,
+      source_updated_at: el.timestamp,
     });
   });
 

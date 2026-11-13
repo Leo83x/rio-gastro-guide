@@ -674,6 +674,23 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
                       <p className="mt-1 px-1.5 text-[11px] text-[var(--text-secondary)]">
                         {item.data.neighborhood} · {item.data.address}
                       </p>
+                      {item.data.source_updated_at && (() => {
+                        const year = new Date(item.data.source_updated_at).getFullYear();
+                        const isOld = year < 2022;
+                        return (
+                          <span
+                            className={`mt-1.5 ml-1.5 inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                              isOld
+                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                            }`}
+                          >
+                            {isOld
+                              ? `OSM ${year} · Verificar se ativo`
+                              : `Atualizado OSM ${year}`}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 align-top">
                       <select
