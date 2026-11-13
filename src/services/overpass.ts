@@ -1,6 +1,6 @@
-import { getCuratedCoverImage, getCuratedGallery } from '../data/curatedImages';
 import type { PriceRange, Restaurant, RestaurantCategory } from '../types/restaurant';
 import { generateUUID, normalizeCategory, slugify } from '../utils/slug';
+import { evaluateRestaurantValidation } from './validator';
 
 export interface RioNeighborhoodBBox {
   name: string;
@@ -209,7 +209,7 @@ out center 45;
   const seenNames = new Set<string>();
   const results: Omit<Restaurant, 'id'>[] = [];
 
-  elements.forEach((el, index) => {
+  elements.forEach((el) => {
     const tags = el.tags || {};
     const name = (tags.name || '').trim();
     if (!name || seenNames.has(name.toLowerCase())) return;
@@ -232,8 +232,19 @@ out center 45;
       ? instagramRaw.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '').replace(/^@/, '')
       : undefined;
 
-    const rating = Number((4.2 + ((index * 7) % 7) * 0.1).toFixed(1));
-    const reviewsCount = 45 + ((index * 53) % 420);
+    const rating = 0;
+    const reviewsCount = 0;
+
+    const validation = evaluateRestaurantValidation({
+      data_source: 'openstreetmap',
+      operational_status: 'DESCONHECIDO',
+      source_updated_at: el.timestamp,
+      address,
+      phone,
+      website,
+      latitude: lat,
+      longitude: lon,
+    });
 
     results.push({
       external_id: `osm-${el.type}-${el.id}`,
@@ -245,9 +256,9 @@ out center 45;
       latitude: lat,
       longitude: lon,
       description: generateEditorialDescription(name, neighborhoodName, category, tags.cuisine),
-      cover_image: getCuratedCoverImage(category, index),
-      gallery: getCuratedGallery(category, index),
-      rating: Math.min(4.9, rating),
+      cover_image: '',
+      gallery: [],
+      rating,
       reviews_count: reviewsCount,
       price_range: estimatePriceRange(category),
       phone,
@@ -258,6 +269,16 @@ out center 45;
       is_claimed: false,
       is_featured: false,
       source_updated_at: el.timestamp,
+      data_source: 'openstreetmap',
+      is_redistribution_authorized: true,
+      validation_status: validation.validation_status,
+      operational_status: validation.operational_status,
+      confidence_level: validation.confidence_level,
+      last_verified_at: validation.last_verified_at,
+      rating_source: 'none',
+      image_origin: 'none',
+      image_license: 'Sem fotografia oficial disponível',
+      has_real_photo: false,
     });
   });
 

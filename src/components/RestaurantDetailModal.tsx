@@ -72,8 +72,10 @@ export function RestaurantDetailModal({
           <SmartImage
             src={photos[activePhotoIdx] || restaurant.cover_image}
             alt={restaurant.name}
+            name={restaurant.name}
             category={restaurant.category}
-            fallbackIndex={activePhotoIdx}
+            imageOrigin={restaurant.image_origin}
+            hasRealPhoto={restaurant.has_real_photo}
             className="h-full w-full object-cover"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -121,8 +123,11 @@ export function RestaurantDetailModal({
                 <SmartImage
                   src={photo}
                   alt={`${restaurant.name} foto ${idx + 1}`}
+                  name={restaurant.name}
                   category={restaurant.category}
-                  fallbackIndex={idx}
+                  imageOrigin={restaurant.image_origin}
+                  hasRealPhoto={restaurant.has_real_photo}
+                  compact
                   className="h-full w-full object-cover"
                 />
               </button>
@@ -135,15 +140,23 @@ export function RestaurantDetailModal({
           {/* Left Column */}
           <div className="space-y-6 lg:col-span-3">
             <div className="flex flex-wrap items-center gap-4 border-b border-[var(--border-hairline)] pb-4">
-              <div className="flex items-center gap-1.5">
-                <Star className="h-5 w-5 fill-[#E5B342] text-[#E5B342]" />
-                <span className="text-lg font-bold text-[var(--text-primary)]">
-                  {restaurant.rating.toFixed(1)}
+              {restaurant.rating > 0 && restaurant.rating_source !== 'none' ? (
+                <div className="flex items-center gap-1.5">
+                  <Star className="h-5 w-5 fill-[#E5B342] text-[#E5B342]" />
+                  <span className="text-lg font-bold text-[var(--text-primary)]">
+                    {restaurant.rating.toFixed(1)}
+                  </span>
+                  {restaurant.reviews_count > 0 && (
+                    <span className="text-sm text-[var(--text-secondary)]">
+                      ({restaurant.reviews_count.toLocaleString('pt-BR')} avaliações)
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                  Sem avaliação externa vinculada
                 </span>
-                <span className="text-sm text-[var(--text-secondary)]">
-                  ({restaurant.reviews_count.toLocaleString('pt-BR')} avaliações)
-                </span>
-              </div>
+              )}
 
               {restaurant.opening_hours && (
                 <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">

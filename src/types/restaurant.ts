@@ -13,6 +13,28 @@ export type RestaurantCategory =
 
 export type PriceRange = '$' | '$$' | '$$$' | '$$$$';
 
+export type DataSource =
+  | 'openstreetmap'
+  | 'google_places_api'
+  | 'commercial_provider'
+  | 'official_website'
+  | 'owner_submitted'
+  | 'curated_seed'
+  | 'csv_import';
+
+export type ValidationStatus = 'CONFIRMADO' | 'PENDENTE' | 'FECHADO/INVÁLIDO';
+
+export type OperationalStatus = 'OPERACIONAL' | 'DESCONHECIDO' | 'FECHADO';
+
+export type ConfidenceLevel = 'ALTA' | 'MÉDIA' | 'BAIXA';
+
+export type ImageOrigin =
+  | 'owner_authorized'
+  | 'establishment_authorized'
+  | 'commercial_licensed'
+  | 'illustrative_editorial'
+  | 'none';
+
 export interface Restaurant {
   id: string;
   external_id: string;
@@ -38,6 +60,18 @@ export interface Restaurant {
   is_featured: boolean;
   created_at?: string;
   source_updated_at?: string;
+
+  // Procedência, validação e licenciamento (retrocompatível)
+  data_source?: DataSource;
+  is_redistribution_authorized?: boolean;
+  validation_status?: ValidationStatus;
+  operational_status?: OperationalStatus;
+  confidence_level?: ConfidenceLevel;
+  last_verified_at?: string;
+  rating_source?: 'authorized_source' | 'seed_editorial' | 'none';
+  image_origin?: ImageOrigin;
+  image_license?: string;
+  has_real_photo?: boolean;
 }
 
 export interface ClaimRequest {

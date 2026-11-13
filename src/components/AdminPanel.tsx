@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Database,
   Download,
@@ -15,7 +16,7 @@ import {
   Upload,
   Users,
 } from 'lucide-react';
-import { useState, type DragEvent } from 'react';
+import { useMemo, useState, type DragEvent } from 'react';
 import {
   clearDatabase,
   exportRestaurantsAsCSV,
@@ -37,7 +38,15 @@ import {
   RIO_NEIGHBORHOODS_BBOX,
   type OverpassAmenityType,
 } from '../services/overpass';
-import type { ClaimRequest, Restaurant, RestaurantCategory } from '../types/restaurant';
+import { fetchFromGooglePlacesOfficial } from '../services/sources/googlePlaces';
+import { DATA_SOURCE_LABELS, findDuplicateInDatabase } from '../services/validator';
+import type {
+  ClaimRequest,
+  ImageOrigin,
+  Restaurant,
+  RestaurantCategory,
+  ValidationStatus,
+} from '../types/restaurant';
 import { SmartImage } from './SmartImage';
 
 interface AdminPanelProps {
@@ -47,9 +56,13 @@ interface AdminPanelProps {
 }
 
 type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims';
+type LiveSource = 'openstreetmap' | 'google_places_api';
+type StatusFilter = 'ALL' | ValidationStatus;
 
 interface StagedItem {
+  id: string;
   selected: boolean;
+  isDuplicate: boolean;
   data: Omit<Restaurant, 'id'>;
 }
 
@@ -67,19 +80,33 @@ const CATEGORIES: RestaurantCategory[] = [
   'Contemporâneo',
 ];
 
+const STATUS_BADGE_STYLES: Record<ValidationStatus, string> = {
+  CONFIRMADO: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  PENDENTE: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+  'FECHADO/INVÁLIDO': 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30',
+};
+
 export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('overpass');
   const storageMode = getStorageMode();
 
-  // Overpass State
+  // Mode 1: Multi-Source Live Extractor State
+  const [liveSource, setLiveSource] = useState<LiveSource>('openstreetmap');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('Botafogo');
   const [amenityType, setAmenityType] = useState<OverpassAmenityType>('restaurant');
+  const [googlePlacesKey, setGooglePlacesKey] = useState<string>('');
   const [geminiKey, setGeminiKey] = useState<string>('');
   const [overpassLoading, setOverpassLoading] = useState(false);
   const [overpassStatus, setOverpassStatus] = useState<string>('');
   const [overpassError, setOverpassError] = useState<string>('');
 
-  // CSV / JSON State
+  // Staging Filters
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [minRatingFilter, setMinRatingFilter] = useState<number>(0);
+  const [minReviewsFilter, setMinReviewsFilter] = useState<number>(0);
+  const [hideDuplicates, setHideDuplicates] = useState<boolean>(false);
+
+  // Mode 2: CSV / JSON State (Preserved)
   const [isDragging, setIsDragging] = useState(false);
   const [csvFileName, setCsvFileName] = useState<string>('');
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
@@ -94,24 +121,52 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 5000);
+    setTimeout(() => setToastMessage(''), 5500);
   };
 
-  // --- Overpass Handlers ---
-  const handleOverpassFetch = async () => {
+  const toStagedItems = (items: Array<Omit<Restaurant, 'id'>>): StagedItem[] => {
+    return items.map((data, idx) => {
+      const dup = findDuplicateInDatabase(data, restaurants);
+      const isClosed = data.validation_status === 'FECHADO/INVÁLIDO';
+      const isAuthorized = data.is_redistribution_authorized !== false;
+      return {
+        id: `${data.external_id}-${idx}`,
+        selected: !dup && !isClosed && isAuthorized,
+        isDuplicate: Boolean(dup),
+        data,
+      };
+    });
+  };
+
+  // --- Mode 1: Multi-Source Live Fetch ---
+  const handleLiveFetch = async () => {
     setOverpassLoading(true);
     setOverpassError('');
-    setOverpassStatus('Conectando ao OpenStreetMap...');
+    setOverpassStatus('Iniciando consulta na fonte selecionada...');
     setStaged([]);
+    setStatusFilter('ALL');
+    setMinRatingFilter(0);
+    setMinReviewsFilter(0);
 
     try {
-      let items = await fetchFromOverpass(selectedNeighborhood, amenityType, (step) => {
-        setOverpassStatus(step);
-      });
+      let items: Array<Omit<Restaurant, 'id'>> = [];
+
+      if (liveSource === 'openstreetmap') {
+        items = await fetchFromOverpass(selectedNeighborhood, amenityType, (step) => {
+          setOverpassStatus(step);
+        });
+      } else {
+        items = await fetchFromGooglePlacesOfficial(
+          selectedNeighborhood,
+          amenityType,
+          googlePlacesKey,
+          (step) => setOverpassStatus(step)
+        );
+      }
 
       if (items.length === 0) {
         setOverpassError(
-          `Nenhum estabelecimento encontrado em ${selectedNeighborhood} para este filtro. Tente "Todos" ou outro bairro.`
+          `Nenhum estabelecimento encontrado em ${selectedNeighborhood} para este filtro. Tente outro bairro ou categoria.`
         );
         setOverpassStatus('');
         return;
@@ -123,11 +178,13 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
         });
       }
 
-      setOverpassStatus(`Pronto para importar! ${items.length} estabelecimentos reais encontrados.`);
-      setStaged(items.map((data) => ({ selected: true, data })));
+      setOverpassStatus(
+        `${items.length} estabelecimentos carregados na Staging Area para revisão e validação.`
+      );
+      setStaged(toStagedItems(items));
     } catch (err) {
       setOverpassError(
-        err instanceof Error ? err.message : 'Erro inesperado ao consultar a Overpass API.'
+        err instanceof Error ? err.message : 'Erro inesperado ao consultar a fonte selecionada.'
       );
       setOverpassStatus('');
     } finally {
@@ -135,7 +192,7 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
     }
   };
 
-  // --- CSV / JSON Handlers ---
+  // --- Mode 2: CSV / JSON Handlers (Preserved) ---
   const processFile = async (file: File) => {
     setCsvError('');
     try {
@@ -150,8 +207,18 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
       setCsvRawRows(rows);
       setColumnMapping(detected);
 
-      const mapped = mapRowsToRestaurants(rows, detected);
-      setStaged(mapped.map((data) => ({ selected: true, data })));
+      const mapped = mapRowsToRestaurants(rows, detected).map((r) => ({
+        ...r,
+        data_source: 'csv_import' as const,
+        is_redistribution_authorized: true,
+        validation_status: 'PENDENTE' as const,
+        operational_status: 'DESCONHECIDO' as const,
+        confidence_level: 'MÉDIA' as const,
+        last_verified_at: new Date().toISOString(),
+        image_origin: r.cover_image ? ('commercial_licensed' as const) : ('none' as const),
+        has_real_photo: Boolean(r.cover_image),
+      }));
+      setStaged(toStagedItems(mapped));
     } catch (err) {
       setCsvError(err instanceof Error ? err.message : 'Falha ao ler o arquivo CSV/JSON.');
     }
@@ -169,18 +236,73 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
     const next = { ...columnMapping, [field]: header };
     setColumnMapping(next);
     const mapped = mapRowsToRestaurants(csvRawRows, next);
-    setStaged(mapped.map((data) => ({ selected: true, data })));
+    setStaged(toStagedItems(mapped));
   };
 
-  // --- Staging & Bulk Upsert ---
-  const selectedCount = staged.filter((s) => s.selected).length;
+  // --- Filtered Staging View ---
+  const hasAuthorizedRatings = useMemo(
+    () => staged.some((s) => s.data.rating_source === 'authorized_source'),
+    [staged]
+  );
 
-  const toggleAllStaged = (checked: boolean) => {
-    setStaged((prev) => prev.map((item) => ({ ...item, selected: checked })));
+  const filteredStaged = useMemo(() => {
+    return staged.filter((item) => {
+      const status = item.data.validation_status || 'PENDENTE';
+      if (statusFilter !== 'ALL' && status !== statusFilter) return false;
+      if (hideDuplicates && item.isDuplicate) return false;
+      if (hasAuthorizedRatings) {
+        if (minRatingFilter > 0 && item.data.rating < minRatingFilter) return false;
+        if (minReviewsFilter > 0 && item.data.reviews_count < minReviewsFilter) return false;
+      }
+      return true;
+    });
+  }, [staged, statusFilter, hideDuplicates, hasAuthorizedRatings, minRatingFilter, minReviewsFilter]);
+
+  const statusCounts = useMemo(() => {
+    let confirmados = 0;
+    let pendentes = 0;
+    let fechados = 0;
+    let duplicados = 0;
+    staged.forEach((s) => {
+      const st = s.data.validation_status || 'PENDENTE';
+      if (st === 'CONFIRMADO') confirmados++;
+      else if (st === 'FECHADO/INVÁLIDO') fechados++;
+      else pendentes++;
+      if (s.isDuplicate) duplicados++;
+    });
+    return { confirmados, pendentes, fechados, duplicados };
+  }, [staged]);
+
+  const authorizedSelectedItems = useMemo(
+    () =>
+      staged.filter(
+        (s) =>
+          s.selected &&
+          s.data.validation_status !== 'FECHADO/INVÁLIDO' &&
+          s.data.is_redistribution_authorized !== false
+      ),
+    [staged]
+  );
+
+  const toggleAllVisible = (checked: boolean) => {
+    const visibleIds = new Set(filteredStaged.map((f) => f.id));
+    setStaged((prev) =>
+      prev.map((item) => {
+        if (!visibleIds.has(item.id)) return item;
+        if (
+          checked &&
+          (item.data.validation_status === 'FECHADO/INVÁLIDO' ||
+            item.data.is_redistribution_authorized === false)
+        ) {
+          return item;
+        }
+        return { ...item, selected: checked };
+      })
+    );
   };
 
   const handleBulkUpsert = async () => {
-    const toImport = staged.filter((s) => s.selected).map((s) => s.data);
+    const toImport = authorizedSelectedItems.map((s) => s.data);
     if (toImport.length === 0) return;
 
     setImporting(true);
@@ -189,7 +311,7 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
       await onDatabaseUpdated();
       setStaged([]);
       showToast(
-        `Importação concluída: ${res.inserted} novos adicionados, ${res.updated} atualizados. Total no guia: ${res.total}.`
+        `Publicação autorizada concluída: ${res.inserted} novos adicionados, ${res.updated} atualizados. Total no guia: ${res.total}.`
       );
     } finally {
       setImporting(false);
@@ -224,10 +346,10 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
             </span>
           </div>
           <h1 className="font-editorial mt-3 text-3xl font-bold text-[var(--text-primary)]">
-            Motor de Importação em Lote (Cold Start)
+            Motor de Extração &amp; Validação Multi-Fonte
           </h1>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            Popule o Rio Gastro Guide em segundos com dados reais gratuitos do OpenStreetMap ou planilhas CSV/JSON.
+            Importe com procedência rastreável, validação de status e política rígida de fotografias reais ou placeholder editorial.
           </p>
         </div>
 
@@ -290,7 +412,7 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
           }`}
         >
           <Globe2 className="h-4 w-4" />
-          1. Extrator Ao Vivo (OpenStreetMap)
+          1. Extrator Ao Vivo (Multi-Fonte)
         </button>
 
         <button
@@ -336,10 +458,24 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
         </button>
       </div>
 
-      {/* Tab 1: Overpass API Live Extractor */}
+      {/* Tab 1: Multi-Source Live Extractor */}
       {activeTab === 'overpass' && (
-        <div className="mt-6 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 sm:p-6">
-          <div className="grid gap-4 md:grid-cols-4">
+        <div className="mt-6 space-y-4 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 sm:p-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                Fonte de Dados
+              </label>
+              <select
+                value={liveSource}
+                onChange={(e) => setLiveSource(e.target.value as LiveSource)}
+                className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
+              >
+                <option value="openstreetmap">OpenStreetMap (Overpass · ODbL)</option>
+                <option value="google_places_api">Google Places API (Oficial)</option>
+              </select>
+            </div>
+
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
                 Bairro do Rio de Janeiro
@@ -370,34 +506,52 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
                 className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[#E05A47] focus:outline-none"
               >
                 <option value="restaurant">Restaurantes</option>
-                <option value="bar">Bares & Botecos</option>
+                <option value="bar">Bares &amp; Botecos</option>
                 <option value="cafe">Cafeterias</option>
                 <option value="all">Todos (Restaurantes, Bares e Cafés)</option>
               </select>
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
-                GEMINI_API_KEY (Opcional · Reescreve textos)
-              </label>
-              <div className="relative">
-                <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
-                <input
-                  type="password"
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  placeholder="Cole sua chave gratuita do AI Studio"
-                  className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-2.5 pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:border-[#E05A47] focus:outline-none"
-                />
+            {liveSource === 'google_places_api' ? (
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                  GOOGLE_PLACES_API_KEY *
+                </label>
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#E05A47]" />
+                  <input
+                    type="password"
+                    value={googlePlacesKey}
+                    onChange={(e) => setGooglePlacesKey(e.target.value)}
+                    placeholder="Chave oficial Google Cloud"
+                    className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-2.5 pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:border-[#E05A47] focus:outline-none"
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-[var(--text-primary)]">
+                  GEMINI_API_KEY (Opcional)
+                </label>
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+                  <input
+                    type="password"
+                    value={geminiKey}
+                    onChange={(e) => setGeminiKey(e.target.value)}
+                    placeholder="Reescreve textos em lote"
+                    className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-2.5 pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/60 focus:border-[#E05A47] focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex items-end">
               <button
                 id="btn-fetch-overpass"
                 type="button"
                 disabled={overpassLoading}
-                onClick={handleOverpassFetch}
+                onClick={handleLiveFetch}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#E05A47] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#c84b39] disabled:opacity-60"
               >
                 {overpassLoading ? (
@@ -405,13 +559,26 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
                 ) : (
                   <Globe2 className="h-4 w-4" />
                 )}
-                {overpassLoading ? 'Extraindo...' : 'Buscar Estabelecimentos Reais Agora'}
+                {overpassLoading ? 'Consultando...' : 'Extrair para Revisão'}
               </button>
             </div>
           </div>
 
+          <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)]/60 px-4 py-2.5 text-xs text-[var(--text-secondary)]">
+            {liveSource === 'openstreetmap' ? (
+              <span>
+                <strong>Política de qualidade:</strong> registros do OpenStreetMap entram como{' '}
+                <strong>PENDENTE</strong> e recebem o <strong>placeholder visual do Rio Gastro Guide</strong> (sem fotos genéricas de terceiros e sem notas inventadas).
+              </span>
+            ) : (
+              <span>
+                <strong>Conformidade Google Places API:</strong> consulta oficial sem scraping. Não armazena nem redistribui fotos hospedadas pelo Google e exige revisão/autorização antes da publicação em lote.
+              </span>
+            )}
+          </div>
+
           {overpassStatus && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl bg-[var(--bg-subtle)] px-4 py-2.5 text-xs font-medium text-[var(--text-primary)]">
+            <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-subtle)] px-4 py-2.5 text-xs font-medium text-[var(--text-primary)]">
               {overpassLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin text-[#E05A47]" />
               ) : (
@@ -422,7 +589,7 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
           )}
 
           {overpassError && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-600 dark:text-red-400">
+            <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-600 dark:text-red-400">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{overpassError}</span>
             </div>
@@ -430,7 +597,7 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
         </div>
       )}
 
-      {/* Tab 2: Universal CSV / JSON Importer */}
+      {/* Tab 2: Universal CSV / JSON Importer (Preserved) */}
       {activeTab === 'csv' && (
         <div className="mt-6 space-y-5">
           <div
@@ -448,7 +615,7 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
           >
             <Upload className="h-10 w-10 text-[#E05A47]" />
             <h3 className="font-editorial mt-3 text-xl font-bold text-[var(--text-primary)]">
-              Arraste seu CSV ou JSON do Google Maps / Apify / Outscraper
+              Arraste seu CSV ou JSON (Importador Universal)
             </h3>
             <p className="mt-1 max-w-lg text-xs text-[var(--text-secondary)]">
               Detectamos automaticamente colunas como <code className="font-mono">title</code>,{' '}
@@ -536,7 +703,7 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
             Carga Inicial de Demonstração (1-Click Seed RJ)
           </h3>
           <p className="mt-2 max-w-2xl text-sm text-[var(--text-secondary)]">
-            Popule ou restaure instantaneamente 12 casas icônicas do Rio de Janeiro (Aprazível, Satyricon, Lasai, CT Boucherie, Churrascaria Palace, Bar Urca, Oteque, Sushi Leblon, Bráz Pizzaria, Confeitaria Colombo, Gero Ipanema e Bar do Mineiro) com coordenadas reais e fotos curadas.
+            Popule ou restaure instantaneamente 12 casas icônicas do Rio de Janeiro com coordenadas reais e descrições editoriais.
           </p>
           <button
             type="button"
@@ -562,7 +729,10 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
           ) : (
             <div className="mt-4 divide-y divide-[var(--border-hairline)]">
               {claims.map((c) => (
-                <div key={c.id} className="flex flex-col justify-between gap-2 py-3 sm:flex-row sm:items-center">
+                <div
+                  key={c.id}
+                  className="flex flex-col justify-between gap-2 py-3 sm:flex-row sm:items-center"
+                >
                   <div>
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-emerald-500" />
@@ -588,147 +758,356 @@ export function AdminPanel({ restaurants, claims, onDatabaseUpdated }: AdminPane
       {/* Staging Area Table */}
       {staged.length > 0 && (activeTab === 'overpass' || activeTab === 'csv') && (
         <div className="mt-6 overflow-hidden rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-sm">
-          <div className="flex flex-col justify-between gap-3 border-b border-[var(--border-hairline)] bg-[var(--bg-subtle)]/60 px-5 py-4 sm:flex-row sm:items-center">
+          {/* Top Bar */}
+          <div className="flex flex-col justify-between gap-4 border-b border-[var(--border-hairline)] bg-[var(--bg-subtle)]/60 px-5 py-4 lg:flex-row lg:items-center">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
-                checked={selectedCount === staged.length}
-                onChange={(e) => toggleAllStaged(e.target.checked)}
+                checked={
+                  filteredStaged.length > 0 && filteredStaged.every((item) => item.selected)
+                }
+                onChange={(e) => toggleAllVisible(e.target.checked)}
                 className="h-4 w-4 rounded accent-[#E05A47]"
               />
               <div>
                 <h3 className="text-sm font-bold text-[var(--text-primary)]">
-                  Área de Pré-Visualização (Staging Area)
+                  Staging Area · Revisão, Validação e Licenciamento
                 </h3>
                 <p className="text-xs text-[var(--text-secondary)]">
-                  {selectedCount} de {staged.length} estabelecimentos selecionados para envio em lote
+                  {authorizedSelectedItems.length} autorizados selecionados para publicação ·{' '}
+                  {statusCounts.duplicados} duplicado(s) detectado(s) na base
                 </p>
               </div>
             </div>
 
-            <button
-              id="btn-commit-bulk"
-              type="button"
-              disabled={importing || selectedCount === 0}
-              onClick={handleBulkUpsert}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E05A47] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#c84b39] disabled:opacity-50"
-            >
-              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Subir {selectedCount} Estabelecimentos em Lote para o Guia
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setStaged((prev) =>
+                    prev.map((row) => {
+                      const year = row.data.source_updated_at
+                        ? new Date(row.data.source_updated_at).getFullYear()
+                        : 2025;
+                      return year < 2022 ? { ...row, selected: false } : row;
+                    })
+                  )
+                }
+                className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-300"
+              >
+                Desmarcar antigos (&lt; 2022)
+              </button>
+
+              <button
+                id="btn-commit-bulk"
+                type="button"
+                disabled={importing || authorizedSelectedItems.length === 0}
+                onClick={handleBulkUpsert}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E05A47] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#c84b39] disabled:opacity-50"
+              >
+                {importing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                Publicar {authorizedSelectedItems.length} Autorizados em Lote
+              </button>
+            </div>
           </div>
 
-          <div className="max-h-[540px] overflow-x-auto overflow-y-auto">
+          {/* Staging Filters */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)] px-5 py-3 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  ['ALL', `Todos (${staged.length})`],
+                  ['CONFIRMADO', `Confirmados (${statusCounts.confirmados})`],
+                  ['PENDENTE', `Pendentes (${statusCounts.pendentes})`],
+                  ['FECHADO/INVÁLIDO', `Fechados/Inválidos (${statusCounts.fechados})`],
+                ] as Array<[StatusFilter, string]>
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatusFilter(key)}
+                  className={`rounded-lg px-2.5 py-1.5 font-semibold transition-colors ${
+                    statusFilter === key
+                      ? 'bg-[#E05A47] text-white'
+                      : 'border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+
+              <label className="ml-2 inline-flex cursor-pointer items-center gap-1.5 text-[var(--text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={hideDuplicates}
+                  onChange={(e) => setHideDuplicates(e.target.checked)}
+                  className="rounded accent-[#E05A47]"
+                />
+                Ocultar duplicados ({statusCounts.duplicados})
+              </label>
+            </div>
+
+            {hasAuthorizedRatings && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-[var(--text-secondary)]">
+                  Filtros (fonte autorizada):
+                </span>
+                <select
+                  value={minRatingFilter}
+                  onChange={(e) => setMinRatingFilter(Number(e.target.value))}
+                  className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-1 text-xs"
+                >
+                  <option value={0}>Nota: Todas</option>
+                  <option value={4.0}>Nota 4.0+</option>
+                  <option value={4.5}>Nota 4.5+</option>
+                </select>
+                <select
+                  value={minReviewsFilter}
+                  onChange={(e) => setMinReviewsFilter(Number(e.target.value))}
+                  className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-1 text-xs"
+                >
+                  <option value={0}>Avaliações: Todas</option>
+                  <option value={50}>50+ avaliações</option>
+                  <option value={200}>200+ avaliações</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Staging Rows */}
+          <div className="max-h-[580px] overflow-x-auto overflow-y-auto">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 z-10 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">
                 <tr>
                   <th className="px-4 py-3">Sel.</th>
-                  <th className="px-4 py-3">Foto</th>
-                  <th className="px-4 py-3">Estabelecimento & Endereço</th>
-                  <th className="px-4 py-3">Categoria</th>
-                  <th className="px-4 py-3">Descrição Editorial</th>
+                  <th className="px-4 py-3">Mídia / Origem</th>
+                  <th className="px-4 py-3">Estabelecimento &amp; Contato</th>
+                  <th className="px-4 py-3">Status &amp; Procedência</th>
+                  <th className="px-4 py-3">Categoria &amp; Descrição</th>
+                  <th className="px-4 py-3 text-right">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-hairline)]">
-                {staged.map((item, idx) => (
-                  <tr
-                    key={`${item.data.external_id}-${idx}`}
-                    className={item.selected ? '' : 'opacity-50'}
-                  >
-                    <td className="px-4 py-3 align-top">
-                      <input
-                        type="checkbox"
-                        checked={item.selected}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setStaged((prev) =>
-                            prev.map((row, i) => (i === idx ? { ...row, selected: checked } : row))
-                          );
-                        }}
-                        className="mt-1 h-4 w-4 rounded accent-[#E05A47]"
-                      />
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <SmartImage
-                        src={item.data.cover_image}
-                        alt={item.data.name}
-                        category={item.data.category}
-                        fallbackIndex={idx}
-                        className="h-14 w-20 rounded-lg object-cover"
-                      />
-                    </td>
-                    <td className="min-w-[220px] px-4 py-3 align-top">
-                      <input
-                        type="text"
-                        value={item.data.name}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setStaged((prev) =>
-                            prev.map((row, i) =>
-                              i === idx ? { ...row, data: { ...row.data, name: val } } : row
-                            )
-                          );
-                        }}
-                        className="w-full rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-[var(--text-primary)] hover:border-[var(--border-hairline)] focus:border-[#E05A47] focus:outline-none"
-                      />
-                      <p className="mt-1 px-1.5 text-[11px] text-[var(--text-secondary)]">
-                        {item.data.neighborhood} · {item.data.address}
-                      </p>
-                      {item.data.source_updated_at && (() => {
-                        const year = new Date(item.data.source_updated_at).getFullYear();
-                        const isOld = year < 2022;
-                        return (
-                          <span
-                            className={`mt-1.5 ml-1.5 inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${
-                              isOld
-                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                                : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                            }`}
-                          >
-                            {isOld
-                              ? `OSM ${year} · Verificar se ativo`
-                              : `Atualizado OSM ${year}`}
+                {filteredStaged.map((item) => {
+                  const status = item.data.validation_status || 'PENDENTE';
+                  const isClosed = status === 'FECHADO/INVÁLIDO';
+                  const isUnauthorized = item.data.is_redistribution_authorized === false;
+                  const sourceLabel = item.data.data_source
+                    ? DATA_SOURCE_LABELS[item.data.data_source]
+                    : 'Fonte não informada';
+
+                  const updateItem = (patch: Partial<Omit<Restaurant, 'id'>>) => {
+                    setStaged((prev) =>
+                      prev.map((row) =>
+                        row.id === item.id
+                          ? { ...row, data: { ...row.data, ...patch } }
+                          : row
+                      )
+                    );
+                  };
+
+                  return (
+                    <tr key={item.id} className={item.selected ? '' : 'opacity-60'}>
+                      <td className="px-4 py-3 align-top">
+                        <input
+                          type="checkbox"
+                          disabled={isClosed || isUnauthorized}
+                          checked={item.selected}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setStaged((prev) =>
+                              prev.map((row) =>
+                                row.id === item.id ? { ...row, selected: checked } : row
+                              )
+                            );
+                          }}
+                          className="mt-1 h-4 w-4 rounded accent-[#E05A47] disabled:opacity-40"
+                        />
+                      </td>
+
+                      <td className="min-w-[150px] px-4 py-3 align-top">
+                        <SmartImage
+                          src={item.data.cover_image}
+                          alt={item.data.name}
+                          name={item.data.name}
+                          category={item.data.category}
+                          imageOrigin={item.data.image_origin}
+                          hasRealPhoto={item.data.has_real_photo}
+                          compact
+                          className="h-14 w-24 rounded-lg object-cover"
+                        />
+                        <input
+                          type="url"
+                          value={item.data.cover_image}
+                          onChange={(e) => {
+                            const url = e.target.value.trim();
+                            updateItem({
+                              cover_image: url,
+                              has_real_photo: Boolean(url),
+                              image_origin: url ? 'establishment_authorized' : 'none',
+                              image_license: url
+                                ? 'URL autorizada informada na revisão'
+                                : 'Sem fotografia oficial disponível',
+                            });
+                          }}
+                          placeholder="URL foto autorizada..."
+                          className="mt-1.5 w-28 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-1.5 py-0.5 text-[10px] text-[var(--text-primary)]"
+                        />
+                        <select
+                          value={item.data.image_origin || 'none'}
+                          onChange={(e) =>
+                            updateItem({ image_origin: e.target.value as ImageOrigin })
+                          }
+                          className="mt-1 w-28 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-1 py-0.5 text-[10px] text-[var(--text-secondary)]"
+                        >
+                          <option value="none">Sem foto real</option>
+                          <option value="establishment_authorized">Autorizada (local)</option>
+                          <option value="owner_authorized">Enviada pelo dono</option>
+                          <option value="commercial_licensed">Licença comercial</option>
+                        </select>
+                      </td>
+
+                      <td className="min-w-[230px] px-4 py-3 align-top">
+                        <input
+                          type="text"
+                          value={item.data.name}
+                          onChange={(e) => updateItem({ name: e.target.value })}
+                          className="w-full rounded-lg border border-transparent bg-transparent px-1.5 py-0.5 text-sm font-semibold text-[var(--text-primary)] hover:border-[var(--border-hairline)] focus:border-[#E05A47] focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={item.data.address}
+                          onChange={(e) => updateItem({ address: e.target.value })}
+                          className="mt-1 w-full rounded border border-transparent bg-transparent px-1.5 py-0.5 text-[11px] text-[var(--text-secondary)] hover:border-[var(--border-hairline)] focus:border-[#E05A47] focus:outline-none"
+                        />
+                        <div className="mt-1 flex gap-1.5 px-1">
+                          <input
+                            type="text"
+                            value={item.data.phone || ''}
+                            onChange={(e) => updateItem({ phone: e.target.value })}
+                            placeholder="Telefone"
+                            className="w-28 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-1.5 py-0.5 text-[10px]"
+                          />
+                          <input
+                            type="text"
+                            value={item.data.website || ''}
+                            onChange={(e) => updateItem({ website: e.target.value })}
+                            placeholder="Site oficial"
+                            className="w-28 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-1.5 py-0.5 text-[10px]"
+                          />
+                        </div>
+                      </td>
+
+                      <td className="min-w-[200px] px-4 py-3 align-top space-y-1.5">
+                        <select
+                          value={status}
+                          onChange={(e) => {
+                            const nextStatus = e.target.value as ValidationStatus;
+                            setStaged((prev) =>
+                              prev.map((row) =>
+                                row.id === item.id
+                                  ? {
+                                      ...row,
+                                      selected:
+                                        nextStatus === 'FECHADO/INVÁLIDO' ? false : row.selected,
+                                      data: { ...row.data, validation_status: nextStatus },
+                                    }
+                                  : row
+                              )
+                            );
+                          }}
+                          className={`w-full rounded-lg border px-2 py-1 text-[11px] font-bold ${STATUS_BADGE_STYLES[status]}`}
+                        >
+                          <option value="CONFIRMADO">CONFIRMADO</option>
+                          <option value="PENDENTE">PENDENTE</option>
+                          <option value="FECHADO/INVÁLIDO">FECHADO/INVÁLIDO</option>
+                        </select>
+
+                        <div className="text-[10px] leading-snug text-[var(--text-secondary)]">
+                          <div>
+                            <strong>Fonte:</strong> {sourceLabel}
+                          </div>
+                          <div>
+                            <strong>Confiabilidade:</strong> {item.data.confidence_level || 'MÉDIA'}
+                          </div>
+                          {item.data.last_verified_at && (
+                            <div>
+                              <strong>Verificado:</strong>{' '}
+                              {new Date(item.data.last_verified_at).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
+                          {item.data.source_updated_at && (
+                            <div>
+                              <strong>Atualizado na fonte:</strong>{' '}
+                              {new Date(item.data.source_updated_at).getFullYear()}
+                            </div>
+                          )}
+                        </div>
+
+                        {item.isDuplicate && (
+                          <span className="inline-flex items-center gap-1 rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600 dark:text-purple-300">
+                            <AlertTriangle className="h-3 w-3" />
+                            Duplicado na base
                           </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <select
-                        value={item.data.category}
-                        onChange={(e) => {
-                          const cat = e.target.value as RestaurantCategory;
-                          setStaged((prev) =>
-                            prev.map((row, i) =>
-                              i === idx ? { ...row, data: { ...row.data, category: cat } } : row
-                            )
-                          );
-                        }}
-                        className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-1.5 text-xs text-[var(--text-primary)]"
-                      >
-                        {CATEGORIES.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="min-w-[280px] px-4 py-3 align-top">
-                      <textarea
-                        rows={2}
-                        value={item.data.description}
-                        onChange={(e) => {
-                          const desc = e.target.value;
-                          setStaged((prev) =>
-                            prev.map((row, i) =>
-                              i === idx ? { ...row, data: { ...row.data, description: desc } } : row
-                            )
-                          );
-                        }}
-                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-2 text-xs leading-relaxed text-[var(--text-secondary)] focus:border-[#E05A47] focus:outline-none"
-                      />
-                    </td>
-                  </tr>
-                ))}
+                        )}
+
+                        {isUnauthorized && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-300">
+                              Uso não autorizado
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateItem({ is_redistribution_authorized: true })}
+                              className="text-[10px] font-semibold text-[#E05A47] underline"
+                            >
+                              Autorizar
+                            </button>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="min-w-[260px] px-4 py-3 align-top">
+                        <select
+                          value={item.data.category}
+                          onChange={(e) =>
+                            updateItem({ category: e.target.value as RestaurantCategory })
+                          }
+                          className="mb-1.5 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-1 text-xs text-[var(--text-primary)]"
+                        >
+                          {CATEGORIES.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                        <textarea
+                          rows={2}
+                          value={item.data.description}
+                          onChange={(e) => updateItem({ description: e.target.value })}
+                          className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-2 text-xs leading-relaxed text-[var(--text-secondary)] focus:border-[#E05A47] focus:outline-none"
+                        />
+                      </td>
+
+                      <td className="px-4 py-3 text-right align-top">
+                        <button
+                          type="button"
+                          title="Excluir da pré-visualização"
+                          onClick={() =>
+                            setStaged((prev) => prev.filter((row) => row.id !== item.id))
+                          }
+                          className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-red-500/15 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

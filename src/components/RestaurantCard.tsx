@@ -8,7 +8,9 @@ interface RestaurantCardProps {
   onSelect: (restaurant: Restaurant) => void;
 }
 
-export function RestaurantCard({ restaurant, index, onSelect }: RestaurantCardProps) {
+export function RestaurantCard({ restaurant, onSelect }: RestaurantCardProps) {
+  const hasRating = restaurant.rating > 0 && restaurant.rating_source !== 'none';
+
   return (
     <article
       onClick={() => onSelect(restaurant)}
@@ -19,8 +21,10 @@ export function RestaurantCard({ restaurant, index, onSelect }: RestaurantCardPr
         <SmartImage
           src={restaurant.cover_image}
           alt={restaurant.name}
+          name={restaurant.name}
           category={restaurant.category}
-          fallbackIndex={index}
+          imageOrigin={restaurant.image_origin}
+          hasRealPhoto={restaurant.has_real_photo}
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
@@ -51,15 +55,19 @@ export function RestaurantCard({ restaurant, index, onSelect }: RestaurantCardPr
             {restaurant.category}
           </span>
 
-          <div className="inline-flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-xs font-semibold text-white backdrop-blur-md">
-            <Star className="h-3.5 w-3.5 fill-[#E5B342] text-[#E5B342]" />
-            <span>{restaurant.rating.toFixed(1)}</span>
-            <span className="text-[11px] font-normal text-white/75">
-              ({restaurant.reviews_count > 999
-                ? `${(restaurant.reviews_count / 1000).toFixed(1)}k`
-                : restaurant.reviews_count})
-            </span>
-          </div>
+          {hasRating && (
+            <div className="inline-flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-xs font-semibold text-white backdrop-blur-md">
+              <Star className="h-3.5 w-3.5 fill-[#E5B342] text-[#E5B342]" />
+              <span>{restaurant.rating.toFixed(1)}</span>
+              {restaurant.reviews_count > 0 && (
+                <span className="text-[11px] font-normal text-white/75">
+                  ({restaurant.reviews_count > 999
+                    ? `${(restaurant.reviews_count / 1000).toFixed(1)}k`
+                    : restaurant.reviews_count})
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
