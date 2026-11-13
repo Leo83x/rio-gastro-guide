@@ -205,32 +205,59 @@ export function HeroSection({
     });
   };
 
+  const heroGlassClass = isDark
+    ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
+    : 'border-white/32 bg-[#081A2C]/52 text-white shadow-[0_6px_18px_rgba(5,14,24,0.22)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]';
+  const heroGlassInteractiveClass = isDark
+    ? `${heroGlassClass} hover:border-white/50 hover:bg-white/25`
+    : `${heroGlassClass} hover:border-white/55 hover:bg-[#081A2C]/68`;
+
   return (
     <section className="relative w-full overflow-x-clip">
       {/* 1. TOPO ATMOSFÉRICO DO RIO (Abrange até o topo atrás do Header transparente) */}
-      <div className="relative overflow-hidden pb-12 pt-22 text-white sm:pb-14 sm:pt-28 lg:pb-16 lg:pt-30">
+      <div className="relative overflow-hidden pb-12 pt-26 text-white sm:pb-14 sm:pt-28 lg:pb-16 lg:pt-30">
         <img
           src={isDark ? rioHeroNight : rioHeroDay}
           alt="Paisagem atmosférica do Rio de Janeiro"
           className="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-500"
         />
 
-        <div
-          className={`absolute inset-0 ${
-            isDark
-              ? 'bg-gradient-to-b from-[#06101B]/45 via-[#08192B]/25 to-[#07111C]/75'
-              : 'bg-gradient-to-b from-[#071829]/40 via-[#0A2036]/20 to-[#0C2742]/55'
-          }`}
-        />
+        {isDark ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/45 via-[#08192B]/25 to-[#07111C]/75"
+          />
+        ) : (
+          <>
+            {/* Scrim de contraste para manchete e pílulas na metade média/inferior do Hero claro */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(8,26,44,0) 0%, rgba(8,26,44,0.34) 34%, rgba(8,26,44,0.58) 62%, rgba(7,22,38,0.84) 100%)',
+              }}
+            />
+            {/* Bruma clara suavemente esfumaçada atrás da barra fixa superior (dá leitura à logo sem card/borda) */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 h-[108px] sm:h-[120px]"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(250,247,242,0.97) 0%, rgba(250,247,242,0.88) 48%, rgba(250,247,242,0.36) 76%, rgba(250,247,242,0) 100%)',
+              }}
+            />
+          </>
+        )}
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-[#F7931E] [text-shadow:0_1px_4px_rgba(0,0,0,0.45)]">
+              <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#081A2C]/65 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] shadow-sm backdrop-blur-md">
                 <Sparkles className="h-3 w-3" />
                 {greeting}
               </p>
-              <h1 className="mt-1 text-2xl font-bold leading-snug tracking-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.4)] sm:text-4xl">
+              <h1 className="mt-2 text-2xl font-extrabold leading-snug tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.75),0_1px_3px_rgba(5,14,24,0.85)] sm:text-4xl">
                 A cidade acontece.
                 <br />
                 Você aproveita.
@@ -239,7 +266,7 @@ export function HeroSection({
 
             {/* Compact 3-Pill Status Panel with Translucent Frosted Glass */}
             <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">
+              <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}>
                 {weather?.source === 'open-meteo-live' ? (
                   <>
                     {weather.isRaining ? (
@@ -253,7 +280,7 @@ export function HeroSection({
                   </>
                 ) : (
                   <>
-                    <Sun className="h-3.5 w-3.5 text-white/75" />
+                    <Sun className="h-3.5 w-3.5 text-white/80" />
                     <span>Clima indisponível</span>
                   </>
                 )}
@@ -264,7 +291,7 @@ export function HeroSection({
                 onClick={() =>
                   setActivePillInfo((prev) => (prev === 'deboa' ? null : 'deboa'))
                 }
-                className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]"
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${heroGlassInteractiveClass}`}
               >
                 <Activity className="h-3 w-3 text-[#4CA188]" />
                 <span>{deBoa.label}</span>
@@ -276,7 +303,7 @@ export function HeroSection({
                 onClick={() =>
                   setActivePillInfo((prev) => (prev === 'mobility' ? null : 'mobility'))
                 }
-                className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]"
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${heroGlassInteractiveClass}`}
               >
                 <Car className="h-3 w-3 text-[#FF6B35]" />
                 <span>{locationConsent ? 'Rotas via GPS' : 'Uber / Rotas sob demanda'}</span>
@@ -286,7 +313,7 @@ export function HeroSection({
           </div>
 
           {activePillInfo && (
-            <div className="mt-2.5 flex items-start justify-between gap-2 rounded-2xl border border-white/30 bg-white/15 px-3.5 py-2.5 text-[11px] font-medium text-white shadow-lg backdrop-blur-xl [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+            <div className={`mt-2.5 flex items-start justify-between gap-2 rounded-2xl border px-3.5 py-2.5 text-[11px] font-medium ${heroGlassClass}`}>
               <p>
                 {activePillInfo === 'deboa'
                   ? deBoa.detail
@@ -316,7 +343,7 @@ export function HeroSection({
                   className={`flex min-w-[70px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-3.5 py-2.5 text-xs font-semibold backdrop-blur-md transition-all sm:min-w-[82px] ${
                     active
                       ? 'border-white/25 bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-lg shadow-[#FF4B2B]/25'
-                      : 'border-white/30 bg-white/15 text-white shadow-[0_6px_20px_rgba(0,0,0,0.14)] hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
+                      : heroGlassInteractiveClass
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -332,7 +359,7 @@ export function HeroSection({
               className={`flex h-[58px] w-14 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-md transition ${
                 showFiltersPanel || activeFilterCount > 0
                   ? 'border-[#FF6B35] bg-[#FF6B35]/35 text-white shadow-lg'
-                  : 'border-white/30 bg-white/15 text-white shadow-[0_6px_20px_rgba(0,0,0,0.14)] hover:border-white/50 hover:bg-white/25'
+                  : heroGlassInteractiveClass
               }`}
             >
               <MoreHorizontal className="h-5 w-5" />

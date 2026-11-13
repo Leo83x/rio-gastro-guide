@@ -15,9 +15,14 @@ function notifyListeners() {
 export function registerServiceWorker() {
   if (typeof window === 'undefined') return;
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-    });
+    const register = () => {
+      void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    };
+    if (document.readyState === 'complete') {
+      register();
+    } else {
+      window.addEventListener('load', register, { once: true });
+    }
   }
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();

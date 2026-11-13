@@ -82,6 +82,12 @@ export function Navbar({
   }, []);
 
   const isOverHero = overlayHero && !isScrolled;
+  const isOverLightHero = isOverHero && !isDark;
+  const isOverDarkHero = isOverHero && isDark;
+
+  const overHeroControlClass = isOverLightHero
+    ? 'border-[#123B56]/15 bg-white/84 text-[#123B56] shadow-[0_4px_14px_rgba(16,47,70,0.08)] backdrop-blur-md hover:border-[#FF6B35]/50 hover:bg-white'
+    : 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25';
 
   return (
     <>
@@ -89,9 +95,11 @@ export function Navbar({
         className={`${
           overlayHero ? 'fixed inset-x-0 top-0' : 'sticky top-0'
         } z-40 w-full transition-all duration-300 ${
-          isOverHero
-            ? 'border-b border-transparent bg-gradient-to-b from-[#061524]/35 via-[#061524]/10 to-transparent'
-            : 'border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 shadow-xs backdrop-blur-xl'
+          isOverLightHero
+            ? 'border-b border-transparent bg-transparent'
+            : isOverDarkHero
+              ? 'border-b border-transparent bg-gradient-to-b from-[#061524]/35 via-[#061524]/10 to-transparent'
+              : 'border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 shadow-xs backdrop-blur-xl'
         }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-2.5 sm:gap-3 sm:px-6 lg:px-8">
@@ -103,14 +111,16 @@ export function Navbar({
               title="Ir para a página inicial do BoraRio"
               className="group flex shrink-0 items-center text-left focus:outline-none"
             >
-              <BrandLogo variant="horizontal" size="md" onDark={isDark || isOverHero} />
+              <BrandLogo variant="horizontal" size="md" onDark={isDark} />
             </button>
             {!isOnline && (
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  isOverHero
-                    ? 'border border-amber-300/35 bg-amber-500/20 text-amber-100 backdrop-blur-md'
-                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-300'
+                  isOverLightHero
+                    ? 'border border-amber-700/20 bg-amber-100/90 text-amber-900 backdrop-blur-md'
+                    : isOverDarkHero
+                      ? 'border border-amber-300/35 bg-amber-500/20 text-amber-100 backdrop-blur-md'
+                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-300'
                 }`}
               >
                 <WifiOff className="h-3 w-3" />
@@ -123,9 +133,11 @@ export function Navbar({
           <nav
             aria-label="Navegação principal desktop"
             className={`hidden items-center gap-1 rounded-full border p-1 transition-all lg:flex ${
-              isOverHero
-                ? 'border-white/30 bg-white/14 shadow-[0_4px_18px_rgba(0,0,0,0.12)] backdrop-blur-md'
-                : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)]'
+              isOverLightHero
+                ? 'border-[#123B56]/15 bg-white/84 shadow-[0_4px_18px_rgba(16,47,70,0.08)] backdrop-blur-md'
+                : isOverDarkHero
+                  ? 'border-white/30 bg-white/14 shadow-[0_4px_18px_rgba(0,0,0,0.12)] backdrop-blur-md'
+                  : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)]'
             }`}
           >
             {MAIN_TABS.map((tab) => {
@@ -140,9 +152,11 @@ export function Navbar({
                   className={`relative inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
                     active
                       ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
-                      : isOverHero
-                        ? 'text-white/90 hover:bg-white/15 hover:text-white'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      : isOverLightHero
+                        ? 'text-[#123B56] hover:bg-[#123B56]/8 hover:text-[#0A2233]'
+                        : isOverDarkHero
+                          ? 'text-white/90 hover:bg-white/15 hover:text-white'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -168,7 +182,7 @@ export function Navbar({
               onClick={() => onSelectTab('profile')}
               className={`hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition sm:inline-flex ${
                 isOverHero
-                  ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                  ? overHeroControlClass
                   : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]'
               }`}
             >
@@ -189,7 +203,7 @@ export function Navbar({
                 }}
                 className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
                   isOverHero
-                    ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                    ? overHeroControlClass
                     : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
                 }`}
               >
@@ -239,14 +253,14 @@ export function Navbar({
               aria-label="Alternar tema Rio de dia / Rio à noite"
               className={`flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
                 isOverHero
-                  ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                  ? overHeroControlClass
                   : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
               }`}
             >
               {isDark ? (
                 <Sun className="h-4 w-4 text-[#F7931E]" />
               ) : (
-                <Moon className={`h-4 w-4 ${isOverHero ? 'text-white' : 'text-[#123B56]'}`} />
+                <Moon className="h-4 w-4 text-[#123B56]" />
               )}
             </button>
 
@@ -271,7 +285,7 @@ export function Navbar({
                   }}
                   className={`flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
                     isOverHero
-                      ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)] backdrop-blur-md hover:border-white/50 hover:bg-white/25'
+                      ? overHeroControlClass
                       : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
                   }`}
                 >

@@ -67,15 +67,19 @@ export function LandingPage({
   }, []);
 
   const isOverHero = !isScrolled;
+  const isOverLightHero = isOverHero && !isDark;
+  const isOverDarkHero = isOverHero && isDark;
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
       {/* Top Header */}
       <header
         className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${
-          isOverHero
-            ? 'border-b border-transparent bg-gradient-to-b from-[#061524]/35 via-[#061524]/10 to-transparent'
-            : 'border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 shadow-xs backdrop-blur-xl'
+          isOverLightHero
+            ? 'border-b border-transparent bg-transparent'
+            : isOverDarkHero
+              ? 'border-b border-transparent bg-gradient-to-b from-[#061524]/35 via-[#061524]/10 to-transparent'
+              : 'border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 shadow-xs backdrop-blur-xl'
         }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
@@ -84,44 +88,76 @@ export function LandingPage({
             onClick={() => onNavigate('/')}
             className="flex items-center gap-2 text-left"
           >
-            <BrandLogo variant="horizontal" size="md" onDark={isDark || isOverHero} />
+            <BrandLogo variant="horizontal" size="md" onDark={isDark} />
           </button>
 
           <nav
             className={`hidden items-center gap-5 text-sm font-semibold transition-all md:flex ${
-              isOverHero
-                ? 'rounded-full border border-white/30 bg-white/14 px-5 py-1.5 text-white/95 shadow-[0_4px_18px_rgba(0,0,0,0.12)] backdrop-blur-md'
-                : 'text-[var(--text-secondary)]'
+              isOverLightHero
+                ? 'rounded-full border border-[#123B56]/15 bg-white/85 px-5 py-1.5 text-[#123B56] shadow-[0_4px_18px_rgba(16,47,70,0.08)] backdrop-blur-md'
+                : isOverDarkHero
+                  ? 'rounded-full border border-white/30 bg-white/14 px-5 py-1.5 text-white/95 shadow-[0_4px_18px_rgba(0,0,0,0.12)] backdrop-blur-md'
+                  : 'text-[var(--text-secondary)]'
             }`}
           >
             <a
               href="#descubra"
-              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+              className={
+                isOverLightHero
+                  ? 'hover:text-[#FF6B35]'
+                  : isOverDarkHero
+                    ? 'hover:text-white'
+                    : 'hover:text-[var(--text-primary)]'
+              }
             >
               Descubra
             </a>
             <a
               href="#inteligencia"
-              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+              className={
+                isOverLightHero
+                  ? 'hover:text-[#FF6B35]'
+                  : isOverDarkHero
+                    ? 'hover:text-white'
+                    : 'hover:text-[var(--text-primary)]'
+              }
             >
               Seu Rio, agora
             </a>
             <a
               href="#planeje"
-              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+              className={
+                isOverLightHero
+                  ? 'hover:text-[#FF6B35]'
+                  : isOverDarkHero
+                    ? 'hover:text-white'
+                    : 'hover:text-[var(--text-primary)]'
+              }
             >
               Planejador IA
             </a>
             <a
               href="#club"
-              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+              className={
+                isOverLightHero
+                  ? 'hover:text-[#FF6B35]'
+                  : isOverDarkHero
+                    ? 'hover:text-white'
+                    : 'hover:text-[var(--text-primary)]'
+              }
             >
               Bora Club
             </a>
             <button
               type="button"
               onClick={() => onNavigate('/parceiros')}
-              className={isOverHero ? 'hover:text-white' : 'hover:text-[var(--text-primary)]'}
+              className={
+                isOverLightHero
+                  ? 'hover:text-[#FF6B35]'
+                  : isOverDarkHero
+                    ? 'hover:text-white'
+                    : 'hover:text-[var(--text-primary)]'
+              }
             >
               Para Estabelecimentos
             </button>
@@ -133,15 +169,17 @@ export function LandingPage({
               onClick={onToggleTheme}
               title={isDark ? 'Mudar para Rio de dia' : 'Mudar para Rio à noite'}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                isOverHero
-                  ? 'border-white/30 bg-white/14 text-white backdrop-blur-md hover:border-white/50 hover:bg-white/24'
-                  : 'border-[var(--border-hairline)] bg-[var(--bg-subtle)] text-[var(--text-primary)] hover:border-[#FF765E]'
+                isOverLightHero
+                  ? 'border-[#123B56]/15 bg-white/85 text-[#123B56] shadow-[0_4px_14px_rgba(16,47,70,0.08)] backdrop-blur-md hover:border-[#FF6B35]/50 hover:bg-white'
+                  : isOverDarkHero
+                    ? 'border-white/30 bg-white/14 text-white backdrop-blur-md hover:border-white/50 hover:bg-white/24'
+                    : 'border-[var(--border-hairline)] bg-[var(--bg-subtle)] text-[var(--text-primary)] hover:border-[#FF765E]'
               }`}
             >
               {isDark ? (
                 <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
               ) : (
-                <Moon className={`h-3.5 w-3.5 ${isOverHero ? 'text-white' : 'text-[#123B56]'}`} />
+                <Moon className="h-3.5 w-3.5 text-[#123B56]" />
               )}
               <span className="hidden sm:inline">{isDark ? 'Rio de dia' : 'Rio à noite'}</span>
             </button>
@@ -165,28 +203,52 @@ export function LandingPage({
           alt="Rio de Janeiro"
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div
-          className={`absolute inset-0 ${
-            isDark
-              ? 'bg-gradient-to-b from-[#06101B]/55 via-[#0A1D30]/40 to-[#07111C]/85'
-              : 'bg-gradient-to-b from-[#071829]/45 via-[#0D2B45]/30 to-[#0A1E30]/65'
-          }`}
-        />
+        {isDark ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/55 via-[#0A1D30]/40 to-[#07111C]/85"
+          />
+        ) : (
+          <>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(8,26,44,0) 0%, rgba(8,26,44,0.4) 36%, rgba(8,26,44,0.6) 65%, rgba(7,22,38,0.85) 100%)',
+              }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 h-[112px] sm:h-[128px]"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(250,247,242,0.97) 0%, rgba(250,247,242,0.88) 48%, rgba(250,247,242,0.36) 78%, rgba(250,247,242,0) 100%)',
+              }}
+            />
+          </>
+        )}
         <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-28 sm:px-6 sm:pt-32 lg:grid-cols-12 lg:px-8 lg:pb-24 lg:pt-36">
           <div className="lg:col-span-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">
-              <Sparkles className="h-3.5 w-3.5 text-[#F7931E]" />
+            <div
+              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md ${
+                isDark
+                  ? 'border-white/30 bg-white/15 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
+                  : 'border-white/30 bg-[#081A2C]/62 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-[#FFB347]" />
               Superapp de Experiências & Concierge do Rio de Janeiro
             </div>
 
             <h1 className="font-sans mt-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              <span className="[text-shadow:0_2px_10px_rgba(0,0,0,0.4)]">A cidade acontece.</span>{' '}
-              <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+              <span className="[text-shadow:0_2px_14px_rgba(5,14,24,0.75)]">A cidade acontece.</span>{' '}
+              <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
                 Você aproveita.
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#F1E8D8]/95 [text-shadow:0_1px_4px_rgba(0,0,0,0.35)] sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#F7F1E7] [text-shadow:0_1px_8px_rgba(5,14,24,0.75)] sm:text-lg">
               Do almoço de família em Santa Teresa ao rooftop no Leblon, passando por shows,
               museus e roteiros inteligentes que se adaptam ao clima do Rio em tempo real.
             </p>
@@ -204,7 +266,11 @@ export function LandingPage({
               <button
                 type="button"
                 onClick={() => onNavigate('/parceiros')}
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/15 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]"
+                className={`inline-flex items-center gap-2 rounded-2xl border px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition ${
+                  isDark
+                    ? 'border-white/30 bg-white/15 hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
+                    : 'border-white/35 bg-[#081A2C]/55 hover:border-white/60 hover:bg-[#081A2C]/72 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]'
+                }`}
               >
                 <Building2 className="h-4 w-4" />
                 Para Estabelecimentos
@@ -214,7 +280,11 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onInstallPwa}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-[#4CA188]/50 bg-[#397B68]/35 px-4 py-3.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-[#397B68]/55"
+                  className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-3.5 text-xs font-bold text-white backdrop-blur-md transition ${
+                    isDark
+                      ? 'border-[#4CA188]/50 bg-[#397B68]/35 hover:bg-[#397B68]/55'
+                      : 'border-[#4CA188]/60 bg-[#225848]/78 hover:bg-[#225848]/92'
+                  }`}
                 >
                   <Smartphone className="h-4 w-4" />
                   Instalar PWA
@@ -222,7 +292,7 @@ export function LandingPage({
               )}
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-[#F1E8D8]/95 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]">
+            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs font-medium text-[#F7F1E7] [text-shadow:0_1px_6px_rgba(5,14,24,0.8)]">
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-[#4CA188]" />
                 {totalExperiences}+ locais e experiências no catálogo
@@ -240,20 +310,48 @@ export function LandingPage({
 
           {/* Visual App Preview Card */}
           <div className="lg:col-span-5">
-            <div className="rounded-3xl border border-white/30 bg-white/14 p-5 shadow-2xl backdrop-blur-xl">
-              <div className="flex items-center justify-between border-b border-white/20 pb-3">
-                <BrandLogo variant="horizontal" size="sm" onDark />
-                <span className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+            <div
+              className={`rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${
+                isDark
+                  ? 'border-white/25 bg-[#0A1D30]/72 text-white'
+                  : 'border-white/80 bg-[#FAF7F2]/92 text-[#102F46]'
+              }`}
+            >
+              <div
+                className={`flex items-center justify-between border-b pb-3 ${
+                  isDark ? 'border-white/20' : 'border-[#123B56]/12'
+                }`}
+              >
+                <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold backdrop-blur-md ${
+                    isDark
+                      ? 'border-white/25 bg-white/15 text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]'
+                      : 'border-[#123B56]/15 bg-white text-[#123B56]'
+                  }`}
+                >
                   {weather ? `${weather.temperatureC}°C · ${weather.weatherLabel}` : 'Rio ao vivo'}
                 </span>
               </div>
 
               <div className="mt-4 space-y-3">
-                <div className="rounded-2xl border border-white/20 bg-[#0A1E30]/25 p-3.5 backdrop-blur-md">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#F7931E]">
+                <div
+                  className={`rounded-2xl border p-3.5 backdrop-blur-md ${
+                    isDark ? 'border-white/20 bg-[#0A1E30]/35' : 'border-[#123B56]/10 bg-white/85'
+                  }`}
+                >
+                  <p
+                    className={`text-[11px] font-bold uppercase tracking-wider ${
+                      isDark ? 'text-[#F7931E]' : 'text-[#D95B26]'
+                    }`}
+                  >
                     Seu Rio, agora
                   </p>
-                  <p className="mt-1 text-sm font-medium text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.4)]">
+                  <p
+                    className={`mt-1 text-sm font-medium ${
+                      isDark ? 'text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.4)]' : 'text-[#102F46]'
+                    }`}
+                  >
                     {weather
                       ? `${weather.isRaining ? 'Dia chuvoso — Modo Chuva ativado com locais cobertos.' : 'Tempo firme para rooftops, praias e passeios ao ar livre.'}`
                       : 'Clima em tempo real integrado via Open-Meteo.'}
@@ -261,15 +359,47 @@ export function LandingPage({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-white/20 bg-[#0A1E30]/25 p-3.5 backdrop-blur-md">
+                  <div
+                    className={`rounded-2xl border p-3.5 backdrop-blur-md ${
+                      isDark ? 'border-white/20 bg-[#0A1E30]/35' : 'border-[#123B56]/10 bg-white/85'
+                    }`}
+                  >
                     <UtensilsCrossed className="h-5 w-5 text-[#FF6B35]" />
-                    <p className="mt-2 text-xs font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">Gastronomia</p>
-                    <p className="mt-0.5 text-[11px] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">Botecos, bistrôs &amp; alta cozinha</p>
+                    <p
+                      className={`mt-2 text-xs font-bold ${
+                        isDark ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]' : 'text-[#102F46]'
+                      }`}
+                    >
+                      Gastronomia
+                    </p>
+                    <p
+                      className={`mt-0.5 text-[11px] ${
+                        isDark ? 'text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]' : 'text-[#5B6B76]'
+                      }`}
+                    >
+                      Botecos, bistrôs &amp; alta cozinha
+                    </p>
                   </div>
-                  <div className="rounded-2xl border border-white/20 bg-[#0A1E30]/25 p-3.5 backdrop-blur-md">
+                  <div
+                    className={`rounded-2xl border p-3.5 backdrop-blur-md ${
+                      isDark ? 'border-white/20 bg-[#0A1E30]/35' : 'border-[#123B56]/10 bg-white/85'
+                    }`}
+                  >
                     <Vote className="h-5 w-5 text-[#4CA188]" />
-                    <p className="mt-2 text-xs font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">Onde Vamos?</p>
-                    <p className="mt-0.5 text-[11px] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">Votação em grupo + dividir conta</p>
+                    <p
+                      className={`mt-2 text-xs font-bold ${
+                        isDark ? 'text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]' : 'text-[#102F46]'
+                      }`}
+                    >
+                      Onde Vamos?
+                    </p>
+                    <p
+                      className={`mt-0.5 text-[11px] ${
+                        isDark ? 'text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]' : 'text-[#5B6B76]'
+                      }`}
+                    >
+                      Votação em grupo + dividir conta
+                    </p>
                   </div>
                 </div>
 
