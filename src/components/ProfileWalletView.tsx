@@ -97,6 +97,10 @@ import {
   WALLET_NON_MONETARY_NOTICE,
   type ReservationLifecycleStage,
 } from '../types/verification';
+import { haversineKm } from '../utils/geo';
+
+export type ProfileSectionTab = 'passport' | 'agenda' | 'privacy';
+export type ProfileFocusTarget = 'ledger' | 'missions' | 'vouchers' | null;
 
 interface ProfileWalletViewProps {
   experiences: Restaurant[];
@@ -109,9 +113,10 @@ interface ProfileWalletViewProps {
   onOpenPersonalize: () => void;
   onOpenConfiaHub: () => void;
   onPointsChanged: () => void;
+  initialSectionTab?: ProfileSectionTab;
+  focusTarget?: ProfileFocusTarget;
+  deepLinkNonce?: number;
 }
-
-type ProfileSectionTab = 'passport' | 'agenda' | 'privacy';
 
 interface BarcodeDetectorLike {
   detect(source: HTMLVideoElement): Promise<Array<{ rawValue?: string }>>;
@@ -190,17 +195,6 @@ function getEffectiveStage(r: ReservationRequest): ReservationLifecycleStage {
   return 'REQUESTED';
 }
 
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function buildGoogleCalendarUrl(r: ReservationRequest): string {
   const start = `${r.date.replace(/-/g, '')}T${r.time.replace(':', '')}00`;
   const hour = Math.min(23, parseInt(r.time.split(':')[0] || '19', 10) + 2);
@@ -226,8 +220,26 @@ export function ProfileWalletView({
   onOpenPersonalize,
   onOpenConfiaHub,
   onPointsChanged,
+  initialSectionTab = 'passport',
+  focusTarget = null,
+  deepLinkNonce = 0,
 }: ProfileWalletViewProps) {
-  const [sectionTab, setSectionTab] = useState<ProfileSectionTab>('passport');
+  const [sectionTab, setSectionTab] = useState<ProfileSectionTab>(initialSectionTab);
+
+  useEffect(() => {
+    setSectionTab(initialSectionTab);
+    if (!focusTarget || deepLinkNonce === 0) return;
+    const targetId =
+      focusTarget === 'ledger'
+        ? 'profile-points-ledger'
+        : focusTarget === 'vouchers'
+          ? 'profile-vouchers'
+          : 'profile-passport-missions';
+    const timer = window.setTimeout(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [deepLinkNonce, initialSectionTab, focusTarget]);
   const [identity, setIdentity] = useState<UserProfileIdentity>(() => getUserProfileIdentity());
   const [editingIdentity, setEditingIdentity] = useState(false);
   const [draftName, setDraftName] = useState(identity.display_name);
@@ -723,7 +735,10 @@ export function ProfileWalletView({
       {sectionTab === 'passport' && (
         <div className="space-y-6">
           {/* Passaporte Carioca & Missões Milestones */}
-          <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
+          <section
+            id="profile-passport-missions"
+            className="scroll-mt-20 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
+          >
             <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
               <div>
                 <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#397B68]">
@@ -1320,7 +1335,10 @@ export function ProfileWalletView({
               </section>
 
               {/* Meus Vouchers de Recompensa (6 estados + Cancelamento com Estorno Integral) */}
-              <section className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
+              <section
+                id="profile-vouchers"
+                className="scroll-mt-20 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#123B56] dark:text-[#8DC4EA]">
                     <Ticket className="h-4 w-4 text-[#FF6B35]" />
@@ -1406,7 +1424,10 @@ export function ProfileWalletView({
             </div>
 
             {/* Transactional History (Auditável e Imutável) */}
-            <section className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
+            <section
+              id="profile-points-ledger"
+              className="scroll-mt-20 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                   <Sparkles className="h-4 w-4 text-[#FF6B35]" />

@@ -36,7 +36,11 @@ export function BrandLogo({
     <img
       src={logoPng}
       alt="BoraRio"
-      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain`}
+      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain transition ${
+        onDark
+          ? 'drop-shadow-[0_1px_10px_rgba(248,250,252,0.45)]'
+          : ''
+      }`}
     />
   );
 

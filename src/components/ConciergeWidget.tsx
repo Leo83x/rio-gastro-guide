@@ -33,6 +33,7 @@ export function ConciergeWidget({
   onSelectExperience,
 }: ConciergeWidgetProps) {
   const [open, setOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -42,6 +43,13 @@ export function ConciergeWidget({
       text: 'Olá! Sou a Bora IA. Cruzo o catálogo real do BoraRio, o seu Cofre de Intenções, indicações autorizadas da sua Rede Confia e o clima do Rio agora. O que você quer viver?',
     },
   ]);
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 120);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const sendPrompt = async (text: string) => {
     const trimmed = text.trim();
@@ -95,21 +103,30 @@ export function ConciergeWidget({
     'Olá Bora IA Concierge! Gostaria de continuar meu atendimento pelo WhatsApp.'
   );
 
+  const compactCollapsed = isScrolled && !open;
+
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button (Recolhe para ícone compacto ao rolar e respeita a barra inferior) */}
       <button
         type="button"
+        data-testid="bora-ia-floating-btn"
+        aria-label="Abrir Bora IA"
+        title="Bora IA Concierge"
         onClick={() => setOpen((prev) => !prev)}
-        className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-[#FF4B2B]/30 transition-transform hover:scale-105 lg:bottom-6 lg:right-6"
+        className={`fixed bottom-[5.5rem] right-3.5 z-40 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] font-bold text-white shadow-lg shadow-[#FF4B2B]/25 transition-all duration-300 hover:scale-105 lg:bottom-6 lg:right-6 ${
+          compactCollapsed
+            ? 'h-11 w-11 p-0'
+            : 'gap-1.5 px-3 py-2 text-[11px] sm:px-3.5 sm:py-2.5 sm:text-xs'
+        }`}
       >
-        <Sparkles className="h-4 w-4" />
-        <span>Bora IA</span>
+        <Sparkles className="h-4 w-4 shrink-0" />
+        {!compactCollapsed && <span className="whitespace-nowrap">Bora IA</span>}
       </button>
 
       {/* Bora IA Chat Window */}
       {open && (
-        <div className="fixed bottom-36 right-4 z-50 flex h-[480px] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-2xl lg:bottom-20 lg:right-6">
+        <div className="fixed bottom-[9.25rem] right-3.5 z-50 flex h-[460px] max-h-[calc(100vh-11rem)] w-[calc(100vw-1.75rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-2xl lg:bottom-20 lg:right-6 lg:h-[480px]">
           {/* Header */}
           <div className="flex items-center justify-between bg-gradient-to-r from-[#123B56] via-[#102F46] to-[#FF6B35] px-4 py-3 text-white">
             <div className="flex items-center gap-2.5">

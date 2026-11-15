@@ -24,6 +24,7 @@ import {
   MANDATORY_CHECKIN_INSTRUCTION,
   POINTS_PREVISIT_CHECKIN_NOTICE,
 } from '../types/verification';
+import { haversineKm } from '../utils/geo';
 
 interface ExperienceIntelligenceBlocksProps {
   experience: Restaurant;
@@ -45,17 +46,6 @@ const HOURS_CURVE = [
   { hour: '22h', pct: 68 },
   { hour: '23h', pct: 42 },
 ];
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 export function ExperienceIntelligenceBlocks({
   experience,

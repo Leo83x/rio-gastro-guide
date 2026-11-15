@@ -54,6 +54,9 @@ interface ClubViewProps {
   onSelectExperience: (item: Restaurant) => void;
   onReservationCreated?: (req: ReservationRequest) => void;
   onPointsChanged?: () => void;
+  initialSection?: 'offerings' | 'rewards';
+  initialModality?: CommercialModality | 'ALL';
+  deepLinkNonce?: number;
 }
 
 const MODALITY_META: Record<
@@ -91,16 +94,27 @@ export function ClubView({
   onSelectExperience,
   onReservationCreated,
   onPointsChanged,
+  initialSection = 'offerings',
+  initialModality = 'ALL',
+  deepLinkNonce = 0,
 }: ClubViewProps) {
-  const [clubSection, setClubSection] = useState<'offerings' | 'rewards'>('offerings');
+  const [clubSection, setClubSection] = useState<'offerings' | 'rewards'>(initialSection);
   const [offerings, setOfferings] = useState<PartnerOffering[]>(() => getPartnerOfferings());
-  const [modalityFilter, setModalityFilter] = useState<CommercialModality | 'ALL'>('ALL');
+  const [modalityFilter, setModalityFilter] = useState<CommercialModality | 'ALL'>(initialModality);
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>('');
   const [priceFilter, setPriceFilter] = useState<string>('');
   const [onlyToday, setOnlyToday] = useState<boolean>(false);
 
   // Condition 2: Cross-partner Rewards Marketplace State
   const [rewards, setRewards] = useState<PartnerReward[]>(() => getPartnerRewards());
+
+  useEffect(() => {
+    setClubSection(initialSection);
+    setModalityFilter(initialModality);
+    if (initialSection === 'rewards') {
+      setRewards(getPartnerRewards());
+    }
+  }, [deepLinkNonce, initialSection, initialModality]);
   const [rewardSegment, setRewardSegment] = useState<string>('ALL');
   const [rewardNeighborhood, setRewardNeighborhood] = useState<string>('');
   const [rewardCostFilter, setRewardCostFilter] = useState<string>('ALL');
