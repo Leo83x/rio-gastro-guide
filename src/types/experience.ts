@@ -1,4 +1,6 @@
+import type { CommercialModality } from './partnerCommercial';
 import type { Restaurant } from './restaurant';
+import type { ReservationLifecycleStage, VisitProofLevel } from './verification';
 
 export type MacroCategory =
   | 'Gastronomia'
@@ -72,7 +74,18 @@ export interface PointTransaction {
   experience_id?: string;
   experience_name?: string;
   qr_nonce?: string;
+  validation_status?: 'RELEASED' | 'PENDING_VALIDATION' | 'REVERSED';
   created_at: string;
+}
+
+export interface ReservationSnapshotTerms {
+  title?: string;
+  benefit_summary?: string;
+  price_summary?: string;
+  cancellation_policy?: string;
+  base_price_brl?: number;
+  partner_condition_price_brl?: number;
+  estimated_savings_brl?: number;
 }
 
 export interface ReservationRequest {
@@ -86,6 +99,16 @@ export interface ReservationRequest {
   time: string;
   guests: number;
   status: 'PENDING_CONFIRMATION' | 'CONFIRMED' | 'CANCELLED';
+  stage?: ReservationLifecycleStage;
+  modality?: CommercialModality;
+  offering_id?: string;
+  offering_title?: string;
+  payment_instruction?: string;
+  attribution_origin?: string;
+  referral_code_used?: string;
+  visit_proof_id?: string;
+  visit_proof_level?: VisitProofLevel;
+  snapshot_terms?: ReservationSnapshotTerms;
   whatsapp_reminder: boolean;
   created_at: string;
 }
@@ -122,6 +145,7 @@ export interface ClubOffer {
   benefit_type: '2_FOR_1' | 'EXECUTIVE_MENU' | 'FREE_DESSERT' | 'OFF_PEAK';
   discount_label: string;
   valid_window: string;
+  estimated_savings_brl?: number;
   reliability: DataReliability;
 }
 
@@ -180,8 +204,11 @@ export interface ClubRedemption {
   experience_name: string;
   offer_title: string;
   discount_label: string;
+  estimated_savings_brl?: number;
   voucher_code: string;
   status: 'ACTIVE' | 'USED' | 'EXPIRED';
+  validated_with_checkin?: boolean;
+  visit_proof_id?: string;
   is_demonstrative: boolean;
   redeemed_at: string;
 }
@@ -197,6 +224,7 @@ export interface PassportMilestone {
 
 export interface PassportSummary {
   verified_checkins_count: number;
+  verified_consumptions_count?: number;
   verified_reviews_count: number;
   vault_visited_count: number;
   unique_neighborhoods: string[];

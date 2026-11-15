@@ -6,6 +6,7 @@ interface RestaurantCardProps {
   restaurant: Restaurant;
   index: number;
   matchScore?: number | null;
+  matchReason?: string;
   inVault?: boolean;
   confiaCount?: number;
   onSaveToVault?: (restaurant: Restaurant) => void;
@@ -15,6 +16,7 @@ interface RestaurantCardProps {
 export function RestaurantCard({
   restaurant,
   matchScore,
+  matchReason,
   inVault = false,
   confiaCount = 0,
   onSaveToVault,
@@ -49,18 +51,13 @@ export function RestaurantCard({
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
-        {/* Top badges */}
+        {/* Top badges: Operational & Geographic */}
         <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
               <MapPin className="h-3 w-3 text-[#FF6B35]" />
               {restaurant.neighborhood}
             </span>
-            {showMatch && (
-              <span className="rounded-full bg-[#397B68]/95 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-md">
-                {matchScore}% Match
-              </span>
-            )}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -129,6 +126,19 @@ export function RestaurantCard({
       {/* Card Body */}
       <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
         <div>
+          {(showMatch || matchReason) && (
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-1.5 rounded-xl bg-[var(--bg-canvas)] px-2.5 py-1.5 text-[11px]">
+              <span className="truncate font-semibold text-[var(--text-secondary)]">
+                {matchReason || 'Afinidade com seu perfil'}
+              </span>
+              {showMatch && (
+                <span className="shrink-0 rounded-full bg-[#397B68]/15 px-2 py-0.5 text-[10px] font-extrabold text-[#397B68] dark:text-[#4CA188]">
+                  {matchScore}% Match
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-sans text-lg font-bold leading-snug tracking-tight text-[var(--text-primary)] transition-colors group-hover:text-[#FF6B35]">
               {restaurant.name}

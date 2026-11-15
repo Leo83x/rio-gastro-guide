@@ -12,12 +12,13 @@ import {
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import {
-  addTrustConnectionByInvite,
   createTrustCircle,
   deleteTrustCircle,
   getMyConfiaInviteCode,
+  SUGGESTED_CIRCLE_NAMES,
   toggleConnectionInCircle,
   updateConnectionStatus,
+  addTrustConnectionByInvite,
 } from '../../services/confiaStore';
 import type { TrustCircle, TrustConnection } from '../../types/confia';
 
@@ -137,6 +138,33 @@ export function CircleManagerModal({
             </button>
           </div>
 
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+              Sugestões em 1 toque:
+            </span>
+            {SUGGESTED_CIRCLE_NAMES.map((suggested) => {
+              const alreadyExists = circles.some(
+                (c) => c.name.toLowerCase() === suggested.toLowerCase()
+              );
+              return (
+                <button
+                  key={suggested}
+                  type="button"
+                  disabled={alreadyExists}
+                  onClick={() => onUpdated(createTrustCircle(suggested), connections)}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition ${
+                    alreadyExists
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 opacity-75'
+                      : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#397B68] hover:text-[#397B68]'
+                  }`}
+                >
+                  {alreadyExists ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                  {suggested}
+                </button>
+              );
+            })}
+          </div>
+
           {circles.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
               {circles.map((c) => (
@@ -252,10 +280,16 @@ export function CircleManagerModal({
                         className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                           conn.status === 'ACCEPTED'
                             ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-red-500/15 text-red-600 dark:text-red-300'
+                            : conn.status === 'PENDING'
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                              : 'bg-red-500/15 text-red-600 dark:text-red-300'
                         }`}
                       >
-                        {conn.status === 'ACCEPTED' ? 'Ativo' : 'Revogado'}
+                        {conn.status === 'ACCEPTED'
+                          ? 'Ativo'
+                          : conn.status === 'PENDING'
+                            ? 'Pendente'
+                            : 'Revogado'}
                       </span>
                     </div>
 
@@ -305,6 +339,11 @@ export function CircleManagerModal({
                       <>
                         <UserX className="h-3.5 w-3.5" />
                         Revogar acesso
+                      </>
+                    ) : conn.status === 'PENDING' ? (
+                      <>
+                        <UserCheck className="h-3.5 w-3.5" />
+                        Aprovar conexão
                       </>
                     ) : (
                       <>

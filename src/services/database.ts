@@ -1,27 +1,16 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import Papa from 'papaparse';
 import { SEED_EXPERIENCES } from '../data/seedExperiences';
-import type { ClaimRequest, Restaurant, StorageMode, UpsertResult } from '../types/restaurant';
+import type { ClaimRequest, Restaurant, UpsertResult } from '../types/restaurant';
 import { generateUUID, slugify } from '../utils/slug';
+import { getStorageMode, supabase } from './supabaseClient';
+
+export { getStorageMode, supabase };
+const supabaseClient = supabase;
 
 const STORAGE_KEY_RESTAURANTS = 'rio_gastro_restaurants_v1';
 const STORAGE_KEY_CLAIMS = 'rio_gastro_claims_v1';
 const STORAGE_KEY_INITIALIZED = 'rio_gastro_initialized_v1';
 const STORAGE_KEY_SUPERAPP_MERGED = 'rio_gastro_superapp_merged_v1';
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-let supabaseClient: SupabaseClient | null = null;
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-export const supabase: SupabaseClient | null = supabaseClient;
-
-export function getStorageMode(): StorageMode {
-  return supabaseClient ? 'supabase' : 'local';
-}
 
 function normalizeRecord(r: Restaurant): Restaurant {
   return {

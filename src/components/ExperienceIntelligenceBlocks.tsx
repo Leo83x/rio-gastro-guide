@@ -6,12 +6,19 @@ import {
   CheckCircle2,
   ExternalLink,
   ParkingCircle,
+  QrCode,
+  Store,
   TrainFront,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { getPartnerOfferings, submitOfferingRequest } from '../services/opportunityStore';
 import { createReservationRequest } from '../services/superappStore';
 import type { ReservationRequest } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
+import {
+  DIRECT_PAYMENT_NOTICE,
+  MANDATORY_CHECKIN_INSTRUCTION,
+} from '../types/verification';
 
 interface ExperienceIntelligenceBlocksProps {
   experience: Restaurant;
@@ -50,29 +57,38 @@ export function ExperienceIntelligenceBlocks({
   locationConsent = false,
   onReservationCreated,
 }: ExperienceIntelligenceBlocksProps) {
-  // 3-Click Quick Reservation State
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const [todayStr] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [currentHour] = useState<number>(() => new Date().getHours());
   const [resDate, setResDate] = useState<string>(todayStr);
   const [resTime, setResTime] = useState<string>('19:30');
   const [resGuests, setResGuests] = useState<number>(2);
   const [whatsappReminder, setWhatsappReminder] = useState<boolean>(true);
   const [resSaved, setResSaved] = useState<boolean>(false);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [offeringMsg, setOfferingMsg] = useState<string>('');
+  const [geoCoords, setGeoCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
     if (!locationConsent || typeof navigator === 'undefined' || !navigator.geolocation) {
-      setUserCoords(null);
       return;
     }
+    let cancelled = false;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        if (!cancelled) {
+          setGeoCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        }
       },
-      () => setUserCoords(null),
+      () => {
+        if (!cancelled) setGeoCoords(null);
+      },
       { enableHighAccuracy: false, timeout: 4000, maximumAge: 300000 }
     );
+    return () => {
+      cancelled = true;
+    };
   }, [locationConsent]);
 
+  const userCoords = locationConsent ? geoCoords : null;
   const refLat = userCoords?.lat ?? -22.966;
   const refLon = userCoords?.lon ?? -43.185;
   const distKm = Math.max(
@@ -93,11 +109,16 @@ export function ExperienceIntelligenceBlocks({
   const nineNineUrl = `https://99app.com/`;
   const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${experience.latitude},${experience.longitude}`;
 
-  const currentHour = new Date().getHours();
   const currentBar = HOURS_CURVE.find((h) => parseInt(h.hour, 10) === currentHour);
   const currentPct = currentBar?.pct ?? 52;
   const crowdStatus =
     currentPct < 45 ? 'Movimento Baixo' : currentPct < 75 ? 'Movimento Moderado' : 'Movimento Alto';
+
+  const venueOfferings = getPartnerOfferings({ restaurantId: experience.id }).filter(
+    (o) =>
+      o.partner_managed_active &&
+      !['ENDED_WITHOUT_GOAL', 'CANCELLED', 'COMPLETED', 'DRAFT'].includes(o.status)
+  );
 
   const handleReserve = () => {
     const req = createReservationRequest({
@@ -109,10 +130,27 @@ export function ExperienceIntelligenceBlocks({
       date: resDate,
       time: resTime,
       guests: resGuests,
+      stage: 'REQUESTED',
+      modality: 'TRADITIONAL_BOOKING',
+      payment_instruction: DIRECT_PAYMENT_NOTICE,
       whatsapp_reminder: whatsappReminder,
     });
     setResSaved(true);
     onReservationCreated?.(req);
+  };
+
+  const handleRequestOffering = (offeringId: string) => {
+    const res = submitOfferingRequest({
+      offeringId,
+      guests: resGuests,
+      whatsappReminder,
+      attributionOrigin: 'detail_modal',
+      venueCoords: { latitude: experience.latitude, longitude: experience.longitude },
+    });
+    setOfferingMsg(res.message);
+    if (res.ok && res.reservation) {
+      onReservationCreated?.(res.reservation);
+    }
   };
 
   return (
@@ -155,9 +193,9 @@ export function ExperienceIntelligenceBlocks({
         </div>
 
         <p className="mt-2.5 text-[10px] text-[var(--text-secondary)]">
-          Previsão baseada em histórico, clima e eventos próximos{' '}
+          Previsão baseada em faixa horária{' '}
           <span className="rounded bg-[var(--bg-subtle)] px-1.5 py-0.5 font-semibold">
-            Estimativa calculada pela plataforma (demonstrativo)
+            Estimativa referencial da plataforma
           </span>
         </p>
       </div>
@@ -167,7 +205,7 @@ export function ExperienceIntelligenceBlocks({
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)]">
             <Car className="h-4 w-4 text-[#E05A47]" />
-            Comparador de Mobilidade &amp; Custo
+            Comparador de Mobilidade &amp; Rotas
           </span>
           <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
             {userCoords
@@ -236,24 +274,77 @@ export function ExperienceIntelligenceBlocks({
         </div>
       </div>
 
-      {/* 3. Reserva Rápida em 3 Cliques */}
+      {/* 3. Oportunidades do Parceiro nesta Casa (quando publicadas) */}
+      {venueOfferings.length > 0 && (
+        <div className="rounded-2xl border border-[#397B68]/30 bg-[#397B68]/8 p-4 text-xs">
+          <p className="font-bold text-[var(--text-primary)]">
+            Condições &amp; janelas publicadas por este estabelecimento
+          </p>
+          <div className="mt-2.5 space-y-2.5">
+            {venueOfferings.map((off) => {
+              const remaining = Math.max(0, off.capacity_total - off.reserved_count);
+              return (
+                <div
+                  key={off.id}
+                  className="flex flex-col justify-between gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3 sm:flex-row sm:items-center"
+                >
+                  <div>
+                    <span className="rounded bg-[#FF6B35]/15 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35]">
+                      {off.condition_badge}
+                    </span>
+                    <p className="mt-1 font-bold text-[var(--text-primary)]">{off.title}</p>
+                    <p className="text-[11px] text-[var(--text-secondary)]">
+                      {off.service_date} às {off.time_slot_label} · {remaining} vagas disponíveis
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={remaining === 0}
+                    onClick={() => handleRequestOffering(off.id)}
+                    className="shrink-0 rounded-xl bg-[#397B68] px-3.5 py-2 text-[11px] font-bold text-white hover:opacity-95 disabled:opacity-45"
+                  >
+                    Solicitar ({resGuests}p)
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          {offeringMsg && (
+            <p className="mt-2 rounded-xl bg-emerald-500/15 px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-300">
+              {offeringMsg}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* 4. Reserva Tradicional em 3 Cliques (Sem Gateway + Instruções Obrigatórias) */}
       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)]">
             <CalendarCheck2 className="h-4 w-4 text-[#E05A47]" />
-            Reserva Rápida em 3 Cliques
+            Solicitar Reserva Tradicional (Sem cobrança no app)
           </span>
           <span className="text-[10px] text-[var(--text-secondary)]">
-            Salva em Perfil › Minha Agenda
+            Salva em Perfil › Agenda
           </span>
         </div>
 
         {resSaved ? (
-          <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-500/15 px-3.5 py-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span>
-              Solicitação pendente registrada para {resDate} às {resTime} ({resGuests} pessoas) e adicionada em Perfil › Minha Agenda!
-            </span>
+          <div className="mt-3 space-y-2 rounded-xl bg-emerald-500/15 px-3.5 py-3 text-xs text-emerald-800 dark:text-emerald-200">
+            <p className="flex items-center gap-2 font-bold">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>
+                Solicitação registrada para {resDate} às {resTime} ({resGuests} pessoas) — aguardando confirmação do estabelecimento.
+              </span>
+            </p>
+            <p className="flex items-start gap-1.5 text-[11px]">
+              <Store className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{DIRECT_PAYMENT_NOTICE}</span>
+            </p>
+            <p className="flex items-start gap-1.5 rounded-lg bg-white/75 p-2 text-[11px] font-semibold text-[#123B56] dark:bg-black/25 dark:text-[#F1E8D8]">
+              <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF6B35]" />
+              <span>{MANDATORY_CHECKIN_INSTRUCTION}</span>
+            </p>
           </div>
         ) : (
           <div className="mt-3 space-y-3">
@@ -287,6 +378,15 @@ export function ExperienceIntelligenceBlocks({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-1 rounded-xl bg-[var(--bg-surface)] p-2.5 text-[10px] text-[var(--text-secondary)]">
+              <p>
+                <strong>Pagamento:</strong> {DIRECT_PAYMENT_NOTICE}
+              </p>
+              <p>
+                <strong>Na chegada:</strong> {MANDATORY_CHECKIN_INSTRUCTION}
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2">

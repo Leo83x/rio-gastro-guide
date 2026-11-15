@@ -4,8 +4,11 @@ import {
   Bookmark,
   CalendarDays,
   CalendarPlus,
+  Camera,
+  Check,
   CheckCircle2,
   Compass,
+  Copy,
   Gift,
   HeartHandshake,
   Lock,
@@ -13,14 +16,18 @@ import {
   LogOut,
   MapPin,
   QrCode,
+  RotateCcw,
   Shield,
+  ShieldAlert,
   Sparkles,
   Star,
+  Store,
   Trash2,
   UserPlus,
   Wand2,
+  WifiOff,
 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   getUserProfileIdentity,
   isSupabaseAuthConfigured,
@@ -33,17 +40,32 @@ import {
   saveConfiaPrivacySettings,
 } from '../services/confiaStore';
 import { deleteSavedItinerary, getSavedItineraries } from '../services/itineraryStore';
+import { computeMissionSummary } from '../services/missionStore';
 import { computePassportSummary } from '../services/passportStore';
 import {
+  getIncomingReferralCode,
+  getMyReferralCode,
+  getMyReferralLink,
+  getReferralAttributions,
+  linkBookingToReferral,
+  registerReferralInvitation,
+  reverseReferralAttribution,
+  setIncomingReferralCode,
+  tryConvertAttributionWithProof,
+} from '../services/referralStore';
+import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
+import {
   cancelReservation,
-  creditReferralBonus,
+  completeReservationCheckin,
   creditVerifiedReview,
   getPointsBalance,
   getPointTransactions,
+  getReservations,
   hasValidatedCheckinForVenue,
   redeemReward,
   validateAndCreditQRCheckin,
 } from '../services/superappStore';
+import { queueOfflineContingencyCheckin } from '../services/visitProofStore';
 import type { ConfiaPrivacySettings } from '../types/confia';
 import type {
   PointTransaction,
@@ -52,7 +74,13 @@ import type {
   UserPreferences,
   UserProfileIdentity,
 } from '../types/experience';
+import type { ReferralAttribution } from '../types/growth';
 import type { Restaurant } from '../types/restaurant';
+import {
+  DIRECT_PAYMENT_NOTICE,
+  MANDATORY_CHECKIN_INSTRUCTION,
+  type ReservationLifecycleStage,
+} from '../types/verification';
 
 interface ProfileWalletViewProps {
   experiences: Restaurant[];
@@ -69,11 +97,61 @@ interface ProfileWalletViewProps {
 
 type ProfileSectionTab = 'passport' | 'agenda' | 'privacy';
 
+interface BarcodeDetectorLike {
+  detect(source: HTMLVideoElement): Promise<Array<{ rawValue?: string }>>;
+}
+
+interface WindowWithBarcodeDetector extends Window {
+  BarcodeDetector?: new (options?: { formats?: string[] }) => BarcodeDetectorLike;
+}
+
 const REWARDS_CATALOG = [
   { id: 'rew-1', title: 'Sobremesa cortesia em casas parceiras (Demo)', cost: 250 },
-  { id: 'rew-2', title: 'Voucher R$ 50 no Bora Club (Demo)', cost: 500 },
+  { id: 'rew-2', title: 'Benefício especial de membro no Bora Club (Demo)', cost: 500 },
   { id: 'rew-3', title: 'Par de ingressos Museu do Amanhã (Demo)', cost: 350 },
 ];
+
+const STAGE_BADGE: Record<ReservationLifecycleStage, { label: string; cls: string }> = {
+  REQUESTED: {
+    label: 'Solicitada',
+    cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  },
+  CONFIRMED: {
+    label: 'Confirmada',
+    cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  },
+  CHECKED_IN: {
+    label: 'Check-in realizado',
+    cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  },
+  VERIFIED_VISIT: {
+    label: 'Visita verificada',
+    cls: 'bg-[#397B68]/20 text-[#397B68] dark:text-[#4CA188]',
+  },
+  VERIFIED_CONSUMPTION: {
+    label: 'Consumo verificado',
+    cls: 'bg-purple-500/15 text-purple-700 dark:text-purple-300',
+  },
+  CANCELLED: {
+    label: 'Cancelada',
+    cls: 'bg-red-500/15 text-red-600 dark:text-red-300',
+  },
+  NO_SHOW: {
+    label: 'Não compareceu',
+    cls: 'bg-red-500/15 text-red-600 dark:text-red-300',
+  },
+  ENDED_WITHOUT_GOAL: {
+    label: 'Encerrada sem meta',
+    cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
+  },
+};
+
+function getEffectiveStage(r: ReservationRequest): ReservationLifecycleStage {
+  if (r.stage) return r.stage;
+  if (r.status === 'CONFIRMED') return 'CONFIRMED';
+  if (r.status === 'CANCELLED') return 'CANCELLED';
+  return 'REQUESTED';
+}
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -94,7 +172,7 @@ function buildGoogleCalendarUrl(r: ReservationRequest): string {
     action: 'TEMPLATE',
     text: `${r.experience_name} — BoraRio`,
     dates: `${start}/${end}`,
-    details: `Reserva para ${r.guests} pessoas (${r.status === 'CONFIRMED' ? 'Confirmada' : 'Solicitação pendente'}).`,
+    details: `Reserva para ${r.guests} pessoas (${getEffectiveStage(r)}). Pagamento direto no local.`,
     location: `${r.neighborhood}, Rio de Janeiro - RJ`,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -131,40 +209,123 @@ export function ProfileWalletView({
     getConfiaPrivacySettings()
   );
 
-  const [selectedVenueId, setSelectedVenueId] = useState<string>(
-    experiences[0]?.id || ''
-  );
-  const [qrInput, setQrInput] = useState<string>('RGG-QR-DEMO-2026');
+  // Check-in QR dinâmico (Passport tab & Agenda drawer)
+  const [selectedVenueId, setSelectedVenueId] = useState<string>(experiences[0]?.id || '');
+  const [qrInput, setQrInput] = useState<string>('');
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const passport = useMemo(() => computePassportSummary(experiences), [experiences]);
+  // Recomende e Ganhe (Rastreável & Antifraude)
+  const myReferralCode = useMemo(() => getMyReferralCode(), []);
+  const myReferralLink = useMemo(() => getMyReferralLink(), []);
+  const [copiedRefLink, setCopiedRefLink] = useState<boolean>(false);
+  const [attributions, setAttributions] = useState<ReferralAttribution[]>(() =>
+    getReferralAttributions()
+  );
+  const [inviteFriendName, setInviteFriendName] = useState<string>('');
+  const [inviteFriendIdentifier, setInviteFriendIdentifier] = useState<string>('');
+  const [inviteBookingId, setInviteBookingId] = useState<string>('');
+  const [incomingRefInput, setIncomingRefInput] = useState<string>(
+    () => getIncomingReferralCode() || ''
+  );
+  const [referralFeedback, setReferralFeedback] = useState<{ ok: boolean; msg: string } | null>(
+    null
+  );
+  const [savingsTick, setSavingsTick] = useState<number>(0);
+
+  // Reservation-specific QR Check-in Drawer State
+  const [checkinResId, setCheckinResId] = useState<string | null>(null);
+  const [drawerCodeOrPin, setDrawerCodeOrPin] = useState<string>('');
+  const [drawerFeedback, setDrawerFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [cameraActive, setCameraActive] = useState<boolean>(false);
+  const [cameraInfo, setCameraInfo] = useState<string>('');
+  const [showClosedReservations, setShowClosedReservations] = useState<boolean>(false);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
+  const passport = useMemo(() => {
+    void savingsTick;
+    void reservations;
+    return computePassportSummary(experiences);
+  }, [experiences, savingsTick, reservations]);
+
+  const missions = useMemo(() => {
+    void savingsTick;
+    void reservations;
+    return computeMissionSummary(experiences);
+  }, [experiences, savingsTick, reservations]);
+
+  const savingsSummary = useMemo(() => {
+    void savingsTick;
+    void reservations;
+    return computeSavingsSummary();
+  }, [savingsTick, reservations]);
   const supabaseReady = isSupabaseAuthConfigured();
 
   const refreshWallet = () => {
     setBalance(getPointsBalance());
     setTransactions(getPointTransactions());
+    setAttributions(getReferralAttributions());
+    setSavingsTick((n) => n + 1);
     onPointsChanged();
   };
 
   const selectedVenue = experiences.find((e) => e.id === selectedVenueId) || experiences[0];
   const canReviewSelected = selectedVenue ? hasValidatedCheckinForVenue(selectedVenue.id) : false;
 
-  const activeReservations = useMemo(
+  const visibleReservations = useMemo(
     () =>
       reservations
-        .filter((r) => r.status !== 'CANCELLED')
+        .filter((r) => {
+          const st = getEffectiveStage(r);
+          if (!showClosedReservations && st === 'CANCELLED') return false;
+          return true;
+        })
         .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
+    [reservations, showClosedReservations]
+  );
+
+  const activeReservationsCount = useMemo(
+    () =>
+      reservations.filter((r) => {
+        const st = getEffectiveStage(r);
+        return st !== 'CANCELLED' && st !== 'NO_SHOW' && st !== 'ENDED_WITHOUT_GOAL';
+      }).length,
     [reservations]
   );
 
   const conflictIds = useMemo(() => {
+    const activeOnly = visibleReservations.filter((r) => {
+      const st = getEffectiveStage(r);
+      return st !== 'CANCELLED' && st !== 'NO_SHOW' && st !== 'ENDED_WITHOUT_GOAL';
+    });
     const set = new Set<string>();
-    for (let i = 0; i < activeReservations.length - 1; i++) {
-      const a = activeReservations[i];
-      const b = activeReservations[i + 1];
+    for (let i = 0; i < activeOnly.length - 1; i++) {
+      const a = activeOnly[i];
+      const b = activeOnly[i + 1];
       if (a.date === b.date) {
-        const minA = parseInt(a.time.split(':')[0] || '0', 10) * 60 + parseInt(a.time.split(':')[1] || '0', 10);
-        const minB = parseInt(b.time.split(':')[0] || '0', 10) * 60 + parseInt(b.time.split(':')[1] || '0', 10);
+        const minA =
+          parseInt(a.time.split(':')[0] || '0', 10) * 60 +
+          parseInt(a.time.split(':')[1] || '0', 10);
+        const minB =
+          parseInt(b.time.split(':')[0] || '0', 10) * 60 +
+          parseInt(b.time.split(':')[1] || '0', 10);
         const dist = haversineKm(a.latitude, a.longitude, b.latitude, b.longitude);
         if (Math.abs(minB - minA) < 90 || (Math.abs(minB - minA) < 120 && dist > 6)) {
           set.add(a.id);
@@ -173,7 +334,7 @@ export function ProfileWalletView({
       }
     }
     return set;
-  }, [activeReservations]);
+  }, [visibleReservations]);
 
   const handleSaveIdentity = (e: FormEvent) => {
     e.preventDefault();
@@ -193,11 +354,90 @@ export function ProfileWalletView({
 
   const handleCheckin = () => {
     if (!selectedVenue) return;
-    const res = validateAndCreditQRCheckin(selectedVenue.id, selectedVenue.name, qrInput);
+    const res = validateAndCreditQRCheckin(selectedVenue.id, selectedVenue.name, qrInput, {
+      hasGeolocationEvidence: preferences.lgpd_consents.location,
+    });
     setFeedback({ ok: res.ok, msg: res.message });
     if (res.ok) {
-      setQrInput(`RGG-QR-${Date.now().toString().slice(-5)}`);
+      setQrInput('');
+      onReservationsUpdated(getReservations());
       refreshWallet();
+    }
+  };
+
+  const handleReservationDynamicCheckin = (resItem: ReservationRequest, codeOrPin: string) => {
+    const res = completeReservationCheckin({
+      reservationId: resItem.id,
+      scannedCodeOrPin: codeOrPin,
+      actorContext: 'USER',
+      hasGeolocationEvidence: preferences.lgpd_consents.location,
+    });
+    setDrawerFeedback({ ok: res.ok, msg: res.message });
+    if (res.ok) {
+      stopCamera();
+      setDrawerCodeOrPin('');
+      onReservationsUpdated(getReservations());
+      refreshWallet();
+    }
+  };
+
+  const handleOfflineContingency = (resItem: ReservationRequest) => {
+    const res = queueOfflineContingencyCheckin({
+      reservation: resItem,
+      contingencyPinEntered: drawerCodeOrPin,
+    });
+    setDrawerFeedback({ ok: res.ok, msg: res.message });
+    if (res.ok) {
+      stopCamera();
+      setDrawerCodeOrPin('');
+    }
+  };
+
+  const handleStartQrCamera = async (resItem: ReservationRequest) => {
+    const win = window as WindowWithBarcodeDetector;
+    if (!win.BarcodeDetector || !navigator.mediaDevices?.getUserMedia) {
+      setCameraInfo(
+        'Leitura via câmera (BarcodeDetector) indisponível neste navegador. Digite o código BR-QR-... ou o PIN de 6 dígitos fornecido pelo estabelecimento, ou utilize Contingência Offline.'
+      );
+      return;
+    }
+
+    try {
+      setCameraInfo('Iniciando câmera para leitura do QR dinâmico...');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      streamRef.current = stream;
+      setCameraActive(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      const detector = new win.BarcodeDetector({ formats: ['qr_code'] });
+
+      const scanFrame = async () => {
+        if (!streamRef.current || !videoRef.current) return;
+        try {
+          const codes = await detector.detect(videoRef.current);
+          const raw = codes[0]?.rawValue?.trim();
+          if (raw) {
+            setDrawerCodeOrPin(raw);
+            handleReservationDynamicCheckin(resItem, raw);
+            return;
+          }
+        } catch {
+          // Ignore single frame detection error
+        }
+        if (streamRef.current) {
+          requestAnimationFrame(() => void scanFrame());
+        }
+      };
+      requestAnimationFrame(() => void scanFrame());
+    } catch {
+      stopCamera();
+      setCameraInfo(
+        'Permissão de câmera negada ou câmera ausente. Use o campo manual com o código BR-QR-... ou PIN de 6 dígitos.'
+      );
     }
   };
 
@@ -208,9 +448,64 @@ export function ProfileWalletView({
     if (res.ok) refreshWallet();
   };
 
-  const handleReferral = () => {
-    const res = creditReferralBonus(`Amigo #${Math.floor(Math.random() * 900 + 100)}`);
-    setFeedback({ ok: res.ok, msg: res.message });
+  const handleRegisterReferral = (e: FormEvent) => {
+    e.preventDefault();
+    const linkedBooking = reservations.find((r) => r.id === inviteBookingId);
+    const res = registerReferralInvitation({
+      referredLabel: inviteFriendName,
+      referredIdentifier: inviteFriendIdentifier,
+      bookingId: linkedBooking?.id,
+      experienceId: linkedBooking?.experience_id,
+      experienceName: linkedBooking?.experience_name,
+    });
+    setAttributions(res.attributions);
+    setReferralFeedback({ ok: res.ok, msg: res.message });
+    if (res.ok) {
+      setInviteFriendName('');
+      setInviteFriendIdentifier('');
+      setInviteBookingId('');
+      if (linkedBooking && res.attribution) {
+        const linkRes = linkBookingToReferral({
+          attributionId: res.attribution.id,
+          reservation: linkedBooking,
+        });
+        setAttributions(linkRes.attributions);
+        if (linkRes.converted) {
+          setReferralFeedback({ ok: true, msg: linkRes.message });
+          refreshWallet();
+        }
+      }
+    }
+  };
+
+  const handleApplyIncomingReferral = () => {
+    const res = setIncomingReferralCode(incomingRefInput);
+    setReferralFeedback({ ok: res.ok, msg: res.message });
+  };
+
+  const handleVerifyReferralConversion = (attributionId: string) => {
+    const res = tryConvertAttributionWithProof(attributionId, reservations);
+    setAttributions(res.attributions);
+    setReferralFeedback({ ok: res.ok, msg: res.message });
+    if (res.ok) refreshWallet();
+  };
+
+  const handleLinkBookingToReferral = (attributionId: string, bookingId: string) => {
+    const targetBooking = reservations.find((r) => r.id === bookingId);
+    if (!targetBooking) return;
+    const res = linkBookingToReferral({ attributionId, reservation: targetBooking });
+    setAttributions(res.attributions);
+    setReferralFeedback({ ok: res.ok, msg: res.message });
+    if (res.converted) refreshWallet();
+  };
+
+  const handleReverseReferral = (attributionId: string) => {
+    const res = reverseReferralAttribution(
+      attributionId,
+      'Cancelamento ou contestação auditada pelo usuário/parceiro'
+    );
+    setAttributions(res.attributions);
+    setReferralFeedback({ ok: res.ok, msg: res.message });
     refreshWallet();
   };
 
@@ -320,7 +615,7 @@ export function ProfileWalletView({
             { id: 'passport' as const, label: 'Passaporte Carioca & Rio Points', icon: Award },
             {
               id: 'agenda' as const,
-              label: `Minha Agenda & Roteiros (${activeReservations.length + savedItineraries.length})`,
+              label: `Minhas Reservas & Roteiros (${activeReservationsCount + savedItineraries.length})`,
               icon: CalendarDays,
             },
             { id: 'privacy' as const, label: 'Privacidade, LGPD & Rede Confia', icon: Shield },
@@ -349,20 +644,22 @@ export function ProfileWalletView({
       {/* SECTION 1: Passaporte Carioca & Rio Points */}
       {sectionTab === 'passport' && (
         <div className="space-y-6">
-          {/* Passaporte Carioca Milestones */}
+          {/* Passaporte Carioca & Missões Milestones */}
           <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
               <div>
                 <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#397B68]">
                   <Compass className="h-4 w-4" />
-                  Passaporte Carioca
+                  Passaporte Carioca &amp; Missões Reais
                 </p>
                 <h3 className="font-sans mt-1 text-xl font-bold text-[var(--text-primary)]">
                   Nível atual: {passport.level_label}
                 </h3>
               </div>
               <span className="text-xs text-[var(--text-secondary)]">
-                {passport.verified_checkins_count} check-ins QR · {passport.unique_neighborhoods.length} bairros visitados
+                {passport.verified_checkins_count} check-ins validados ·{' '}
+                {passport.verified_consumptions_count || 0} consumos confirmados ·{' '}
+                {passport.unique_neighborhoods.length} bairros visitados
               </span>
             </div>
 
@@ -388,6 +685,50 @@ export function ProfileWalletView({
                 </div>
               ))}
             </div>
+
+            {/* Missões e Jornadas (Derivadas exclusivamente de ações reais) */}
+            <div className="mt-5 border-t border-[var(--border-hairline)] pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Missões e Jornadas ({missions.completed_count}/{missions.total_count} concluídas)
+                </p>
+                <span className="text-[11px] text-[var(--text-secondary)]">
+                  Atualizadas exclusivamente por provas reais (sem progresso simulado)
+                </span>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {missions.missions.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`rounded-2xl border p-3.5 text-xs ${
+                      m.completed
+                        ? 'border-emerald-500/40 bg-emerald-500/10'
+                        : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="rounded-full bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] font-bold text-[#397B68]">
+                        {m.category}
+                      </span>
+                      <span className="font-mono text-[11px] font-bold text-[#FF6B35]">
+                        {m.current}/{m.target}
+                      </span>
+                    </div>
+                    <h4 className="mt-1.5 font-bold text-[var(--text-primary)]">{m.title}</h4>
+                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                      {m.description}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--border-hairline)] pt-2 text-[10px]">
+                      <span className="font-semibold text-[#123B56] dark:text-[#7FB6D9]">
+                        {m.reward_badge}
+                      </span>
+                      <span className="text-[var(--text-secondary)]">{m.verification_rule}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
 
           {/* Wallet Hero + QR Check-in */}
@@ -410,14 +751,31 @@ export function ProfileWalletView({
                 Saldo calculado exclusivamente a partir do histórico transacional (sem edição arbitrária).
               </p>
 
-              <button
-                type="button"
-                onClick={handleReferral}
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF6B35] py-2.5 text-xs font-semibold text-white hover:bg-[#e8634c]"
-              >
-                <UserPlus className="h-4 w-4" />
-                Simular Indicação Validada (+200 RP)
-              </button>
+              {/* Economia Comprovada vs Economia Potencial */}
+              <div className="mt-5 grid grid-cols-2 gap-2.5 text-xs">
+                <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/12 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                    Economia Comprovada
+                  </p>
+                  <p className="mt-1 font-sans text-lg font-extrabold text-white">
+                    {formatBrl(savingsSummary.proven_brl)}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-white/70">
+                    {savingsSummary.proven_count} pós-check-in
+                  </p>
+                </div>
+                <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#FFB347]">
+                    Economia Potencial
+                  </p>
+                  <p className="mt-1 font-sans text-lg font-extrabold text-white">
+                    {formatBrl(savingsSummary.potential_brl)}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-white/70">
+                    {savingsSummary.potential_count} aguardando ida
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
@@ -428,6 +786,9 @@ export function ProfileWalletView({
               <h3 className="font-sans mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
                 Validar Visita (+50 RP) &amp; Liberar Visita Verificada
               </h3>
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                {MANDATORY_CHECKIN_INSTRUCTION} O check-in valida sua chegada; o selo Consumo Verificado requer confirmação adicional do parceiro após o atendimento.
+              </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
@@ -449,13 +810,13 @@ export function ProfileWalletView({
 
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
-                    Token QR Dinâmico
+                    Token QR Dinâmico ou PIN 6 dígitos
                   </label>
                   <input
                     type="text"
                     value={qrInput}
                     onChange={(e) => setQrInput(e.target.value)}
-                    placeholder="RGG-QR-..."
+                    placeholder="BR-QR-... ou PIN 6 dígitos"
                     className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 font-mono text-xs text-[var(--text-primary)]"
                   />
                 </div>
@@ -499,6 +860,266 @@ export function ProfileWalletView({
             </div>
           </div>
 
+          {/* Recomende e Ganhe (Rastreável & Antifraude) */}
+          <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
+            <div className="flex flex-col justify-between gap-4 border-b border-[var(--border-hairline)] pb-4 md:flex-row md:items-center">
+              <div>
+                <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#397B68]">
+                  <UserPlus className="h-4 w-4" />
+                  Recomende e Ganhe · Antifraude
+                </p>
+                <h3 className="font-sans mt-1 text-xl font-bold text-[var(--text-primary)]">
+                  Recompensa apenas por visita validada (+200 RP)
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  Zero pontos por clique ou cadastro isolado. Autoindicação bloqueada e estorno automático se a reserva for cancelada ou contestada.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-xs">
+                <div>
+                  <span className="block text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                    Seu Código Rastreável
+                  </span>
+                  <span className="font-mono text-sm font-extrabold text-[#FF6B35]">
+                    {myReferralCode}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(myReferralLink);
+                    setCopiedRefLink(true);
+                    setTimeout(() => setCopiedRefLink(false), 2500);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#123B56] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#102F46]"
+                >
+                  {copiedRefLink ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-300" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                  {copiedRefLink ? 'Link copiado!' : 'Copiar link'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-6 lg:grid-cols-2">
+              <form onSubmit={handleRegisterReferral} className="space-y-3 rounded-2xl bg-[var(--bg-canvas)] p-4 text-xs">
+                <p className="font-bold text-[var(--text-primary)]">
+                  Registrar convidado indicado (Pendente até check-in real)
+                </p>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <input
+                    type="text"
+                    value={inviteFriendName}
+                    onChange={(e) => setInviteFriendName(e.target.value)}
+                    placeholder="Nome do amigo indicado"
+                    className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs text-[var(--text-primary)]"
+                  />
+                  <input
+                    type="text"
+                    value={inviteFriendIdentifier}
+                    onChange={(e) => setInviteFriendIdentifier(e.target.value)}
+                    placeholder="E-mail ou @identificador (opcional)"
+                    className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs text-[var(--text-primary)]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold text-[var(--text-secondary)]">
+                    Vincular a reserva elegível (opcional — para rastrear check-in)
+                  </label>
+                  <select
+                    value={inviteBookingId}
+                    onChange={(e) => setInviteBookingId(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs text-[var(--text-primary)]"
+                  >
+                    <option value="">Sem reserva vinculada no momento</option>
+                    {reservations
+                      .filter(
+                        (r) =>
+                          r.status !== 'CANCELLED' &&
+                          r.stage !== 'CANCELLED' &&
+                          r.stage !== 'NO_SHOW' &&
+                          r.stage !== 'ENDED_WITHOUT_GOAL'
+                      )
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.experience_name} ({r.date} {r.time} · {STAGE_BADGE[getEffectiveStage(r)].label})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-secondary)]">
+                    <ShieldAlert className="h-3.5 w-3.5 text-[#397B68]" />
+                    Cadastro isolado gera +0 RP.
+                  </span>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#397B68] px-4 py-2 text-xs font-bold text-white hover:opacity-95"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Registrar Convite
+                  </button>
+                </div>
+
+                {/* Código de entrada aplicado por convidado */}
+                <div className="border-t border-[var(--border-hairline)] pt-3">
+                  <label className="mb-1 block text-[11px] font-semibold text-[var(--text-secondary)]">
+                    Recebeu código de um amigo? (Bloqueia autoindicação)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={incomingRefInput}
+                      onChange={(e) => setIncomingRefInput(e.target.value)}
+                      placeholder="Ex: BR-IND-ABC12"
+                      className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyIncomingReferral}
+                      className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 font-bold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="font-bold text-[var(--text-primary)]">
+                    Acompanhamento de Indicações ({attributions.length})
+                  </span>
+                  <span className="text-[11px] text-[var(--text-secondary)]">
+                    {attributions.filter((a) => a.status === 'CONVERTED').length} convertidas ·{' '}
+                    {attributions.filter((a) => a.status === 'PENDING_CONVERSION').length} pendentes
+                  </span>
+                </div>
+
+                {referralFeedback && (
+                  <p
+                    className={`rounded-xl px-3 py-2 text-[11px] font-semibold ${
+                      referralFeedback.ok
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-red-500/15 text-red-600 dark:text-red-300'
+                    }`}
+                  >
+                    {referralFeedback.msg}
+                  </p>
+                )}
+
+                {attributions.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-[var(--border-hairline)] p-4 text-xs text-[var(--text-secondary)]">
+                    Nenhuma indicação registrada ainda. Compartilhe seu código rastreável acima; as conversões aparecem aqui quando houver reserva e check-in real.
+                  </p>
+                ) : (
+                  <div className="max-h-64 space-y-2.5 overflow-y-auto pr-1">
+                    {attributions.map((attr) => (
+                      <div
+                        key={attr.id}
+                        className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3 text-xs"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <strong className="text-[var(--text-primary)]">
+                              {attr.referred_label}
+                            </strong>
+                            {attr.experience_name && (
+                              <span className="ml-1.5 text-[11px] text-[var(--text-secondary)]">
+                                · {attr.experience_name}
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              attr.status === 'CONVERTED'
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                : attr.status === 'REVERSED'
+                                  ? 'bg-red-500/15 text-red-600 dark:text-red-300'
+                                  : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                            }`}
+                          >
+                            {attr.status === 'CONVERTED'
+                              ? `Convertida (+${attr.reward_points} RP)`
+                              : attr.status === 'REVERSED'
+                                ? 'Estornada'
+                                : 'Pendente (0 RP até check-in)'}
+                          </span>
+                        </div>
+
+                        {attr.reversal_reason && (
+                          <p className="mt-1 text-[10px] text-red-600 dark:text-red-300">
+                            Motivo do estorno: {attr.reversal_reason}
+                          </p>
+                        )}
+
+                        {attr.status === 'PENDING_CONVERSION' && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {!attr.booking_id && reservations.length > 0 && (
+                              <select
+                                defaultValue=""
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleLinkBookingToReferral(attr.id, e.target.value);
+                                  }
+                                }}
+                                className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2 py-1 text-[10px]"
+                              >
+                                <option value="">Vincular reserva...</option>
+                                {reservations
+                                  .filter(
+                                    (r) =>
+                                      r.status !== 'CANCELLED' &&
+                                      r.stage !== 'CANCELLED' &&
+                                      r.stage !== 'NO_SHOW'
+                                  )
+                                  .map((r) => (
+                                    <option key={r.id} value={r.id}>
+                                      {r.experience_name} ({r.date})
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyReferralConversion(attr.id)}
+                              className="rounded-lg bg-[#397B68] px-2.5 py-1 text-[10px] font-bold text-white"
+                            >
+                              Validar pós-check-in
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReverseReferral(attr.id)}
+                              className="rounded-lg border border-red-500/35 px-2.5 py-1 text-[10px] font-bold text-red-600 dark:text-red-300"
+                            >
+                              Cancelar convite
+                            </button>
+                          </div>
+                        )}
+
+                        {attr.status === 'CONVERTED' && (
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleReverseReferral(attr.id)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/8 px-2.5 py-1 text-[10px] font-bold text-red-600 dark:text-red-300"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              Estornar / Contestar Indicação
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
           <div className="grid gap-6 md:grid-cols-2">
             {/* Rewards Catalog */}
             <section className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
@@ -535,50 +1156,80 @@ export function ProfileWalletView({
                 Extrato de Pontos
               </div>
               <div className="mt-4 max-h-64 divide-y divide-[var(--border-hairline)] overflow-y-auto">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between gap-2 py-2.5 text-xs">
-                    <div>
-                      <p className="font-semibold text-[var(--text-primary)]">{tx.description}</p>
-                      <p className="text-[10px] text-[var(--text-secondary)]">
-                        {new Date(tx.created_at).toLocaleString('pt-BR')}
-                      </p>
+                {transactions.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-[var(--border-hairline)] p-4 text-xs text-[var(--text-secondary)]">
+                    Nenhuma movimentação ainda. Faça check-in via QR dinâmico no estabelecimento ou conclua uma indicação pós-check-in para acumular Rio Points.
+                  </p>
+                ) : (
+                  transactions.map((tx) => (
+                    <div key={tx.id} className="flex items-center justify-between gap-2 py-2.5 text-xs">
+                      <div>
+                        <p className="font-semibold text-[var(--text-primary)]">{tx.description}</p>
+                        <p className="text-[10px] text-[var(--text-secondary)]">
+                          {new Date(tx.created_at).toLocaleString('pt-BR')} ·{' '}
+                          {tx.type === 'REVERSAL' ? 'Estorno' : tx.origin}
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 font-bold ${
+                          tx.type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
+                        }`}
+                      >
+                        {tx.type === 'CREDIT' ? `+${tx.amount}` : `-${tx.amount}`} RP
+                      </span>
                     </div>
-                    <span
-                      className={`shrink-0 font-bold ${
-                        tx.type === 'CREDIT' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'
-                      }`}
-                    >
-                      {tx.type === 'CREDIT' ? `+${tx.amount}` : `-${tx.amount}`} RP
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </section>
           </div>
         </div>
       )}
 
-      {/* SECTION 2: Minha Agenda Pessoal, Reservas & Roteiros Salvos (Migrated cleanly from AgendaView) */}
+      {/* SECTION 2: Minha Agenda Pessoal, Check-in QR na Reserva & Roteiros Salvos */}
       {sectionTab === 'agenda' && (
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
-              <CalendarDays className="h-4 w-4" />
-              Minhas Reservas &amp; Google Calendar ({activeReservations.length})
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                <CalendarDays className="h-4 w-4" />
+                Minhas Reservas &amp; Check-in ({visibleReservations.length})
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={showClosedReservations}
+                  onChange={(e) => setShowClosedReservations(e.target.checked)}
+                  className="rounded accent-[#FF6B35]"
+                />
+                Exibir canceladas
+              </label>
             </div>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Suas solicitações de reserva com detector automático de conflitos de horário e distância.
+              Acompanhe o estágio real de cada solicitação, instruções de pagamento direto no local e faça o check-in QR dinâmico na chegada.
             </p>
 
-            {activeReservations.length === 0 ? (
+            {visibleReservations.length === 0 ? (
               <p className="mt-4 rounded-2xl border border-dashed border-[var(--border-hairline)] p-4 text-xs text-[var(--text-secondary)]">
-                Nenhuma reserva registrada ainda. Abra qualquer experiência no catálogo e use a{' '}
-                <strong>Reserva Rápida em 3 Cliques</strong>.
+                Nenhuma reserva registrada ainda. Abra qualquer experiência no catálogo ou acesse o <strong>Bora Club</strong>.
               </p>
             ) : (
               <div className="mt-4 space-y-3">
-                {activeReservations.map((res) => {
+                {visibleReservations.map((res) => {
+                  const stage = getEffectiveStage(res);
+                  const stageMeta = STAGE_BADGE[stage];
                   const hasConflict = conflictIds.has(res.id);
+                  const isClosed =
+                    stage === 'CANCELLED' ||
+                    stage === 'NO_SHOW' ||
+                    stage === 'ENDED_WITHOUT_GOAL';
+                  const alreadyCheckedIn =
+                    stage === 'CHECKED_IN' ||
+                    stage === 'VERIFIED_VISIT' ||
+                    stage === 'VERIFIED_CONSUMPTION';
+                  const canDoCheckin = !isClosed && !alreadyCheckedIn;
+                  const isDrawerOpen = checkinResId === res.id;
+
                   return (
                     <div
                       key={res.id}
@@ -590,32 +1241,62 @@ export function ProfileWalletView({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <span
-                            className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                              res.status === 'CONFIRMED'
-                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                            }`}
-                          >
-                            {res.status === 'CONFIRMED' ? 'Confirmada' : 'Solicitação Pendente'}
-                          </span>
-                          <h4 className="mt-1 text-sm font-bold text-[var(--text-primary)]">
-                            {res.experience_name}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold ${stageMeta.cls}`}>
+                              {stageMeta.label}
+                            </span>
+                            {res.modality === 'DEMAND_OFFER' && stage === 'REQUESTED' && (
+                              <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                                Demanda · Aguardando meta e confirmação do parceiro
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="mt-1.5 text-sm font-bold text-[var(--text-primary)]">
+                            {res.offering_title || res.experience_name}
                           </h4>
                           <p className="text-[11px] text-[var(--text-secondary)]">
-                            {res.date} às {res.time} · {res.guests} pessoas · {res.neighborhood}
+                            {res.experience_name} · {res.date} às {res.time} · {res.guests} pessoas · {res.neighborhood}
                           </p>
+                          {res.snapshot_terms?.price_summary && (
+                            <p className="mt-1 text-[11px] font-medium text-[var(--text-primary)]">
+                              {res.snapshot_terms.price_summary}
+                            </p>
+                          )}
                         </div>
 
-                        <button
-                          type="button"
-                          title="Cancelar solicitação"
-                          onClick={() => onReservationsUpdated(cancelReservation(res.id))}
-                          className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-red-500/15 hover:text-red-600"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {!isClosed && !alreadyCheckedIn && (
+                          <button
+                            type="button"
+                            title="Cancelar solicitação"
+                            onClick={() => {
+                              onReservationsUpdated(cancelReservation(res.id));
+                              refreshWallet();
+                            }}
+                            className="rounded p-1.5 text-[var(--text-secondary)] hover:bg-red-500/15 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
+
+                      {!isClosed && (
+                        <div className="mt-2.5 space-y-1.5 rounded-xl bg-[var(--bg-surface)] p-2.5 text-[10px]">
+                          <p className="flex items-start gap-1.5 text-[var(--text-secondary)]">
+                            <Store className="mt-0.5 h-3 w-3 shrink-0 text-[#397B68]" />
+                            <span>{res.payment_instruction || DIRECT_PAYMENT_NOTICE}</span>
+                          </p>
+                          <p className="flex items-start gap-1.5 font-semibold text-[#123B56] dark:text-[#F1E8D8]">
+                            <QrCode className="mt-0.5 h-3 w-3 shrink-0 text-[#FF6B35]" />
+                            <span>{MANDATORY_CHECKIN_INSTRUCTION}</span>
+                          </p>
+                        </div>
+                      )}
+
+                      {stage === 'ENDED_WITHOUT_GOAL' && (
+                        <p className="mt-2 rounded-lg bg-zinc-500/10 px-2.5 py-1.5 text-[11px] text-[var(--text-secondary)]">
+                          Esta janela por demanda foi encerrada pelo estabelecimento sem atingir a meta mínima, sem cobrança nem ônus.
+                        </p>
+                      )}
 
                       {hasConflict && (
                         <p className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
@@ -624,15 +1305,125 @@ export function ProfileWalletView({
                         </p>
                       )}
 
-                      <a
-                        href={buildGoogleCalendarUrl(res)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
-                      >
-                        <CalendarPlus className="h-3.5 w-3.5 text-[#FF6B35]" />
-                        Adicionar ao Google Calendar
-                      </a>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {canDoCheckin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isDrawerOpen) {
+                                stopCamera();
+                                setCheckinResId(null);
+                              } else {
+                                setCheckinResId(res.id);
+                                setDrawerCodeOrPin('');
+                                setDrawerFeedback(null);
+                                setCameraInfo('');
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-1.5 text-[11px] font-bold text-white shadow-xs"
+                          >
+                            <QrCode className="h-3.5 w-3.5" />
+                            {isDrawerOpen ? 'Fechar Check-in' : 'Fazer Check-in QR Dinâmico'}
+                          </button>
+                        )}
+
+                        {!isClosed && (
+                          <a
+                            href={buildGoogleCalendarUrl(res)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                          >
+                            <CalendarPlus className="h-3.5 w-3.5 text-[#FF6B35]" />
+                            Google Calendar
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Dynamic Check-in Drawer (Camera + Manual BR-QR / PIN + Offline Contingency) */}
+                      {isDrawerOpen && (
+                        <div className="mt-3 space-y-3 rounded-2xl border border-[#FF6B35]/40 bg-[var(--bg-surface)] p-3.5">
+                          <p className="font-bold text-[var(--text-primary)]">
+                            Validação presencial na chegada — {res.experience_name}
+                          </p>
+
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void handleStartQrCamera(res)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 text-[11px] font-bold hover:border-[#FF6B35]"
+                            >
+                              <Camera className="h-3.5 w-3.5 text-[#FF6B35]" />
+                              {cameraActive ? 'Câmera ativa' : 'Escanear QR pela Câmera'}
+                            </button>
+                            {cameraActive && (
+                              <button
+                                type="button"
+                                onClick={stopCamera}
+                                className="rounded-lg border border-red-500/35 px-2.5 py-1.5 text-[11px] font-bold text-red-600"
+                              >
+                                Parar câmera
+                              </button>
+                            )}
+                          </div>
+
+                          {cameraActive && (
+                            <video
+                              ref={videoRef}
+                              muted
+                              playsInline
+                              className="max-h-40 w-full rounded-xl bg-black object-cover"
+                            />
+                          )}
+
+                          {cameraInfo && (
+                            <p className="text-[11px] text-[var(--text-secondary)]">{cameraInfo}</p>
+                          )}
+
+                          <div className="space-y-2">
+                            <label className="block text-[11px] font-semibold text-[var(--text-secondary)]">
+                              Token dinâmico (<code className="font-mono">BR-QR-...</code>) ou PIN 6 dígitos do balcão
+                            </label>
+                            <input
+                              type="text"
+                              value={drawerCodeOrPin}
+                              onChange={(e) => setDrawerCodeOrPin(e.target.value)}
+                              placeholder="Ex: BR-QR-XXXX ou 123456"
+                              className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 font-mono text-xs text-[var(--text-primary)]"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleReservationDynamicCheckin(res, drawerCodeOrPin)}
+                                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#397B68] px-3 py-2 text-[11px] font-bold text-white"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Validar Check-in QR / PIN
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOfflineContingency(res)}
+                                className="inline-flex items-center gap-1 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] font-bold text-amber-800 dark:text-amber-200"
+                              >
+                                <WifiOff className="h-3.5 w-3.5" />
+                                Contingência Offline / Sem Câmera
+                              </button>
+                            </div>
+                          </div>
+
+                          {drawerFeedback && (
+                            <p
+                              className={`rounded-xl px-3 py-2 text-[11px] font-semibold ${
+                                drawerFeedback.ok
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                  : 'bg-red-500/15 text-red-600 dark:text-red-300'
+                              }`}
+                            >
+                              {drawerFeedback.msg}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

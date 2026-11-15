@@ -1,7 +1,6 @@
 import { Check, Shield, Sparkles, X } from 'lucide-react';
 import { useState } from 'react';
 import type { MacroCategory, UserPreferences } from '../types/experience';
-import type { Restaurant } from '../types/restaurant';
 
 interface PersonalizeModalProps {
   preferences: UserPreferences;
@@ -30,28 +29,6 @@ const FAVORITE_NEIGHBORHOODS = [
   'Lapa',
   'Barra da Tijuca',
 ];
-
-export function calculateMatchScore(item: Restaurant, prefs: UserPreferences): number | null {
-  if (!prefs.lgpd_consents.personalization) return null;
-
-  const configuredCriteria =
-    prefs.favorite_macro_categories.length +
-    prefs.favorite_neighborhoods.length +
-    prefs.preferred_moments.length;
-  if (configuredCriteria < 2) return null;
-
-  let score = 46;
-  const macro = item.macro_category || 'Gastronomia';
-  if (prefs.favorite_macro_categories.includes(macro)) score += 22;
-  if (prefs.favorite_neighborhoods.includes(item.neighborhood)) score += 20;
-  if (item.price_range === prefs.budget_tier) score += 7;
-  if (
-    item.moment_tags?.some((tag) => prefs.preferred_moments.includes(tag))
-  ) {
-    score += 4;
-  }
-  return Math.min(99, score);
-}
 
 export function PersonalizeModal({ preferences, onSave, onClose }: PersonalizeModalProps) {
   const [draft, setDraft] = useState<UserPreferences>(preferences);

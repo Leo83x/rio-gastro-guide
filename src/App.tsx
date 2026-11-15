@@ -9,7 +9,7 @@ import { IntentCaptureModal } from './components/confia/IntentCaptureModal';
 import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
-import { calculateMatchScore, PersonalizeModal } from './components/PersonalizeModal';
+import { PersonalizeModal } from './components/PersonalizeModal';
 import { PlannerView } from './components/PlannerView';
 import { ProfileWalletView } from './components/ProfileWalletView';
 import { RestaurantCard } from './components/RestaurantCard';
@@ -17,6 +17,7 @@ import { RestaurantDetailModal } from './components/RestaurantDetailModal';
 import { LandingPage } from './pages/LandingPage';
 import { PartnerDashboard } from './pages/PartnerDashboard';
 import { PartnersLandingPage } from './pages/PartnersLandingPage';
+import { getUserProfileIdentity, subscribeToAuthChanges, syncSupabaseSessionIdentity } from './services/authService';
 import {
   getTrustCircles,
   getTrustConnections,
@@ -24,8 +25,10 @@ import {
 } from './services/confiaStore';
 import { getAllRestaurants, getClaimRequests } from './services/database';
 import { addIntentVaultItem, getIntentVaultItems } from './services/intentVaultStore';
+import { calculateMatchScore, getMatchReasonLabel } from './services/matchService';
 import { usePwaStatus } from './services/pwa';
 import { useAppRoute } from './services/router';
+import { captureReferralCodeFromUrl } from './services/referralStore';
 import {
   getNotifications,
   getPointsBalance,
@@ -123,7 +126,13 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    captureReferralCodeFromUrl();
     void loadData();
+    void syncSupabaseSessionIdentity();
+    const unsub = subscribeToAuthChanges(() => {
+      setConfiaPosts(getVisibleConfiaRecommendations());
+    });
+    return unsub;
   }, [loadData]);
 
   const availableCategories = useMemo(() => {
@@ -311,6 +320,11 @@ export function App() {
         onToggleTheme={() => setIsDark((prev) => !prev)}
         onNavigate={navigate}
         onDatabaseUpdated={loadData}
+        onReservationsUpdated={setReservations}
+        onSyncAppState={() => {
+          setPointsBalance(getPointsBalance());
+          setNotifications(getNotifications());
+        }}
       />
     );
   }
@@ -365,8 +379,10 @@ export function App() {
             availableCategories={availableCategories}
             resultCount={filteredRestaurants.length}
             onOpenPersonalize={() => setShowPersonalize(true)}
+            onOpenProfile={() => setActiveTab('profile')}
             personalizationActive={preferences.lgpd_consents.personalization}
             locationConsent={preferences.lgpd_consents.location}
+            homeNeighborhood={getUserProfileIdentity().home_neighborhood}
             vaultCount={activeVaultCount}
             onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
             onOpenVault={openVaultHub}
@@ -383,12 +399,21 @@ export function App() {
                 experiences={restaurants}
                 preferences={preferences}
                 vaultCount={activeVaultCount}
+                vaultVenueIds={vaultVenueIds}
                 confiaConnectionsCount={acceptedConnectionsCount}
+                confiaPosts={confiaPosts}
+                confiaCountsByVenue={confiaCountsByVenue}
+                pointsBalance={pointsBalance}
                 onSelectExperience={setSelectedRestaurant}
                 onGoToExploreMap={() => setActiveTab('planner')}
                 onGoToClub={() => setActiveTab('club')}
                 onGoToPlanner={() => setActiveTab('planner')}
-                onGoToConfia={openVaultHub}
+                onGoToConfia={() => {
+                  setConfiaSubTab('network');
+                  setActiveTab('confia');
+                }}
+                onGoToProfile={() => setActiveTab('profile')}
+                onOpenPersonalize={() => setShowPersonalize(true)}
               />
             )}
 
@@ -448,21 +473,36 @@ export function App() {
             ) : (
               <div>
                 <h2 className="font-sans tracking-tight mb-4 text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
-                  {showEditorialDiscover ? 'Em alta no Rio' : 'Resultados para você'}
+                  {showEditorialDiscover ? 'Catálogo Completo do Rio' : 'Resultados para você'}
                 </h2>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredRestaurants.map((restaurant, idx) => (
-                    <RestaurantCard
-                      key={restaurant.id}
-                      restaurant={restaurant}
-                      index={idx}
-                      matchScore={calculateMatchScore(restaurant, preferences)}
-                      inVault={vaultVenueIds.has(restaurant.id)}
-                      confiaCount={confiaCountsByVenue.get(restaurant.id) || 0}
-                      onSaveToVault={handleSaveVenueToVault}
-                      onSelect={setSelectedRestaurant}
-                    />
-                  ))}
+                  {filteredRestaurants.map((restaurant, idx) => {
+                    const match = calculateMatchScore(restaurant, preferences);
+                    const inVault = vaultVenueIds.has(restaurant.id);
+                    const confiaCount = confiaCountsByVenue.get(restaurant.id) || 0;
+                    const reason =
+                      match !== null || inVault || confiaCount > 0
+                        ? getMatchReasonLabel({
+                            item: restaurant,
+                            prefs: preferences,
+                            inVault,
+                            confiaCount,
+                          })
+                        : undefined;
+                    return (
+                      <RestaurantCard
+                        key={restaurant.id}
+                        restaurant={restaurant}
+                        index={idx}
+                        matchScore={match}
+                        matchReason={reason}
+                        inVault={inVault}
+                        confiaCount={confiaCount}
+                        onSaveToVault={handleSaveVenueToVault}
+                        onSelect={setSelectedRestaurant}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -480,6 +520,21 @@ export function App() {
           onItinerarySaved={() =>
             setToast({ text: 'Roteiro salvo em Perfil › Minha Agenda & Roteiros!' })
           }
+          onReservationCreated={(req) => {
+            setReservations((prev) => [req, ...prev]);
+            setNotifications(getNotifications());
+            setToast({
+              text: `Solicitação individual registrada em ${req.experience_name} (pagamento direto no local).`,
+            });
+          }}
+          onConfiaPostCreated={() => {
+            setConfiaPosts(getVisibleConfiaRecommendations());
+            setToast({ text: 'Roteiro compartilhado com segurança na Rede Confia!' });
+          }}
+          onGoToConfia={() => {
+            setConfiaSubTab('network');
+            setActiveTab('confia');
+          }}
           onSelectExperience={setSelectedRestaurant}
         />
       )}
@@ -515,6 +570,10 @@ export function App() {
         <ClubView
           experiences={restaurants}
           onSelectExperience={setSelectedRestaurant}
+          onReservationCreated={(req) => {
+            setReservations((prev) => [req, ...prev]);
+            setNotifications(getNotifications());
+          }}
         />
       )}
 

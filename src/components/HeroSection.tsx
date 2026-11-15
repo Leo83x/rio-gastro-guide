@@ -49,8 +49,10 @@ interface HeroSectionProps {
   availableCategories: RestaurantCategory[];
   resultCount: number;
   onOpenPersonalize: () => void;
+  onOpenProfile?: () => void;
   personalizationActive: boolean;
   locationConsent: boolean;
+  homeNeighborhood?: string;
   vaultCount: number;
   onAskBoraIa: (intentText: string) => void;
   onOpenVault: () => void;
@@ -155,8 +157,10 @@ export function HeroSection({
   availableCategories,
   resultCount,
   onOpenPersonalize,
+  onOpenProfile,
   personalizationActive,
   locationConsent,
+  homeNeighborhood,
   vaultCount,
   onAskBoraIa,
   onOpenVault,
@@ -253,15 +257,31 @@ export function HeroSection({
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#081A2C]/65 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] shadow-sm backdrop-blur-md">
-                <Sparkles className="h-3 w-3" />
-                {greeting}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#081A2C]/65 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] shadow-sm backdrop-blur-md">
+                  <Sparkles className="h-3 w-3" />
+                  {greeting}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenProfile?.()}
+                  className="inline-flex items-center gap-1 rounded-full border border-white/25 bg-[#081A2C]/60 px-2.5 py-1 text-[11px] font-semibold text-white/95 backdrop-blur-md hover:border-white/50"
+                >
+                  <MapPin className="h-3 w-3 text-[#FF6B35]" />
+                  {locationConsent
+                    ? `Área: ${homeNeighborhood || 'Rio de Janeiro'}`
+                    : 'Rio · Ativar localização (LGPD)'}
+                </button>
+              </div>
               <h1 className="mt-2 text-2xl font-extrabold leading-snug tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.75),0_1px_3px_rgba(5,14,24,0.85)] sm:text-4xl">
                 A cidade acontece.
                 <br />
                 Você aproveita.
               </h1>
+              <p className="mt-1.5 text-xs font-semibold text-[#F1E8D8] [text-shadow:0_1px_6px_rgba(5,14,24,0.8)] sm:text-sm">
+                Viva mais. Gaste melhor. Ganhe por isso.
+              </p>
             </div>
 
             {/* Compact 3-Pill Status Panel with Translucent Frosted Glass */}

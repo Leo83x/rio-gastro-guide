@@ -119,7 +119,7 @@ export function ConciergeWidget({
               <div>
                 <p className="text-sm font-bold leading-tight">Bora IA Concierge</p>
                 <p className="text-[11px] text-[#F1E8D8]">
-                  Catálogo + Cofre + Rede Confia + Clima
+                  Correspondência real: Catálogo + Cofre + Confia + Clima
                 </p>
               </div>
             </div>

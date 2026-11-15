@@ -541,8 +541,7 @@ export function LandingPage({
             <Crown className="h-7 w-7 text-[#F1E8D8]" />
             <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Bora Club</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
-              Benefícios exclusivos em restaurantes parceiros e drops curados, com transparência
-              entre ofertas demonstrativas e ofertas confirmadas por parceiros.
+              Reservas tradicionais, ofertas individuais, oportunidades de última hora e reserva inteligente por demanda — sem checkout no app e com pagamento direto no local.
             </p>
           </div>
 
@@ -562,8 +561,7 @@ export function LandingPage({
             </div>
             <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Rio Points &amp; Passaporte</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
-              Check-in por QR Code com proteção antifraude (limite diário por local e nonce único)
-              para acumular pontos no Passaporte Carioca.
+              Check-in dinâmico por QR Code com validade temporária e proteção antifraude para comprovar visitas reais e acumular recompensas.
             </p>
           </div>
         </div>
@@ -574,14 +572,13 @@ export function LandingPage({
         <div className="flex flex-col items-start justify-between gap-8 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-8 shadow-sm lg:flex-row lg:items-center">
           <div className="max-w-2xl">
             <span className="text-xs font-bold uppercase tracking-widest text-[#397B68]">
-              Área de Parceiros B2B
+              BoraRio — Reservas, Experiências e Demanda
             </span>
             <h2 className="font-sans tracking-tight mt-2 text-3xl font-bold text-[var(--text-primary)]">
-              Tem um restaurante, bar ou espaço cultural no Rio?
+              Mais reservas, mais previsibilidade e autonomia comercial total.
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Reivindique o perfil do seu estabelecimento, publique fotos oficiais, receba solicitações
-              de reserva e crie benefícios no Bora Club através de um painel exclusivo.
+              Você define suas condições comerciais sem precisar oferecer descontos obrigatórios nem pagar percentual sobre a conta consumida. Ative reservas tradicionais, oportunidades de última hora ou reserva inteligente por demanda no seu painel isolado.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
