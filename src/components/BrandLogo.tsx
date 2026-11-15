@@ -1,3 +1,4 @@
+import logoDarkPng from '../assets/brand/borario-logo-dark.png';
 import logoPng from '../assets/brand/borario-logo.png';
 
 interface BrandLogoProps {
@@ -34,13 +35,9 @@ export function BrandLogo({
 
   const imageEl = (
     <img
-      src={logoPng}
+      src={onDark ? logoDarkPng : logoPng}
       alt="BoraRio"
-      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain transition ${
-        onDark
-          ? 'drop-shadow-[0_1px_10px_rgba(248,250,252,0.45)]'
-          : ''
-      }`}
+      className={`${PNG_HEIGHTS[size]} w-auto max-w-full shrink-0 object-contain transition`}
     />
   );
 

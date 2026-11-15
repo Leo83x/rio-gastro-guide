@@ -231,12 +231,9 @@ export function HeroSection({
     });
   };
 
-  const heroGlassClass = isDark
-    ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
-    : 'border-white/32 bg-[#081A2C]/52 text-white shadow-[0_6px_18px_rgba(5,14,24,0.22)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]';
-  const heroGlassInteractiveClass = isDark
-    ? `${heroGlassClass} hover:border-white/50 hover:bg-white/25`
-    : `${heroGlassClass} hover:border-white/55 hover:bg-[#081A2C]/68`;
+  const heroGlassClass =
+    'border-white/30 bg-white/15 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]';
+  const heroGlassInteractiveClass = `${heroGlassClass} hover:border-white/50 hover:bg-white/25`;
 
   return (
     <section className="relative w-full overflow-x-clip">
@@ -278,7 +275,9 @@ export function HeroSection({
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div className="max-w-xl">
-              <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#081A2C]/62 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] shadow-sm backdrop-blur-md">
+              <p
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] ${heroGlassClass}`}
+              >
                 <Sparkles className="h-3 w-3" />
                 {greeting}
               </p>
