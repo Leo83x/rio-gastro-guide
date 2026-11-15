@@ -31,6 +31,7 @@ import rioHeroNight from '../assets/brand/rio-hero-night.jpg';
 import { fetchRioWeatherLive, type RioWeatherSnapshot } from '../services/integrations/registry';
 import type { MacroCategory, MomentMode } from '../types/experience';
 import type { PriceRange, RestaurantCategory } from '../types/restaurant';
+import type { GeoCoords } from '../utils/geo';
 
 export interface FilterState {
   search: string;
@@ -49,12 +50,18 @@ interface HeroSectionProps {
   availableCategories: RestaurantCategory[];
   resultCount: number;
   onOpenPersonalize: () => void;
+  onOpenProfile?: () => void;
   personalizationActive: boolean;
   locationConsent: boolean;
+  userCoords?: GeoCoords | null;
+  locationState?: 'idle' | 'requesting' | 'granted' | 'denied';
+  onRequestLocation?: () => void;
+  homeNeighborhood?: string;
   vaultCount: number;
   onAskBoraIa: (intentText: string) => void;
   onOpenVault: () => void;
   onOpenVaultCapture: () => void;
+  externalOpenFiltersSignal?: number;
   isDark: boolean;
 }
 
@@ -155,24 +162,43 @@ export function HeroSection({
   availableCategories,
   resultCount,
   onOpenPersonalize,
+  onOpenProfile,
   personalizationActive,
   locationConsent,
+  userCoords = null,
+  locationState = 'idle',
+  onRequestLocation,
+  homeNeighborhood,
   vaultCount,
   onAskBoraIa,
   onOpenVault,
   onOpenVaultCapture,
+  externalOpenFiltersSignal = 0,
   isDark,
 }: HeroSectionProps) {
   const [weather, setWeather] = useState<RioWeatherSnapshot | null>(null);
-  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [ackExternalSignal, setAckExternalSignal] = useState(0);
+  const [dismissedLocationBanner, setDismissedLocationBanner] = useState(false);
   const [activePillInfo, setActivePillInfo] = useState<'deboa' | 'mobility' | null>(null);
 
   useEffect(() => {
     void fetchRioWeatherLive().then(setWeather).catch(() => undefined);
   }, []);
 
+  const showFiltersPanel = filtersOpen || externalOpenFiltersSignal > ackExternalSignal;
+  const toggleFiltersPanel = () => {
+    if (showFiltersPanel) {
+      setFiltersOpen(false);
+      setAckExternalSignal(externalOpenFiltersSignal);
+    } else {
+      setFiltersOpen(true);
+    }
+  };
+
+  const hasLiveWeather = weather?.source === 'open-meteo-live';
   const { greeting, hour } = getRioGreeting();
-  const deBoa = estimateDeBoaIndex(hour, weather?.isRaining);
+  const deBoa = estimateDeBoaIndex(hour, hasLiveWeather ? weather.isRaining : undefined);
 
   const activeFilterCount = [
     filters.neighborhood,
@@ -205,17 +231,14 @@ export function HeroSection({
     });
   };
 
-  const heroGlassClass = isDark
-    ? 'border-white/30 bg-white/15 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
-    : 'border-white/32 bg-[#081A2C]/52 text-white shadow-[0_6px_18px_rgba(5,14,24,0.22)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]';
-  const heroGlassInteractiveClass = isDark
-    ? `${heroGlassClass} hover:border-white/50 hover:bg-white/25`
-    : `${heroGlassClass} hover:border-white/55 hover:bg-[#081A2C]/68`;
+  const heroGlassClass =
+    'border-white/30 bg-white/15 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]';
+  const heroGlassInteractiveClass = `${heroGlassClass} hover:border-white/50 hover:bg-white/25`;
 
   return (
     <section className="relative w-full overflow-x-clip">
-      {/* 1. TOPO ATMOSFÉRICO DO RIO (Abrange até o topo atrás do Header transparente) */}
-      <div className="relative overflow-hidden pb-12 pt-26 text-white sm:pb-14 sm:pt-28 lg:pb-16 lg:pt-30">
+      {/* 1. TOPO ATMOSFÉRICO DO RIO (Proporção limpa com espaço para a paisagem e logo) */}
+      <div className="relative overflow-hidden pb-12 pt-24 text-white sm:pb-14 sm:pt-28 lg:pb-16 lg:pt-30">
         <img
           src={isDark ? rioHeroNight : rioHeroDay}
           alt="Paisagem atmosférica do Rio de Janeiro"
@@ -225,23 +248,22 @@ export function HeroSection({
         {isDark ? (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/45 via-[#08192B]/25 to-[#07111C]/75"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/45 via-[#08192B]/25 to-[#07111C]/78"
           />
         ) : (
           <>
-            {/* Scrim de contraste para manchete e pílulas na metade média/inferior do Hero claro */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0"
               style={{
                 background:
-                  'linear-gradient(180deg, rgba(8,26,44,0) 0%, rgba(8,26,44,0.34) 34%, rgba(8,26,44,0.58) 62%, rgba(7,22,38,0.84) 100%)',
+                  'linear-gradient(180deg, rgba(8,26,44,0) 0%, rgba(8,26,44,0.32) 34%, rgba(8,26,44,0.58) 64%, rgba(7,22,38,0.84) 100%)',
               }}
             />
-            {/* Bruma clara suavemente esfumaçada atrás da barra fixa superior (dá leitura à logo sem card/borda) */}
+            {/* Bruma clara atrás do header fixo para contrastar a logo no modo dia */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-[108px] sm:h-[120px]"
+              className="pointer-events-none absolute inset-x-0 top-0 h-[106px] sm:h-[118px]"
               style={{
                 background:
                   'linear-gradient(180deg, rgba(250,247,242,0.97) 0%, rgba(250,247,242,0.88) 48%, rgba(250,247,242,0.36) 76%, rgba(250,247,242,0) 100%)',
@@ -251,40 +273,41 @@ export function HeroSection({
         )}
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div>
-              <p className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[#081A2C]/65 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] shadow-sm backdrop-blur-md">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div className="max-w-xl">
+              <p
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] ${heroGlassClass}`}
+              >
                 <Sparkles className="h-3 w-3" />
                 {greeting}
               </p>
-              <h1 className="mt-2 text-2xl font-extrabold leading-snug tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.75),0_1px_3px_rgba(5,14,24,0.85)] sm:text-4xl">
+
+              <h1 className="mt-2.5 text-2xl font-extrabold leading-tight tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.75),0_1px_3px_rgba(5,14,24,0.85)] sm:text-4xl">
                 A cidade acontece.
                 <br />
                 Você aproveita.
               </h1>
+              <p className="mt-1.5 text-xs font-semibold text-[#F1E8D8] [text-shadow:0_1px_6px_rgba(5,14,24,0.8)] sm:text-sm">
+                Viva mais. Gaste melhor. Ganhe por isso.
+              </p>
             </div>
 
-            {/* Compact 3-Pill Status Panel with Translucent Frosted Glass */}
+            {/* Clima & Mobilidade compactos e limpos (clima apenas quando disponível) */}
             <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-              <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}>
-                {weather?.source === 'open-meteo-live' ? (
-                  <>
-                    {weather.isRaining ? (
-                      <CloudRain className="h-3.5 w-3.5 text-[#FF6B35]" />
-                    ) : (
-                      <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
-                    )}
-                    <span>
-                      {weather.temperatureC}°C · {weather.isRaining ? 'Chuva' : 'Tempo aberto'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Sun className="h-3.5 w-3.5 text-white/80" />
-                    <span>Clima indisponível</span>
-                  </>
-                )}
-              </div>
+              {hasLiveWeather && weather && (
+                <div
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}
+                >
+                  {weather.isRaining ? (
+                    <CloudRain className="h-3.5 w-3.5 text-[#FF6B35]" />
+                  ) : (
+                    <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
+                  )}
+                  <span>
+                    {weather.temperatureC}°C · {weather.isRaining ? 'Chuva' : 'Tempo aberto'}
+                  </span>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -306,14 +329,16 @@ export function HeroSection({
                 className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${heroGlassInteractiveClass}`}
               >
                 <Car className="h-3 w-3 text-[#FF6B35]" />
-                <span>{locationConsent ? 'Rotas via GPS' : 'Uber / Rotas sob demanda'}</span>
+                <span>{userCoords ? 'Rotas via GPS' : 'Rotas sob demanda'}</span>
                 <Info className="h-3 w-3 opacity-80" />
               </button>
             </div>
           </div>
 
           {activePillInfo && (
-            <div className={`mt-2.5 flex items-start justify-between gap-2 rounded-2xl border px-3.5 py-2.5 text-[11px] font-medium ${heroGlassClass}`}>
+            <div
+              className={`mt-3 flex items-start justify-between gap-2 rounded-2xl border px-3.5 py-2.5 text-[11px] font-medium ${heroGlassClass}`}
+            >
               <p>
                 {activePillInfo === 'deboa'
                   ? deBoa.detail
@@ -329,50 +354,14 @@ export function HeroSection({
               </button>
             </div>
           )}
-
-          {/* 5 Primary Moment Pills + "..." Expand */}
-          <div className="mt-5 flex w-full min-w-0 items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar sm:gap-3">
-            {PRIMARY_MOMENTS.map((m) => {
-              const Icon = m.icon;
-              const active = filters.momentMode === m.id;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => onChange({ ...filters, momentMode: m.id })}
-                  className={`flex min-w-[70px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border px-3.5 py-2.5 text-xs font-semibold backdrop-blur-md transition-all sm:min-w-[82px] ${
-                    active
-                      ? 'border-white/25 bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-lg shadow-[#FF4B2B]/25'
-                      : heroGlassInteractiveClass
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{m.label}</span>
-                </button>
-              );
-            })}
-
-            <button
-              type="button"
-              aria-label="Mais filtros e momentos"
-              onClick={() => setShowFiltersPanel((prev) => !prev)}
-              className={`flex h-[58px] w-14 shrink-0 items-center justify-center rounded-2xl border backdrop-blur-md transition ${
-                showFiltersPanel || activeFilterCount > 0
-                  ? 'border-[#FF6B35] bg-[#FF6B35]/35 text-white shadow-lg'
-                  : heroGlassInteractiveClass
-              }`}
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* 2. BARRA DE INTENÇÃO DA IA ("O que você quer viver hoje?") */}
-      <div className="relative z-20 mx-auto -mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 p-2 shadow-lg backdrop-blur-xl">
+      {/* 2. BARRA DE BUSCA INTELIGENTE + BORA IA (Bastante visível e protagonista) */}
+      <div className="relative z-20 mx-auto -mt-7 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 p-2 shadow-xl backdrop-blur-xl">
           <div className="flex min-w-0 items-center gap-2 px-1">
-            <Search className="h-4.5 w-4.5 shrink-0 text-[var(--text-secondary)]" />
+            <Search className="h-4.5 w-4.5 shrink-0 text-[#FF6B35]" />
 
             <input
               id="search-restaurants"
@@ -386,7 +375,7 @@ export function HeroSection({
                 }
               }}
               placeholder="O que você quer viver hoje?"
-              className="min-w-0 flex-1 bg-transparent py-2 text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/80 focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent py-2.5 text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/85 focus:outline-none"
             />
 
             {filters.search && (
@@ -409,15 +398,16 @@ export function HeroSection({
                 )
               }
               title="Perguntar à Bora IA"
-              className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-2 text-xs font-bold text-white shadow-xs hover:opacity-95"
+              className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-2.5 py-2 text-[11px] font-bold text-white shadow-xs hover:opacity-95 sm:px-3.5 sm:text-xs"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Bora IA</span>
+              <span>Bora IA</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setShowFiltersPanel((prev) => !prev)}
+              onClick={toggleFiltersPanel}
+              aria-label="Abrir filtros avançados"
               title="Filtros (bairros, preço, modo chuva e perfil)"
               className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${
                 showFiltersPanel || activeFilterCount > 0
@@ -551,44 +541,8 @@ export function HeroSection({
           )}
         </div>
 
-        {/* Direct Access Bar to Cofre de Intenções */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 px-3.5 py-2.5 text-xs shadow-xs backdrop-blur-md">
-          <button
-            type="button"
-            onClick={onOpenVault}
-            className="flex min-w-0 items-center gap-2 text-left hover:opacity-85"
-          >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#123B56] text-white">
-              <Bookmark className="h-3.5 w-3.5 text-[#F7931E]" />
-            </div>
-            <span className="truncate font-semibold text-[var(--text-primary)]">
-              {vaultCount > 0
-                ? `${vaultCount} ${vaultCount === 1 ? 'desejo salvo' : 'desejos salvos'} no seu Cofre de Intenções`
-                : 'Cofre de Intenções: guarde links e prints para viver no Rio'}
-            </span>
-          </button>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenVaultCapture}
-              className="inline-flex items-center gap-1 rounded-lg bg-[#FF6B35]/15 px-2.5 py-1.5 text-[11px] font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
-            >
-              <Plus className="h-3 w-3" />
-              Salvar link/print
-            </button>
-            <button
-              type="button"
-              onClick={onOpenVault}
-              className="rounded-lg border border-[var(--border-hairline)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-primary)] hover:border-[#123B56]"
-            >
-              Abrir Cofre
-            </button>
-          </div>
-        </div>
-
-        {/* 3. CATEGORIAS ESPACIOSAS */}
-        <div className="flex w-full min-w-0 items-center gap-4 overflow-x-auto pb-2 pt-5 no-scrollbar sm:justify-start sm:gap-7">
+        {/* 3. CATEGORIAS DE EXPERIÊNCIA */}
+        <div className="flex w-full min-w-0 items-center gap-4 overflow-x-auto pb-1.5 pt-5 no-scrollbar sm:justify-start sm:gap-7">
           {MACRO_CATEGORIES.map((mc) => {
             const Icon = mc.icon;
             const active = filters.macroCategory === mc.value;
@@ -603,7 +557,7 @@ export function HeroSection({
                   className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${mc.gradient} text-white shadow-sm transition-all group-hover:scale-105 ${
                     active
                       ? 'scale-105 ring-2 ring-[#FF6B35] ring-offset-2 ring-offset-[var(--bg-canvas)] shadow-md'
-                      : 'opacity-85 hover:opacity-100'
+                      : 'opacity-90 hover:opacity-100'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -618,6 +572,147 @@ export function HeroSection({
               </button>
             );
           })}
+        </div>
+
+        {/* Filtros rápidos de momento abaixo das categorias (sem poluir a foto do Hero) */}
+        <div className="mt-2.5 flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {PRIMARY_MOMENTS.map((m) => {
+            const Icon = m.icon;
+            const active = filters.momentMode === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => onChange({ ...filters, momentMode: m.id })}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  active
+                    ? 'border-transparent bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs'
+                    : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{m.label}</span>
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            aria-label="Mais filtros e momentos"
+            onClick={toggleFiltersPanel}
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              showFiltersPanel || activeFilterCount > 0
+                ? 'border-[#FF6B35] bg-[#FF6B35]/12 text-[#FF6B35]'
+                : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+            <span>Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+          </button>
+        </div>
+
+        {/* 4. ATIVAÇÃO NATURAL DE LOCALIZAÇÃO (OPCIONAL) + ATALHO COFRE */}
+        <div className="mt-3 grid gap-2.5 lg:grid-cols-2">
+          {!locationConsent && !dismissedLocationBanner ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#397B68]/25 bg-[#397B68]/8 px-3.5 py-2.5 text-xs">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#397B68] text-white">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-[var(--text-primary)]">Ative sua localização</p>
+                  <p className="text-[11px] text-[var(--text-secondary)]">
+                    Encontre experiências, ofertas e lugares perto de você.
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={locationState === 'requesting'}
+                  onClick={() => onRequestLocation?.()}
+                  className="rounded-xl bg-[#397B68] px-3 py-1.5 text-[11px] font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-60"
+                >
+                  {locationState === 'requesting' ? 'Obtendo...' : 'Usar localização'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissedLocationBanner(true)}
+                  aria-label="Continuar sem localização"
+                  className="rounded-lg px-2 py-1 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  Agora não
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 px-3.5 py-2.5 text-xs shadow-xs">
+              <div className="flex min-w-0 items-center gap-2">
+                <MapPin className={`h-4 w-4 shrink-0 ${userCoords ? 'text-[#397B68]' : 'text-[#FF6B35]'}`} />
+                <span className="truncate font-semibold text-[var(--text-primary)]">
+                  {userCoords
+                    ? 'Localização ativa · Ordenando experiências próximas a você'
+                    : locationState === 'denied'
+                      ? 'Explorando o Rio sem GPS (localização opcional)'
+                      : `Área: ${homeNeighborhood || 'Rio de Janeiro'}`}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {!userCoords && onRequestLocation && (
+                  <button
+                    type="button"
+                    onClick={onRequestLocation}
+                    className="rounded-lg bg-[#397B68]/12 px-2.5 py-1 text-[11px] font-bold text-[#397B68] hover:bg-[#397B68] hover:text-white dark:text-[#4CA188]"
+                  >
+                    Ativar localização
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onOpenProfile?.()}
+                  className="rounded-lg border border-[var(--border-hairline)] px-2.5 py-1 text-[11px] font-bold text-[var(--text-secondary)] hover:border-[#123B56] hover:text-[var(--text-primary)]"
+                >
+                  Preferências
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Direct Access Bar to Cofre de Intenções */}
+          <div className="flex flex-col gap-2.5 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 px-3.5 py-2.5 text-xs shadow-xs sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+            <button
+              type="button"
+              onClick={onOpenVault}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left hover:opacity-85"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#123B56] text-white">
+                <Bookmark className="h-3.5 w-3.5 text-[#F7931E]" />
+              </div>
+              <span className="truncate font-semibold text-[var(--text-primary)]">
+                {vaultCount > 0
+                  ? `${vaultCount} ${vaultCount === 1 ? 'desejo salvo' : 'desejos salvos'} no Cofre`
+                  : 'Cofre de Intenções: guarde links e lugares'}
+              </span>
+            </button>
+
+            <div className="flex shrink-0 items-center justify-end gap-1.5">
+              <button
+                type="button"
+                onClick={onOpenVaultCapture}
+                className="inline-flex items-center gap-1 rounded-lg bg-[#FF6B35]/15 px-2.5 py-1.5 text-[11px] font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
+              >
+                <Plus className="h-3 w-3" />
+                Salvar link/print
+              </button>
+              <button
+                type="button"
+                onClick={onOpenVault}
+                className="rounded-lg border border-[var(--border-hairline)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-primary)] hover:border-[#123B56]"
+              >
+                Abrir Cofre
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

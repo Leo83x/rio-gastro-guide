@@ -112,16 +112,16 @@ export const EXTERNAL_INTEGRATIONS_REGISTRY: ExternalIntegrationSpec[] = [
     licensingNotes: 'Estimativa de distância/tempo calculada localmente; tarifa real exibida no app parceiro.',
   },
   {
-    id: 'payments-stripe',
-    name: 'Pagamentos & Ingressos (Club / Drops)',
+    id: 'direct-venue-payment',
+    name: 'Pagamento Direto ao Estabelecimento (Sem Gateway na 1ª Fase)',
     domain: 'payments',
-    provider: 'Stripe / MercadoPago (A integrar)',
-    docsUrl: 'https://stripe.com/docs/api',
-    status: 'PENDING_CREDENTIALS',
-    requiresCredentials: true,
-    envVarName: 'STRIPE_SECRET_KEY / WEBHOOK_SECRET (Backend)',
-    costAndLimits: 'Taxa por transação aprovada',
-    licensingNotes: 'Fluxo financeiro atual claramente marcado como demonstrativo sem cobrança real.',
+    provider: 'Acerto presencial / meios aceitos pelo parceiro',
+    docsUrl: 'https://borario.app/parceiros',
+    status: 'OPERATIONAL',
+    requiresCredentials: false,
+    costAndLimits: 'Sem checkout, retenção ou split financeiro no BoraRio na 1ª fase',
+    licensingNotes:
+      'O cliente paga diretamente ao estabelecimento. O BoraRio registra reservas, valida check-in dinâmico e apura remuneração B2B fixa configurável por contrato.',
   },
 ];
 

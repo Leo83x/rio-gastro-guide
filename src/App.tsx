@@ -1,4 +1,4 @@
-import { Bookmark, CheckCircle2, UtensilsCrossed, X } from 'lucide-react';
+import { Bookmark, CheckCircle2, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminPanel } from './components/AdminPanel';
 import { BrandLogo } from './components/BrandLogo';
@@ -9,14 +9,19 @@ import { IntentCaptureModal } from './components/confia/IntentCaptureModal';
 import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
-import { calculateMatchScore, PersonalizeModal } from './components/PersonalizeModal';
+import { PersonalizeModal } from './components/PersonalizeModal';
 import { PlannerView } from './components/PlannerView';
-import { ProfileWalletView } from './components/ProfileWalletView';
+import {
+  ProfileWalletView,
+  type ProfileFocusTarget,
+  type ProfileSectionTab,
+} from './components/ProfileWalletView';
 import { RestaurantCard } from './components/RestaurantCard';
 import { RestaurantDetailModal } from './components/RestaurantDetailModal';
 import { LandingPage } from './pages/LandingPage';
 import { PartnerDashboard } from './pages/PartnerDashboard';
 import { PartnersLandingPage } from './pages/PartnersLandingPage';
+import { getUserProfileIdentity, subscribeToAuthChanges, syncSupabaseSessionIdentity } from './services/authService';
 import {
   getTrustCircles,
   getTrustConnections,
@@ -24,8 +29,10 @@ import {
 } from './services/confiaStore';
 import { getAllRestaurants, getClaimRequests } from './services/database';
 import { addIntentVaultItem, getIntentVaultItems } from './services/intentVaultStore';
+import { calculateMatchScore, getMatchReasonLabel } from './services/matchService';
 import { usePwaStatus } from './services/pwa';
 import { useAppRoute } from './services/router';
+import { captureReferralCodeFromUrl } from './services/referralStore';
 import {
   getNotifications,
   getPointsBalance,
@@ -37,7 +44,11 @@ import {
 import type { ConfiaRecommendation, TrustCircle, TrustConnection } from './types/confia';
 import type { NotificationItem, ReservationRequest, UserPreferences } from './types/experience';
 import type { IntentVaultItem } from './types/intention';
+import type { CommercialModality } from './types/partnerCommercial';
 import type { ClaimRequest, Restaurant, RestaurantCategory } from './types/restaurant';
+import type { GeoCoords } from './utils/geo';
+
+const CATALOG_PREVIEW_LIMIT = 6;
 
 export function App() {
   const [route, navigate] = useAppRoute();
@@ -55,6 +66,24 @@ export function App() {
   const [pointsBalance, setPointsBalance] = useState<number>(() => getPointsBalance());
   const [reservations, setReservations] = useState<ReservationRequest[]>(() => getReservations());
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => getNotifications());
+
+  // Optional Location & Home Catalog Controls
+  const [userCoords, setUserCoords] = useState<GeoCoords | null>(null);
+  const [locationState, setLocationState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>(
+    'idle'
+  );
+  const [catalogExpanded, setCatalogExpanded] = useState(false);
+  const [filterDrawerSignal, setFilterDrawerSignal] = useState(0);
+  const [clubDeepLink, setClubDeepLink] = useState<{
+    section: 'offerings' | 'rewards';
+    modality: CommercialModality | 'ALL';
+    nonce: number;
+  }>({ section: 'offerings', modality: 'ALL', nonce: 0 });
+  const [profileDeepLink, setProfileDeepLink] = useState<{
+    section: ProfileSectionTab;
+    focus: ProfileFocusTarget;
+    nonce: number;
+  }>({ section: 'passport', focus: null, nonce: 0 });
 
   // Cofre de Intenções & Rede Confia State
   const [vaultItems, setVaultItems] = useState<IntentVaultItem[]>(() => getIntentVaultItems());
@@ -123,7 +152,13 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    captureReferralCodeFromUrl();
     void loadData();
+    void syncSupabaseSessionIdentity();
+    const unsub = subscribeToAuthChanges(() => {
+      setConfiaPosts(getVisibleConfiaRecommendations());
+    });
+    return unsub;
   }, [loadData]);
 
   const availableCategories = useMemo(() => {
@@ -232,10 +267,79 @@ export function App() {
     void getClaimRequests().then(setClaims);
   };
 
-  const handleSavePreferences = (next: UserPreferences) => {
+  const handleSavePreferences = useCallback((next: UserPreferences) => {
     saveUserPreferences(next);
     setPreferences(next);
-  };
+    if (!next.lgpd_consents.location) {
+      setUserCoords(null);
+      setLocationState('idle');
+    }
+  }, []);
+
+  const handleRequestLocation = useCallback(() => {
+    if (!preferences.lgpd_consents.location) {
+      const next: UserPreferences = {
+        ...preferences,
+        lgpd_consents: {
+          ...preferences.lgpd_consents,
+          location: true,
+        },
+      };
+      saveUserPreferences(next);
+      setPreferences(next);
+    }
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationState('denied');
+      setToast({
+        text: 'Localização indisponível neste dispositivo; explorando todo o catálogo normalmente.',
+      });
+      return;
+    }
+
+    setLocationState('requesting');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setLocationState('granted');
+        setToast({
+          text: 'Localização ativada! Exibindo experiências próximas a você.',
+        });
+      },
+      () => {
+        setUserCoords(null);
+        setLocationState('denied');
+        setToast({
+          text: 'Não foi possível ler sua localização agora; catálogo completo liberado normalmente.',
+        });
+      },
+      { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+    );
+  }, [preferences]);
+
+  useEffect(() => {
+    if (!preferences.lgpd_consents.location || typeof navigator === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+    let cancelled = false;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (!cancelled) {
+          setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+          setLocationState('granted');
+        }
+      },
+      () => {
+        if (!cancelled) {
+          setLocationState('denied');
+        }
+      },
+      { enableHighAccuracy: false, timeout: 4000, maximumAge: 300000 }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [preferences.lgpd_consents.location]);
 
   const handleSaveVenueToVault = (venue: Restaurant) => {
     if (vaultVenueIds.has(venue.id)) {
@@ -311,6 +415,11 @@ export function App() {
         onToggleTheme={() => setIsDark((prev) => !prev)}
         onNavigate={navigate}
         onDatabaseUpdated={loadData}
+        onReservationsUpdated={setReservations}
+        onSyncAppState={() => {
+          setPointsBalance(getPointsBalance());
+          setNotifications(getNotifications());
+        }}
       />
     );
   }
@@ -326,8 +435,42 @@ export function App() {
     !filters.priceRange &&
     filters.minRating === 0;
 
+  const isCatalogTruncated =
+    showEditorialDiscover && !catalogExpanded && filteredRestaurants.length > CATALOG_PREVIEW_LIMIT;
+  const visibleCatalogRestaurants = isCatalogTruncated
+    ? filteredRestaurants.slice(0, CATALOG_PREVIEW_LIMIT)
+    : filteredRestaurants;
+
+  const navigateToClub = (opts?: {
+    section?: 'offerings' | 'rewards';
+    modality?: CommercialModality | 'ALL';
+  }) => {
+    setClubDeepLink((prev) => ({
+      section: opts?.section || 'offerings',
+      modality: opts?.modality || 'ALL',
+      nonce: prev.nonce + 1,
+    }));
+    setActiveTab('club');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const navigateToProfile = (opts?: {
+    section?: ProfileSectionTab;
+    focus?: ProfileFocusTarget;
+  }) => {
+    setProfileDeepLink((prev) => ({
+      section: opts?.section || 'passport',
+      focus: opts?.focus ?? null,
+      nonce: prev.nonce + 1,
+    }));
+    setActiveTab('profile');
+    if (!opts?.focus) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[var(--bg-canvas)] pb-24 text-[var(--text-primary)] lg:pb-0">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-[var(--bg-canvas)] pb-28 text-[var(--text-primary)] lg:pb-0">
       <Navbar
         activeTab={effectiveTab}
         onSelectTab={(tab) => {
@@ -365,8 +508,13 @@ export function App() {
             availableCategories={availableCategories}
             resultCount={filteredRestaurants.length}
             onOpenPersonalize={() => setShowPersonalize(true)}
+            onOpenProfile={() => navigateToProfile({ section: 'privacy' })}
             personalizationActive={preferences.lgpd_consents.personalization}
             locationConsent={preferences.lgpd_consents.location}
+            userCoords={userCoords}
+            locationState={locationState}
+            onRequestLocation={handleRequestLocation}
+            homeNeighborhood={getUserProfileIdentity().home_neighborhood}
             vaultCount={activeVaultCount}
             onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
             onOpenVault={openVaultHub}
@@ -374,6 +522,7 @@ export function App() {
               setCaptureInitialVenue(null);
               setShowCaptureModal(true);
             }}
+            externalOpenFiltersSignal={filterDrawerSignal}
             isDark={isDark}
           />
 
@@ -382,13 +531,29 @@ export function App() {
               <DiscoverEditorialSections
                 experiences={restaurants}
                 preferences={preferences}
+                userCoords={userCoords}
                 vaultCount={activeVaultCount}
+                vaultVenueIds={vaultVenueIds}
                 confiaConnectionsCount={acceptedConnectionsCount}
+                confiaPosts={confiaPosts}
+                confiaCountsByVenue={confiaCountsByVenue}
+                pointsBalance={pointsBalance}
                 onSelectExperience={setSelectedRestaurant}
+                onRequestLocation={handleRequestLocation}
+                onScrollToCatalog={() =>
+                  document
+                    .getElementById('home-block-catalog')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
                 onGoToExploreMap={() => setActiveTab('planner')}
-                onGoToClub={() => setActiveTab('club')}
+                onGoToClub={navigateToClub}
                 onGoToPlanner={() => setActiveTab('planner')}
-                onGoToConfia={openVaultHub}
+                onGoToConfia={() => {
+                  setConfiaSubTab('network');
+                  setActiveTab('confia');
+                }}
+                onGoToProfile={navigateToProfile}
+                onOpenPersonalize={() => setShowPersonalize(true)}
               />
             )}
 
@@ -446,25 +611,103 @@ export function App() {
                 </div>
               </div>
             ) : (
-              <div>
-                <h2 className="font-sans tracking-tight mb-4 text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
-                  {showEditorialDiscover ? 'Em alta no Rio' : 'Resultados para você'}
-                </h2>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredRestaurants.map((restaurant, idx) => (
-                    <RestaurantCard
-                      key={restaurant.id}
-                      restaurant={restaurant}
-                      index={idx}
-                      matchScore={calculateMatchScore(restaurant, preferences)}
-                      inVault={vaultVenueIds.has(restaurant.id)}
-                      confiaCount={confiaCountsByVenue.get(restaurant.id) || 0}
-                      onSaveToVault={handleSaveVenueToVault}
-                      onSelect={setSelectedRestaurant}
-                    />
-                  ))}
+              <section aria-labelledby="home-block-catalog">
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <h2
+                      id="home-block-catalog"
+                      className="scroll-mt-20 font-sans text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl"
+                    >
+                      {showEditorialDiscover
+                        ? 'Catálogo Completo do Rio'
+                        : `Resultados para você (${filteredRestaurants.length})`}
+                    </h2>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      {showEditorialDiscover
+                        ? isCatalogTruncated
+                          ? `Amostra inicial com ${visibleCatalogRestaurants.length} de ${filteredRestaurants.length} experiências no Rio.`
+                          : `Exibindo todas as ${filteredRestaurants.length} experiências do catálogo.`
+                        : 'Filtros aplicados sobre o catálogo completo do Rio.'}
+                    </p>
+                  </div>
+
+                  {showEditorialDiscover && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                          setFilterDrawerSignal((n) => n + 1);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-1.5 text-xs font-bold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5 text-[#FF6B35]" />
+                        Filtrar catálogo
+                      </button>
+                      {filteredRestaurants.length > CATALOG_PREVIEW_LIMIT && (
+                        <button
+                          type="button"
+                          onClick={() => setCatalogExpanded((prev) => !prev)}
+                          className="rounded-full bg-[#123B56] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#102F46]"
+                        >
+                          {catalogExpanded
+                            ? 'Mostrar amostra inicial (6)'
+                            : `Ver todos (${filteredRestaurants.length})`}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
+
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibleCatalogRestaurants.map((restaurant, idx) => {
+                    const match = calculateMatchScore(restaurant, preferences);
+                    const inVault = vaultVenueIds.has(restaurant.id);
+                    const confiaCount = confiaCountsByVenue.get(restaurant.id) || 0;
+                    const reason =
+                      match !== null || inVault || confiaCount > 0
+                        ? getMatchReasonLabel({
+                            item: restaurant,
+                            prefs: preferences,
+                            inVault,
+                            confiaCount,
+                          })
+                        : undefined;
+                    return (
+                      <RestaurantCard
+                        key={restaurant.id}
+                        restaurant={restaurant}
+                        index={idx}
+                        matchScore={match}
+                        matchReason={reason}
+                        inVault={inVault}
+                        confiaCount={confiaCount}
+                        onSaveToVault={handleSaveVenueToVault}
+                        onSelect={setSelectedRestaurant}
+                      />
+                    );
+                  })}
+                </div>
+
+                {showEditorialDiscover && filteredRestaurants.length > CATALOG_PREVIEW_LIMIT && (
+                  <div className="mt-6 flex flex-col items-center justify-between gap-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-5 py-4 text-xs sm:flex-row">
+                    <p className="text-[var(--text-secondary)]">
+                      {catalogExpanded
+                        ? `Exibindo todas as ${filteredRestaurants.length} experiências disponíveis na cidade.`
+                        : `Quer explorar além destes ${visibleCatalogRestaurants.length} destaques? O catálogo completo reúne ${filteredRestaurants.length} lugares e eventos no Rio.`}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setCatalogExpanded((prev) => !prev)}
+                      className="shrink-0 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-95"
+                    >
+                      {catalogExpanded
+                        ? 'Recolher amostra do catálogo'
+                        : `Explorar catálogo completo (${filteredRestaurants.length} locais)`}
+                    </button>
+                  </div>
+                )}
+              </section>
             )}
           </main>
         </>
@@ -480,6 +723,21 @@ export function App() {
           onItinerarySaved={() =>
             setToast({ text: 'Roteiro salvo em Perfil › Minha Agenda & Roteiros!' })
           }
+          onReservationCreated={(req) => {
+            setReservations((prev) => [req, ...prev]);
+            setNotifications(getNotifications());
+            setToast({
+              text: `Solicitação individual registrada em ${req.experience_name} (pagamento direto no local).`,
+            });
+          }}
+          onConfiaPostCreated={() => {
+            setConfiaPosts(getVisibleConfiaRecommendations());
+            setToast({ text: 'Roteiro compartilhado com segurança na Rede Confia!' });
+          }}
+          onGoToConfia={() => {
+            setConfiaSubTab('network');
+            setActiveTab('confia');
+          }}
           onSelectExperience={setSelectedRestaurant}
         />
       )}
@@ -514,7 +772,18 @@ export function App() {
       {effectiveTab === 'club' && (
         <ClubView
           experiences={restaurants}
+          initialSection={clubDeepLink.section}
+          initialModality={clubDeepLink.modality}
+          deepLinkNonce={clubDeepLink.nonce}
           onSelectExperience={setSelectedRestaurant}
+          onReservationCreated={(req) => {
+            setReservations((prev) => [req, ...prev]);
+            setNotifications(getNotifications());
+          }}
+          onPointsChanged={() => {
+            setPointsBalance(getPointsBalance());
+            setNotifications(getNotifications());
+          }}
         />
       )}
 
@@ -525,6 +794,9 @@ export function App() {
           reservations={reservations}
           vaultCount={activeVaultCount}
           confiaConnectionsCount={acceptedConnectionsCount}
+          initialSectionTab={profileDeepLink.section}
+          focusTarget={profileDeepLink.focus}
+          deepLinkNonce={profileDeepLink.nonce}
           onSavePreferences={handleSavePreferences}
           onReservationsUpdated={setReservations}
           onOpenPersonalize={() => setShowPersonalize(true)}

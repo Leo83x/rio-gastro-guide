@@ -21,6 +21,7 @@ interface SmartImageProps {
   imageOrigin?: ImageOrigin;
   hasRealPhoto?: boolean;
   compact?: boolean;
+  hideFallbackText?: boolean;
   className?: string;
 }
 
@@ -58,6 +59,7 @@ export function SmartImage({
   imageOrigin,
   hasRealPhoto,
   compact = false,
+  hideFallbackText = false,
   className = '',
 }: SmartImageProps) {
   const [failed, setFailed] = useState(false);
@@ -82,7 +84,11 @@ export function SmartImage({
         {/* Subtle editorial frame */}
         <div className="pointer-events-none absolute inset-2 rounded-xl border border-white/10" />
 
-        <div className="relative z-10 flex flex-col items-center px-3 text-center">
+        <div
+          className={`relative z-10 flex flex-col items-center px-3 text-center ${
+            hideFallbackText ? '-mt-10 sm:-mt-8' : ''
+          }`}
+        >
           <div
             className={`flex items-center justify-center rounded-full border border-[#E05A47]/40 bg-[#E05A47]/15 text-[#E05A47] ${
               compact ? 'h-8 w-8' : 'h-12 w-12'
@@ -91,7 +97,7 @@ export function SmartImage({
             <Icon className={compact ? 'h-4 w-4' : 'h-6 w-6'} />
           </div>
 
-          {!compact && (
+          {!compact && !hideFallbackText && (
             <>
               <span className="mt-2.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
                 {category}

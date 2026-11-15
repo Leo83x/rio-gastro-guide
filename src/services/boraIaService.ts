@@ -157,7 +157,7 @@ export async function queryBoraIa(
 
   const answer =
     topMatches.length > 0
-      ? `Encontrei ${topMatches.length} sugestões alinhadas à sua intenção direto no catálogo real do BoraRio${
+      ? `Encontrei ${topMatches.length} sugestões por correspondência inteligente direta no catálogo real do BoraRio${
           usedSources.has('cofre') ? ' e no seu Cofre de Intenções' : ''
         }${usedSources.has('confia') ? ' com indicações da sua Rede Confia' : ''}.${rainHint}`
       : 'Não encontrei correspondência exata no catálogo atual. Tente informar um bairro (ex: Botafogo, Ipanema, Centro), orçamento ou momento!';

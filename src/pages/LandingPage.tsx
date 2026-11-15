@@ -230,13 +230,7 @@ export function LandingPage({
         )}
         <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-28 sm:px-6 sm:pt-32 lg:grid-cols-12 lg:px-8 lg:pb-24 lg:pt-36">
           <div className="lg:col-span-7">
-            <div
-              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold text-white backdrop-blur-md ${
-                isDark
-                  ? 'border-white/30 bg-white/15 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
-                  : 'border-white/30 bg-[#081A2C]/62 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]'
-              }`}
-            >
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
               <Sparkles className="h-3.5 w-3.5 text-[#FFB347]" />
               Superapp de Experiências & Concierge do Rio de Janeiro
             </div>
@@ -266,11 +260,7 @@ export function LandingPage({
               <button
                 type="button"
                 onClick={() => onNavigate('/parceiros')}
-                className={`inline-flex items-center gap-2 rounded-2xl border px-6 py-3.5 text-sm font-bold text-white backdrop-blur-md transition ${
-                  isDark
-                    ? 'border-white/30 bg-white/15 hover:border-white/50 hover:bg-white/25 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]'
-                    : 'border-white/35 bg-[#081A2C]/55 hover:border-white/60 hover:bg-[#081A2C]/72 [text-shadow:0_1px_2px_rgba(0,0,0,0.4)]'
-                }`}
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/15 px-6 py-3.5 text-sm font-bold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md transition [text-shadow:0_1px_2px_rgba(0,0,0,0.35)] hover:border-white/50 hover:bg-white/25"
               >
                 <Building2 className="h-4 w-4" />
                 Para Estabelecimentos
@@ -280,11 +270,7 @@ export function LandingPage({
                 <button
                   type="button"
                   onClick={onInstallPwa}
-                  className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-3.5 text-xs font-bold text-white backdrop-blur-md transition ${
-                    isDark
-                      ? 'border-[#4CA188]/50 bg-[#397B68]/35 hover:bg-[#397B68]/55'
-                      : 'border-[#4CA188]/60 bg-[#225848]/78 hover:bg-[#225848]/92'
-                  }`}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-[#4CA188]/50 bg-[#397B68]/35 px-4 py-3.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-[#397B68]/55"
                 >
                   <Smartphone className="h-4 w-4" />
                   Instalar PWA
@@ -541,8 +527,7 @@ export function LandingPage({
             <Crown className="h-7 w-7 text-[#F1E8D8]" />
             <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Bora Club</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
-              Benefícios exclusivos em restaurantes parceiros e drops curados, com transparência
-              entre ofertas demonstrativas e ofertas confirmadas por parceiros.
+              Reservas tradicionais, ofertas individuais, oportunidades de última hora e reserva inteligente por demanda — sem checkout no app e com pagamento direto no local.
             </p>
           </div>
 
@@ -562,8 +547,7 @@ export function LandingPage({
             </div>
             <h3 className="font-sans tracking-tight mt-4 text-2xl font-bold">Rio Points &amp; Passaporte</h3>
             <p className="mt-2 text-sm text-[#F1E8D8]/90">
-              Check-in por QR Code com proteção antifraude (limite diário por local e nonce único)
-              para acumular pontos no Passaporte Carioca.
+              Check-in dinâmico por QR Code com validade temporária e proteção antifraude para comprovar visitas reais e acumular recompensas.
             </p>
           </div>
         </div>
@@ -574,14 +558,13 @@ export function LandingPage({
         <div className="flex flex-col items-start justify-between gap-8 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-8 shadow-sm lg:flex-row lg:items-center">
           <div className="max-w-2xl">
             <span className="text-xs font-bold uppercase tracking-widest text-[#397B68]">
-              Área de Parceiros B2B
+              BoraRio — Reservas, Experiências e Demanda
             </span>
             <h2 className="font-sans tracking-tight mt-2 text-3xl font-bold text-[var(--text-primary)]">
-              Tem um restaurante, bar ou espaço cultural no Rio?
+              Mais reservas, mais previsibilidade e autonomia comercial total.
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Reivindique o perfil do seu estabelecimento, publique fotos oficiais, receba solicitações
-              de reserva e crie benefícios no Bora Club através de um painel exclusivo.
+              Você define suas condições comerciais sem precisar oferecer descontos obrigatórios nem pagar percentual sobre a conta consumida. Ative reservas tradicionais, oportunidades de última hora ou reserva inteligente por demanda no seu painel isolado.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
