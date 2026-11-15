@@ -1,9 +1,10 @@
-const CACHE_NAME = 'borario-pwa-v3';
+const CACHE_NAME = 'borario-pwa-v4';
 const STATIC_ASSETS = [
   '/',
   '/app',
   '/manifest.webmanifest',
   '/brand/borario-logo.png',
+  '/brand/borario-logo-dark.png',
   '/brand/borario-icon-192.png',
   '/brand/borario-icon-512.png',
 ];
