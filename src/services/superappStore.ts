@@ -1,6 +1,7 @@
 import type {
   ClubOffer,
   GroupDrop,
+  GroupParticipantValidation,
   GroupVoteSession,
   NotificationItem,
   PointTransaction,
@@ -13,6 +14,7 @@ import {
 } from '../types/verification';
 import { generateUUID } from '../utils/slug';
 import { accruePartnerFeeFromCheckin } from './partnerCommercialStore';
+import { evaluateCheckinPointCredit, recordCompanionSlotCredit } from './pointRulesStore';
 import {
   appendLedgerTransaction,
   getPointsBalance,
@@ -24,6 +26,10 @@ import {
   getIncomingReferralCode,
   reverseReferralForBooking,
 } from './referralStore';
+import {
+  getRewardVouchers,
+  recordPostRewardReturnIfApplicable,
+} from './rewardMarketplaceStore';
 import {
   confirmPostConsumptionVerification,
   getVisitProofs,
@@ -91,45 +97,67 @@ export function hasValidatedCheckinForVenue(experienceId: string): boolean {
   );
 }
 
-function appendCheckinPoints(
-  experienceId: string,
-  experienceName: string,
-  qrCodeToken: string
-): PointTransaction | undefined {
-  const today = new Date().toISOString().slice(0, 10);
-  const txs = getPointTransactions();
-  const alreadyCreditedToday = txs.some(
-    (tx) =>
-      tx.origin === 'checkin_qr' &&
-      tx.experience_id === experienceId &&
-      tx.created_at.slice(0, 10) === today &&
-      tx.validation_status !== 'REVERSED'
-  );
-  if (alreadyCreditedToday) return undefined;
+/**
+ * Credita pontos conforme regra configurável vigente.
+ * Garantia de Grupo: mesmo em reservas com guests > 1, o titular recebe no máximo 1x a cota individual (ex.: 50 RP).
+ */
+function creditCheckinPointsWithRule(params: {
+  reservation: ReservationRequest;
+  qrCodeToken: string;
+  visitProofId: string;
+  category?: string;
+}): { tx?: PointTransaction; pointsCredited: number; reason: string } {
+  const existingTxs = getPointTransactions();
+  const evalResult = evaluateCheckinPointCredit({
+    restaurantId: params.reservation.experience_id,
+    category: params.category,
+    participantSlot: 1,
+    existingTransactions: existingTxs,
+  });
+
+  if (!evalResult.allowed || !evalResult.creditToOwnerLedger || evalResult.pointsAmount <= 0) {
+    return {
+      pointsCredited: 0,
+      reason: evalResult.reason,
+    };
+  }
 
   const tx = appendLedgerTransaction({
     type: 'CREDIT',
-    amount: 50,
+    amount: evalResult.pointsAmount,
     origin: 'checkin_qr',
-    description: `Visita validada por QR dinâmico em ${experienceName}`,
-    experience_id: experienceId,
-    experience_name: experienceName,
-    qr_nonce: qrCodeToken,
+    description: `Visita individual validada por QR dinâmico em ${params.reservation.experience_name}${
+      params.reservation.guests > 1
+        ? ` (Titular — reserva para ${params.reservation.guests} pessoas)`
+        : ''
+    }`,
+    experience_id: params.reservation.experience_id,
+    experience_name: params.reservation.experience_name,
+    qr_nonce: params.qrCodeToken,
+    reservation_id: params.reservation.id,
+    visit_proof_id: params.visitProofId,
+    participant_slot: 1,
+    rule_code: evalResult.rule.rule_code,
     validation_status: 'RELEASED',
   });
 
   const usedRaw = localStorage.getItem(KEYS.QR_USED_NONCES);
   const usedNonces: string[] = usedRaw ? (JSON.parse(usedRaw) as string[]) : [];
-  if (!usedNonces.includes(qrCodeToken)) {
-    localStorage.setItem(KEYS.QR_USED_NONCES, JSON.stringify([...usedNonces, qrCodeToken]));
+  if (!usedNonces.includes(params.qrCodeToken)) {
+    localStorage.setItem(KEYS.QR_USED_NONCES, JSON.stringify([...usedNonces, params.qrCodeToken]));
   }
-  return tx;
+
+  return {
+    tx,
+    pointsCredited: evalResult.pointsAmount,
+    reason: evalResult.reason,
+  };
 }
 
 /**
- * Fluxo oficial de check-in dinâmico atrelado a uma reserva específica.
- * Atualiza estado da reserva, registra Prova de Visita, apura taxa fixa B2B sem percentual sobre consumo
- * e converte indicações vinculadas somente após validação real da visita.
+ * Fluxo oficial de check-in dinâmico atrelado a uma reserva específica (Titular = slot 1).
+ * Atualiza estado da reserva, registra Prova de Visita, apura taxa fixa B2B sem percentual sobre consumo,
+ * pontua exclusivamente 1x para o titular e registra retorno pós-recompensa quando aplicável.
  */
 export function completeReservationCheckin(params: {
   reservationId: string;
@@ -154,6 +182,7 @@ export function completeReservationCheckin(params: {
     scannedCodeOrPin: params.scannedCodeOrPin,
     actorContext: params.actorContext || 'USER',
     hasGeolocationEvidence: params.hasGeolocationEvidence,
+    participantSlot: 1,
   });
 
   if (!res.ok || !res.proof) {
@@ -163,12 +192,25 @@ export function completeReservationCheckin(params: {
   const nextStage =
     res.proof.presence_level === 'VERIFIED_VISIT' ? 'VERIFIED_VISIT' : 'CHECKED_IN';
 
+  const existingSlots = target.group_validated_slots || [];
+  const slotOne: GroupParticipantValidation = {
+    slot: 1,
+    participant_id: res.proof.user_id,
+    participant_label: res.proof.participant_label || 'Titular',
+    qr_code_used: res.proof.qr_code_used,
+    validated_at: res.proof.presence_verified_at,
+  };
+  const nextSlots = existingSlots.some((s) => s.slot === 1)
+    ? existingSlots
+    : [slotOne, ...existingSlots];
+
   const updatedReservation: ReservationRequest = {
     ...target,
     status: 'CONFIRMED',
     stage: nextStage,
     visit_proof_id: res.proof.id,
     visit_proof_level: res.proof.presence_level,
+    group_validated_slots: nextSlots,
   };
 
   localStorage.setItem(
@@ -176,16 +218,38 @@ export function completeReservationCheckin(params: {
     JSON.stringify(all.map((r) => (r.id === updatedReservation.id ? updatedReservation : r)))
   );
 
-  accruePartnerFeeFromCheckin({
+  // Verifica se houve resgate/uso prévio de recompensa neste mesmo parceiro ANTES desta reserva
+  const priorVoucher = getRewardVouchers({
+    restaurantId: updatedReservation.experience_id,
+    userId: res.proof.user_id,
+  }).find(
+    (v) =>
+      (v.status === 'USED' || v.status === 'ISSUED') &&
+      new Date(v.issued_at).getTime() <= new Date(target.created_at).getTime()
+  );
+
+  const feeResult = accruePartnerFeeFromCheckin({
     reservation: updatedReservation,
     visitProof: res.proof,
+    attributedFromRewardVoucherId: priorVoucher?.id,
   });
 
-  const tx = appendCheckinPoints(
-    updatedReservation.experience_id,
-    updatedReservation.experience_name,
-    res.proof.qr_code_used || params.scannedCodeOrPin.trim().toUpperCase()
-  );
+  if (priorVoucher) {
+    recordPostRewardReturnIfApplicable({
+      restaurantId: updatedReservation.experience_id,
+      userId: res.proof.user_id,
+      eventType: 'RETURN_VISIT',
+      subsequentBookingId: updatedReservation.id,
+      subsequentFeeLedgerId: feeResult.entry?.id,
+      indirectFeeBrl: feeResult.entry?.total_fee_brl || 0,
+    });
+  }
+
+  const pointRes = creditCheckinPointsWithRule({
+    reservation: updatedReservation,
+    qrCodeToken: res.proof.qr_code_used || params.scannedCodeOrPin.trim().toUpperCase(),
+    visitProofId: res.proof.id,
+  });
 
   const referralConversion = convertReferralOnVerifiedCheckin({
     reservation: updatedReservation,
@@ -197,8 +261,8 @@ export function completeReservationCheckin(params: {
     type: 'reward',
     title: `Check-in validado em ${updatedReservation.experience_name}`,
     message:
-      (tx
-        ? `+50 Rio Points creditados! Visita registrada (${nextStage}).`
+      (pointRes.tx
+        ? `+${pointRes.pointsCredited} Rio Points creditados! Visita registrada (${nextStage}).`
         : `Sua presença foi validada corretamente antes do consumo.`) +
       (referralConversion.converted
         ? ` Indicação convertida (+${referralConversion.pointsCredited} RP).`
@@ -207,12 +271,126 @@ export function completeReservationCheckin(params: {
 
   return {
     ok: true,
-    message: tx
-      ? `${res.message} +50 Rio Points creditados!`
+    message: pointRes.tx
+      ? `${res.message} +${pointRes.pointsCredited} Rio Points creditados!`
       : res.message,
     proof: res.proof,
     reservation: updatedReservation,
-    transaction: tx,
+    transaction: pointRes.tx,
+  };
+}
+
+/**
+ * Validação individual para acompanhantes de uma reserva em grupo (slot 2..N).
+ * Cada participante valida sua própria presença com QR dinâmico; NUNCA soma pontos ao titular.
+ */
+export function validateGroupCompanionCheckin(params: {
+  reservationId: string;
+  scannedCodeOrPin: string;
+  participantSlot: number;
+  participantLabel?: string;
+}): {
+  ok: boolean;
+  message: string;
+  proof?: VisitProofRecord;
+  reservation?: ReservationRequest;
+  companionPointsAwarded: number;
+  ownerPointsAwarded: 0;
+} {
+  const slot = Math.round(params.participantSlot);
+  if (slot < 2) {
+    return {
+      ok: false,
+      message: 'Check-in individual de acompanhante exige slot de participante igual ou superior a #2.',
+      companionPointsAwarded: 0,
+      ownerPointsAwarded: 0,
+    };
+  }
+
+  const all = getReservations();
+  const target = all.find((r) => r.id === params.reservationId);
+  if (!target) {
+    return {
+      ok: false,
+      message: 'Reserva em grupo não encontrada.',
+      companionPointsAwarded: 0,
+      ownerPointsAwarded: 0,
+    };
+  }
+
+  const companionUserId = `guest-slot-${slot}-${target.id}`;
+  const cleanLabel = params.participantLabel?.trim() || `Acompanhante #${slot}`;
+
+  const res = validateReservationDynamicCheckin({
+    reservation: target,
+    scannedCodeOrPin: params.scannedCodeOrPin,
+    actorContext: 'USER',
+    participantSlot: slot,
+    participantLabel: cleanLabel,
+    participantUserId: companionUserId,
+  });
+
+  if (!res.ok || !res.proof) {
+    return {
+      ok: false,
+      message: res.message,
+      companionPointsAwarded: 0,
+      ownerPointsAwarded: 0,
+    };
+  }
+
+  const evalResult = evaluateCheckinPointCredit({
+    restaurantId: target.experience_id,
+    participantSlot: slot,
+    existingTransactions: getPointTransactions(),
+  });
+
+  const companionPoints = evalResult.pointsAmount;
+  recordCompanionSlotCredit({
+    reservationId: target.id,
+    restaurantId: target.experience_id,
+    participantSlot: slot,
+    participantLabel: cleanLabel,
+    pointsAmount: companionPoints,
+    ruleCode: evalResult.rule.rule_code,
+  });
+
+  const existingSlots = target.group_validated_slots || [];
+  const nextSlots: GroupParticipantValidation[] = [
+    ...existingSlots.filter((s) => s.slot !== slot),
+    {
+      slot,
+      participant_id: res.proof.user_id,
+      participant_label: cleanLabel,
+      qr_code_used: res.proof.qr_code_used,
+      validated_at: res.proof.presence_verified_at,
+    },
+  ].sort((a, b) => a.slot - b.slot);
+
+  const updatedReservation: ReservationRequest = {
+    ...target,
+    group_validated_slots: nextSlots,
+  };
+
+  localStorage.setItem(
+    KEYS.RESERVATIONS,
+    JSON.stringify(all.map((r) => (r.id === updatedReservation.id ? updatedReservation : r)))
+  );
+
+  addNotification({
+    channel: 'internal',
+    type: 'reward',
+    title: `Participante #${slot} validado em ${target.experience_name}`,
+    message: `Presença individual de ${cleanLabel} confirmada (+${companionPoints} RP na conta individual do participante; 0 RP adicionados ao titular).`,
+  });
+
+  return {
+    ok: true,
+    message: `Presença individual de ${cleanLabel} (slot #${slot}) validada! (+${companionPoints} RP individuais do acompanhante; 0 RP extras para o titular).`,
+    proof: res.proof,
+    reservation: updatedReservation,
+    companionPointsAwarded: companionPoints,
+    ownerPointsAwarded: 0,
   };
 }
 
@@ -359,6 +537,13 @@ export function createReservationRequest(
   const list = getReservations();
   localStorage.setItem(KEYS.RESERVATIONS, JSON.stringify([req, ...list]));
 
+  recordPostRewardReturnIfApplicable({
+    restaurantId: payload.experience_id,
+    eventType: 'SUBSEQUENT_BOOKING',
+    subsequentBookingId: req.id,
+    indirectFeeBrl: 0,
+  });
+
   addNotification({
     channel: payload.whatsapp_reminder ? 'whatsapp' : 'internal',
     type: 'reservation',
@@ -450,16 +635,37 @@ export function partnerReconcileContingencyCheckin(params: {
     );
     localStorage.setItem(KEYS.RESERVATIONS, JSON.stringify(nextReservations));
 
-    accruePartnerFeeFromCheckin({
+    const priorVoucher = getRewardVouchers({
+      restaurantId: updatedReservation.experience_id,
+      userId: res.proof.user_id,
+    }).find(
+      (v) =>
+        (v.status === 'USED' || v.status === 'ISSUED') &&
+        new Date(v.issued_at).getTime() <= new Date(target.created_at).getTime()
+    );
+
+    const feeResult = accruePartnerFeeFromCheckin({
       reservation: updatedReservation,
       visitProof: res.proof,
+      attributedFromRewardVoucherId: priorVoucher?.id,
     });
 
-    appendCheckinPoints(
-      updatedReservation.experience_id,
-      updatedReservation.experience_name,
-      `CONTINGENCY-${params.contingencyId.slice(0, 6).toUpperCase()}`
-    );
+    if (priorVoucher) {
+      recordPostRewardReturnIfApplicable({
+        restaurantId: updatedReservation.experience_id,
+        userId: res.proof.user_id,
+        eventType: 'RETURN_VISIT',
+        subsequentBookingId: updatedReservation.id,
+        subsequentFeeLedgerId: feeResult.entry?.id,
+        indirectFeeBrl: feeResult.entry?.total_fee_brl || 0,
+      });
+    }
+
+    creditCheckinPointsWithRule({
+      reservation: updatedReservation,
+      qrCodeToken: `CONTINGENCY-${params.contingencyId.slice(0, 6).toUpperCase()}`,
+      visitProofId: res.proof.id,
+    });
 
     convertReferralOnVerifiedCheckin({
       reservation: updatedReservation,

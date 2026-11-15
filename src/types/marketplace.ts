@@ -43,6 +43,10 @@ export interface PartnerOffering {
   capacity_total: number;
   reserved_count: number;
   min_demand_goal?: number;
+  eligible_item?: string;
+  offer_category?: string;
+  valid_days_hours?: string;
+  views_count?: number;
   partner_managed_active: boolean;
   is_demonstrative: boolean;
   created_at: string;

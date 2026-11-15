@@ -62,6 +62,8 @@ export interface PartnerFeeLedgerEntry {
   unit_fee_brl: number;
   total_fee_brl: number;
   attribution_origin: string;
+  fee_source_type?: 'ATTENDED_BOOKING';
+  attributed_from_reward_voucher_id?: string;
   status: PartnerFeeStatus;
   dispute_reason?: string;
   event_timestamp: string;

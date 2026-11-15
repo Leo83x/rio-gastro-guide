@@ -62,6 +62,10 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(72),
       capacity_total: 24,
       reserved_count: 6,
+      eligible_item: 'Mesa em salão principal (reserva tradicional)',
+      offer_category: 'Gastronomia',
+      valid_days_hours: 'Todos os dias · 19h às 22h',
+      views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
       created_at: nowIso,
@@ -95,6 +99,10 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(48),
       capacity_total: 16,
       reserved_count: 4,
+      eligible_item: 'Menu Executivo (Entrada + Prato Principal)',
+      offer_category: 'Gastronomia',
+      valid_days_hours: 'Segunda a Sexta · 12h às 15h30',
+      views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
       created_at: nowIso,
@@ -130,6 +138,10 @@ function buildStarterOfferings(): PartnerOffering[] {
       capacity_total: 30,
       reserved_count: 14,
       min_demand_goal: 20,
+      eligible_item: 'Menu Degustação Completo em 3 Tempos',
+      offer_category: 'Gastronomia',
+      valid_days_hours: 'Terça e Quarta · 19h30 às 22h',
+      views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
       created_at: nowIso,
@@ -161,6 +173,10 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(8),
       capacity_total: 12,
       reserved_count: 5,
+      eligible_item: 'Empada de camarão cortesia + mesa no salão superior',
+      offer_category: 'Gastronomia',
+      valid_days_hours: 'Hoje · 17h30 às 19h30',
+      views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
       created_at: nowIso,
@@ -209,6 +225,23 @@ export function getDemandParticipations(offeringId?: string): DemandParticipatio
   return list.filter((p) => p.offering_id === offeringId);
 }
 
+export function incrementOfferingViews(offeringId: string): PartnerOffering[] {
+  const all = getPartnerOfferings({ includeDrafts: true });
+  let found = false;
+  const next = all.map((o) => {
+    if (o.id !== offeringId) return o;
+    found = true;
+    return {
+      ...o,
+      views_count: (o.views_count || 0) + 1,
+    };
+  });
+  if (found) {
+    writeJson(KEYS.OFFERINGS, next);
+  }
+  return next;
+}
+
 export function createPartnerOffering(
   payload: Omit<
     PartnerOffering,
@@ -251,6 +284,10 @@ export function createPartnerOffering(
 
   const offering: PartnerOffering = {
     ...payload,
+    eligible_item: payload.eligible_item?.trim() || payload.benefit_summary.trim(),
+    offer_category: payload.offer_category || payload.category,
+    valid_days_hours: payload.valid_days_hours?.trim() || `${payload.service_date} · ${payload.time_slot_label}`,
+    views_count: payload.views_count ?? 0,
     estimated_savings_brl: computedSavings,
     id: generateUUID(),
     reserved_count: 0,
@@ -273,7 +310,7 @@ export function createPartnerOffering(
 
 /**
  * Imutabilidade retroativa: impede alterar preço, benefício ou regras de ofertas que já possuam reservas confirmadas.
- * O parceiro pode apenas pausar/desativar novas entradas respeitando compromissos já assumidos.
+ * O parceiro pode apenas pausar/encerrar novas entradas respeitando compromissos já assumidos.
  */
 export function updatePartnerOffering(
   offeringId: string,
@@ -286,6 +323,8 @@ export function updatePartnerOffering(
       | 'rules_summary'
       | 'partner_condition_price_brl'
       | 'capacity_total'
+      | 'eligible_item'
+      | 'valid_days_hours'
       | 'partner_managed_active'
       | 'status'
     >
@@ -310,13 +349,14 @@ export function updatePartnerOffering(
     (patch.rules_summary !== undefined && patch.rules_summary !== target.rules_summary) ||
     (patch.partner_condition_price_brl !== undefined &&
       patch.partner_condition_price_brl !== target.partner_condition_price_brl) ||
-    (patch.title !== undefined && patch.title !== target.title);
+    (patch.title !== undefined && patch.title !== target.title) ||
+    (patch.eligible_item !== undefined && patch.eligible_item !== target.eligible_item);
 
   if (confirmedBookingsForOffering.length > 0 && touchesCommercialTerms) {
     return {
       ok: false,
       message:
-        `Bloqueado por proteção ao cliente: já existem ${confirmedBookingsForOffering.length} reserva(s) confirmada(s) com estes termos congelados. Você pode apenas pausar novas adesões ou criar uma nova oferta.`,
+        `Bloqueado por proteção ao cliente: já existem ${confirmedBookingsForOffering.length} reserva(s) confirmada(s) com estes termos congelados. Você pode apenas pausar ou encerrar novas adesões ou criar uma nova oferta.`,
       offerings: all,
     };
   }

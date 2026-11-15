@@ -69,11 +69,24 @@ export interface PointTransaction {
   id: string;
   type: PointTransactionType;
   amount: number;
-  origin: 'checkin_qr' | 'verified_review' | 'referral' | 'reward_redeem' | 'welcome_bonus';
+  origin:
+    | 'checkin_qr'
+    | 'verified_review'
+    | 'referral'
+    | 'reward_redeem'
+    | 'reward_refund'
+    | 'campaign_bonus'
+    | 'welcome_bonus';
   description: string;
   experience_id?: string;
   experience_name?: string;
   qr_nonce?: string;
+  reservation_id?: string;
+  visit_proof_id?: string;
+  participant_slot?: number;
+  reward_voucher_id?: string;
+  rule_code?: string;
+  expires_at?: string;
   validation_status?: 'RELEASED' | 'PENDING_VALIDATION' | 'REVERSED';
   created_at: string;
 }
@@ -86,6 +99,14 @@ export interface ReservationSnapshotTerms {
   base_price_brl?: number;
   partner_condition_price_brl?: number;
   estimated_savings_brl?: number;
+}
+
+export interface GroupParticipantValidation {
+  slot: number;
+  participant_id: string;
+  participant_label: string;
+  qr_code_used?: string;
+  validated_at: string;
 }
 
 export interface ReservationRequest {
@@ -108,6 +129,7 @@ export interface ReservationRequest {
   referral_code_used?: string;
   visit_proof_id?: string;
   visit_proof_level?: VisitProofLevel;
+  group_validated_slots?: GroupParticipantValidation[];
   snapshot_terms?: ReservationSnapshotTerms;
   whatsapp_reminder: boolean;
   created_at: string;

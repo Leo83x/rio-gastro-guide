@@ -103,6 +103,7 @@ export function getPartnerFeeLedger(restaurantId?: string): PartnerFeeLedgerEntr
 export function accruePartnerFeeFromCheckin(params: {
   reservation: ReservationRequest;
   visitProof: VisitProofRecord;
+  attributedFromRewardVoucherId?: string;
 }): { created: boolean; entry?: PartnerFeeLedgerEntry; reason?: string } {
   const { reservation, visitProof } = params;
 
@@ -152,6 +153,8 @@ export function accruePartnerFeeFromCheckin(params: {
     unit_fee_brl: unitFee,
     total_fee_brl: totalFee,
     attribution_origin: reservation.attribution_origin || 'catalog',
+    fee_source_type: 'ATTENDED_BOOKING',
+    attributed_from_reward_voucher_id: params.attributedFromRewardVoucherId,
     status: 'ACCRUED',
     event_timestamp: visitProof.presence_verified_at,
     is_demonstrative: visitProof.is_demonstrative,

@@ -1,7 +1,8 @@
 import type { PassportSummary } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
+import { getUserProfileIdentity } from './authService';
 import { getIntentVaultItems } from './intentVaultStore';
-import { getPointTransactions } from './superappStore';
+import { getPointTransactions } from './pointsLedger';
 import { getVisitProofs } from './visitProofStore';
 
 /**
@@ -11,10 +12,16 @@ import { getVisitProofs } from './visitProofStore';
  * Nunca fabrica selos ou progresso fictício.
  */
 export function computePassportSummary(catalog: Restaurant[]): PassportSummary {
+  const me = getUserProfileIdentity();
   const txs = getPointTransactions();
-  const visitProofs = getVisitProofs();
+  const visitProofs = getVisitProofs().filter(
+    (p) => (p.participant_slot ?? 1) === 1 || p.user_id === me.id
+  );
   const checkinTxs = txs.filter(
-    (tx) => tx.origin === 'checkin_qr' && tx.validation_status !== 'REVERSED'
+    (tx) =>
+      tx.origin === 'checkin_qr' &&
+      tx.validation_status !== 'REVERSED' &&
+      (tx.participant_slot ?? 1) === 1
   );
   const reviews = txs.filter((tx) => tx.origin === 'verified_review');
   const vaultVisited = getIntentVaultItems().filter((item) => item.status === 'VISITED');

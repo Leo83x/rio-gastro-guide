@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Award,
   Building2,
   CalendarCheck,
   CheckCircle2,
@@ -8,12 +9,14 @@ import {
   Moon,
   QrCode,
   ShieldCheck,
+  Sparkles,
   Store,
   Sun,
   Users,
 } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import type { AppRoute } from '../services/router';
+import { REWARDS_ZERO_COMMISSION_PARTNER_COPY } from '../types/verification';
 
 interface PartnersLandingPageProps {
   isDark: boolean;
@@ -167,6 +170,56 @@ export function PartnersLandingPage({
           })}
         </div>
 
+        {/* Duas Condições Comerciais + Regra Econômica Comissão Zero sobre Rio Points */}
+        <div className="mt-10 rounded-3xl border border-[#397B68]/35 bg-gradient-to-br from-[#397B68]/10 via-[var(--bg-surface)] to-[#123B56]/10 p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#397B68]">
+                <Award className="h-4 w-4" />
+                Duas Condições Comerciais Complementares
+              </span>
+              <h2 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
+                Aquisição de Clientes + Economia de Recompensas sem Comissão
+              </h2>
+            </div>
+            <span className="rounded-full bg-emerald-500/15 px-3.5 py-1.5 text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
+              Comissão sobre resgates: 0% · R$ 0,00
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                <Gift className="h-4 w-4" />
+                Condição 1 — Oferta para Atrair
+              </div>
+              <h3 className="mt-2 text-base font-bold text-[var(--text-primary)]">
+                Aquisição, reservas e ocupação estratégica
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)]">
+                Crie descontos em itens selecionados, cortesias, menus especiais, preços fechados ou janelas limitadas (individuais ou por demanda agregada) — sem obrigatoriedade de desconto para participar.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#397B68]/40 bg-[var(--bg-surface)] p-5">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#397B68]">
+                <Sparkles className="h-4 w-4" />
+                Condição 2 — Recompensa BoraRio
+              </div>
+              <h3 className="mt-2 text-base font-bold text-[var(--text-primary)]">
+                Fidelidade e retorno de toda a rede com comissão zero
+              </h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)]">
+                Disponibilize produtos, sobremesas, passeios, upgrades ou ingressos do seu catálogo para troca via Rio Points com controle total de estoque, validade e limites por usuário.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-[#123B56]/25 bg-[var(--bg-surface)] p-5 text-sm leading-relaxed text-[var(--text-primary)]">
+            <p className="font-semibold">{REWARDS_ZERO_COMMISSION_PARTNER_COPY}</p>
+          </div>
+        </div>
+
         {/* Garantias Operacionais & Remuneracao Auditavel */}
         <div className="mt-10 grid gap-6 lg:grid-cols-3">
           <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
@@ -189,7 +242,7 @@ export function PartnersLandingPage({
             <ShieldCheck className="h-6 w-6 text-[#123B56] dark:text-[#F7931E]" />
             <h3 className="font-sans mt-3 text-lg font-bold">Remuneração fixa configurável</h3>
             <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-              Taxa fixa configurável por plano/contrato vinculada apenas a reservas e check-ins válidos de clientes atendidos. <strong>0% sobre o valor da conta consumida</strong> e zero cobrança por cliques, visualizações ou cancelamentos.
+              Taxa fixa configurável por plano/contrato vinculada apenas a reservas e check-ins válidos de clientes atendidos. <strong>0% sobre o valor da conta consumida</strong>, <strong>0% sobre resgates de Rio Points</strong> e zero cobrança por cliques ou cancelamentos.
             </p>
           </div>
         </div>

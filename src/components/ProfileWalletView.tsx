@@ -22,8 +22,10 @@ import {
   Sparkles,
   Star,
   Store,
+  Ticket,
   Trash2,
   UserPlus,
+  Users,
   Wand2,
   WifiOff,
 } from 'lucide-react';
@@ -53,17 +55,23 @@ import {
   setIncomingReferralCode,
   tryConvertAttributionWithProof,
 } from '../services/referralStore';
+import { getWalletSummary } from '../services/pointsLedger';
+import {
+  cancelRewardVoucher,
+  getPartnerRewards,
+  getRewardVouchers,
+  redeemPartnerReward,
+} from '../services/rewardMarketplaceStore';
 import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
 import {
   cancelReservation,
   completeReservationCheckin,
   creditVerifiedReview,
-  getPointsBalance,
   getPointTransactions,
   getReservations,
   hasValidatedCheckinForVenue,
-  redeemReward,
   validateAndCreditQRCheckin,
+  validateGroupCompanionCheckin,
 } from '../services/superappStore';
 import { queueOfflineContingencyCheckin } from '../services/visitProofStore';
 import type { ConfiaPrivacySettings } from '../types/confia';
@@ -76,9 +84,17 @@ import type {
 } from '../types/experience';
 import type { ReferralAttribution } from '../types/growth';
 import type { Restaurant } from '../types/restaurant';
+import type {
+  PartnerReward,
+  RewardVoucher,
+  RewardVoucherStatus,
+  WalletSummary,
+} from '../types/rewards';
 import {
   DIRECT_PAYMENT_NOTICE,
   MANDATORY_CHECKIN_INSTRUCTION,
+  POINTS_PREVISIT_CHECKIN_NOTICE,
+  WALLET_NON_MONETARY_NOTICE,
   type ReservationLifecycleStage,
 } from '../types/verification';
 
@@ -105,11 +121,32 @@ interface WindowWithBarcodeDetector extends Window {
   BarcodeDetector?: new (options?: { formats?: string[] }) => BarcodeDetectorLike;
 }
 
-const REWARDS_CATALOG = [
-  { id: 'rew-1', title: 'Sobremesa cortesia em casas parceiras (Demo)', cost: 250 },
-  { id: 'rew-2', title: 'Benefício especial de membro no Bora Club (Demo)', cost: 500 },
-  { id: 'rew-3', title: 'Par de ingressos Museu do Amanhã (Demo)', cost: 350 },
-];
+const VOUCHER_STATUS_META: Record<RewardVoucherStatus, { label: string; cls: string }> = {
+  AVAILABLE: {
+    label: 'AVAILABLE · Disponível',
+    cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  },
+  REDEEMED: {
+    label: 'REDEEMED · Resgatada',
+    cls: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300',
+  },
+  ISSUED: {
+    label: 'ISSUED · Emitido (Pronto p/ uso)',
+    cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  },
+  USED: {
+    label: 'USED · Utilizada no local',
+    cls: 'bg-[#397B68]/20 text-[#397B68] dark:text-[#4CA188]',
+  },
+  EXPIRED: {
+    label: 'EXPIRED · Expirado',
+    cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
+  },
+  CANCELLED: {
+    label: 'CANCELLED · Cancelado / Estornado',
+    cls: 'bg-red-500/15 text-red-600 dark:text-red-300',
+  },
+};
 
 const STAGE_BADGE: Record<ReservationLifecycleStage, { label: string; cls: string }> = {
   REQUESTED: {
@@ -198,10 +235,17 @@ export function ProfileWalletView({
   const [authEmail, setAuthEmail] = useState('');
   const [authMsg, setAuthMsg] = useState('');
 
-  const [balance, setBalance] = useState<number>(() => getPointsBalance());
+  const [wallet, setWallet] = useState<WalletSummary>(() => getWalletSummary());
+  const balance = wallet.available_balance;
   const [transactions, setTransactions] = useState<PointTransaction[]>(() =>
     getPointTransactions()
   );
+  const [marketplaceRewards, setMarketplaceRewards] = useState<PartnerReward[]>(() =>
+    getPartnerRewards()
+  );
+  const [myVouchers, setMyVouchers] = useState<RewardVoucher[]>(() => getRewardVouchers());
+  const [voucherFeedback, setVoucherFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+
   const [savedItineraries, setSavedItineraries] = useState<SavedItinerary[]>(() =>
     getSavedItineraries()
   );
@@ -236,6 +280,16 @@ export function ProfileWalletView({
   const [checkinResId, setCheckinResId] = useState<string | null>(null);
   const [drawerCodeOrPin, setDrawerCodeOrPin] = useState<string>('');
   const [drawerFeedback, setDrawerFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // Group companion (#2..N) individual check-in drawer (kept collapsed unless opened explicitly)
+  const [companionDrawerResId, setCompanionDrawerResId] = useState<string | null>(null);
+  const [companionSlotInput, setCompanionSlotInput] = useState<number>(2);
+  const [companionNameInput, setCompanionNameInput] = useState<string>('');
+  const [companionCodeOrPin, setCompanionCodeOrPin] = useState<string>('');
+  const [companionFeedback, setCompanionFeedback] = useState<{ ok: boolean; msg: string } | null>(
+    null
+  );
+
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [cameraInfo, setCameraInfo] = useState<string>('');
   const [showClosedReservations, setShowClosedReservations] = useState<boolean>(false);
@@ -279,9 +333,11 @@ export function ProfileWalletView({
   const supabaseReady = isSupabaseAuthConfigured();
 
   const refreshWallet = () => {
-    setBalance(getPointsBalance());
+    setWallet(getWalletSummary());
     setTransactions(getPointTransactions());
     setAttributions(getReferralAttributions());
+    setMarketplaceRewards(getPartnerRewards());
+    setMyVouchers(getRewardVouchers());
     setSavingsTick((n) => n + 1);
     onPointsChanged();
   };
@@ -509,10 +565,32 @@ export function ProfileWalletView({
     refreshWallet();
   };
 
-  const handleRedeem = (title: string, cost: number) => {
-    const res = redeemReward(title, cost);
-    setFeedback({ ok: res.ok, msg: res.message });
+  const handleRedeemMarketplaceReward = (rewardId: string) => {
+    const res = redeemPartnerReward(rewardId);
+    setVoucherFeedback({ ok: res.ok, msg: res.message });
     if (res.ok) refreshWallet();
+  };
+
+  const handleCancelVoucher = (voucherId: string) => {
+    const res = cancelRewardVoucher(voucherId);
+    setVoucherFeedback({ ok: res.ok, msg: res.message });
+    if (res.ok) refreshWallet();
+  };
+
+  const handleCompanionDynamicCheckin = (resItem: ReservationRequest) => {
+    const res = validateGroupCompanionCheckin({
+      reservationId: resItem.id,
+      scannedCodeOrPin: companionCodeOrPin,
+      participantSlot: companionSlotInput,
+      participantLabel: companionNameInput.trim() || `Acompanhante #${companionSlotInput}`,
+    });
+    setCompanionFeedback({ ok: res.ok, msg: res.message });
+    if (res.ok) {
+      setCompanionCodeOrPin('');
+      setCompanionNameInput('');
+      onReservationsUpdated(getReservations());
+      refreshWallet();
+    }
   };
 
   const toggleConsent = (key: keyof UserPreferences['lgpd_consents']) => {
@@ -733,26 +811,54 @@ export function ProfileWalletView({
 
           {/* Wallet Hero + QR Check-in */}
           <div className="grid gap-6 lg:grid-cols-3">
-            <div className="rounded-3xl border border-[#E05A47]/30 bg-gradient-to-br from-[#1C1917] via-[#26221F] to-[#141210] p-6 text-white shadow-lg">
+            <div
+              data-testid="wallet-hero-card"
+              className="rounded-3xl border border-[#E05A47]/30 bg-gradient-to-br from-[#1C1917] via-[#26221F] to-[#141210] p-6 text-white shadow-lg"
+            >
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#FF6B35]">
                   <Award className="h-4 w-4" />
                   Carteira Rio Points
                 </span>
                 <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-white/80">
-                  Livro Transacional
+                  Saldo disponível
                 </span>
               </div>
 
-              <p className="font-sans mt-4 text-4xl font-bold tracking-tight">
+              <p data-testid="wallet-available-balance" className="font-sans mt-4 text-4xl font-bold tracking-tight">
                 {balance.toLocaleString('pt-BR')} <span className="text-lg text-[#E5B342]">RP</span>
               </p>
               <p className="mt-1 text-xs text-white/70">
-                Saldo calculado exclusivamente a partir do histórico transacional (sem edição arbitrária).
+                Saldo calculado exclusivamente a partir do histórico transacional auditável.
+              </p>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2">
+                  <span className="block text-white/65">Total acumulado</span>
+                  <strong data-testid="wallet-total-accumulated" className="text-xs text-emerald-300">
+                    {wallet.total_accumulated.toLocaleString('pt-BR')} RP
+                  </strong>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2">
+                  <span className="block text-white/65">Total utilizado</span>
+                  <strong data-testid="wallet-total-spent" className="text-xs text-white">
+                    {wallet.total_spent.toLocaleString('pt-BR')} RP
+                  </strong>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 px-2 py-2">
+                  <span className="block text-white/65">Pontos pendentes</span>
+                  <strong data-testid="wallet-pending-points" className="text-xs text-amber-300">
+                    {wallet.pending_points.toLocaleString('pt-BR')} RP
+                  </strong>
+                </div>
+              </div>
+
+              <p className="mt-2.5 rounded-xl border border-white/10 bg-black/25 px-2.5 py-2 text-[10px] leading-relaxed text-white/75">
+                {WALLET_NON_MONETARY_NOTICE}
               </p>
 
               {/* Economia Comprovada vs Economia Potencial */}
-              <div className="mt-5 grid grid-cols-2 gap-2.5 text-xs">
+              <div className="mt-4 grid grid-cols-2 gap-2.5 text-xs">
                 <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/12 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                     Economia Comprovada
@@ -786,7 +892,10 @@ export function ProfileWalletView({
               <h3 className="font-sans mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
                 Validar Visita (+50 RP) &amp; Liberar Visita Verificada
               </h3>
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              <div className="mt-2 rounded-2xl border border-[#FF6B35]/30 bg-[#FF6B35]/8 px-3.5 py-2.5 text-xs font-semibold text-[#123B56] dark:text-[#F1E8D8]">
+                {POINTS_PREVISIT_CHECKIN_NOTICE}
+              </div>
+              <p className="mt-2 text-xs text-[var(--text-secondary)]">
                 {MANDATORY_CHECKIN_INSTRUCTION} O check-in valida sua chegada; o selo Consumo Verificado requer confirmação adicional do parceiro após o atendimento.
               </p>
 
@@ -1120,40 +1229,192 @@ export function ProfileWalletView({
             </div>
           </section>
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Rewards Catalog */}
-            <section className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
-                <Gift className="h-4 w-4" />
-                Catálogo de Recompensas (Demo)
+          <div className="space-y-6">
+            {voucherFeedback && (
+              <div
+                className={`rounded-2xl border px-4 py-3 text-xs font-semibold ${
+                  voucherFeedback.ok
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200'
+                    : 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
+                }`}
+              >
+                {voucherFeedback.msg}
               </div>
-              <div className="mt-4 space-y-3">
-                {REWARDS_CATALOG.map((rew) => (
-                  <div
-                    key={rew.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3"
-                  >
-                    <div>
-                      <p className="text-xs font-bold text-[var(--text-primary)]">{rew.title}</p>
-                      <p className="text-[11px] font-semibold text-[#D49B27]">{rew.cost} RP</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRedeem(rew.title, rew.cost)}
-                      className="shrink-0 rounded-lg bg-[#FF6B35] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#e8634c]"
-                    >
-                      Resgatar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+            )}
 
-            {/* Transactional History */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Marketplace de Recompensas Cross-Parceiro (0% Comissão) */}
+              <section className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                    <Gift className="h-4 w-4" />
+                    Marketplace de Recompensas (0% Comissão)
+                  </div>
+                  <span className="rounded-full bg-[#397B68]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#397B68] dark:text-[#4CA188]">
+                    Comissão ao parceiro: R$ 0,00
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                  Troque pontos acumulados em qualquer estabelecimento da rede BoraRio por benefícios em restaurantes, museus, passeios e experiências.
+                </p>
+
+                <div className="mt-4 max-h-96 space-y-3 overflow-y-auto pr-1">
+                  {marketplaceRewards.map((rew) => {
+                    const isAvailable = rew.status === 'AVAILABLE' && rew.quantity_available > 0;
+                    const canAfford = balance >= rew.points_cost;
+                    return (
+                      <div
+                        key={rew.id}
+                        data-testid={`wallet-reward-${rew.id}`}
+                        className="flex flex-col justify-between gap-3 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5 text-xs sm:flex-row sm:items-center"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="rounded-full bg-[#123B56]/12 px-2 py-0.5 text-[10px] font-bold text-[#123B56] dark:bg-[#123B56]/40 dark:text-[#8DC4EA]">
+                              {rew.segment_category}
+                            </span>
+                            <span className="text-[10px] text-[var(--text-secondary)]">
+                              {rew.restaurant_name} ({rew.neighborhood})
+                            </span>
+                            {rew.status !== 'AVAILABLE' && (
+                              <span className="rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
+                                {rew.status === 'PAUSED'
+                                  ? 'Pausada'
+                                  : rew.status === 'CLOSED'
+                                    ? 'Encerrada'
+                                    : 'Esgotada'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-bold text-[var(--text-primary)]">{rew.title}</p>
+                          <p className="text-[11px] text-[var(--text-secondary)]">
+                            {rew.eligible_item} · {rew.valid_days_hours}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                            <span className="font-bold text-[#D49B27]">{rew.points_cost} RP</span>
+                            <span className="text-[var(--text-secondary)]">
+                              Estoque: {rew.quantity_available}/{rew.quantity_total} un.
+                            </span>
+                            <span className="font-semibold text-[#397B68] dark:text-[#4CA188]">
+                              Comissão: R$ 0,00
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={!isAvailable || !canAfford}
+                          onClick={() => handleRedeemMarketplaceReward(rew.id)}
+                          className="shrink-0 rounded-lg bg-[#FF6B35] px-3.5 py-2 text-[11px] font-semibold text-white hover:bg-[#e8634c] disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          {!isAvailable
+                            ? 'Indisponível'
+                            : !canAfford
+                              ? `Faltam ${rew.points_cost - balance} RP`
+                              : 'Resgatar'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Meus Vouchers de Recompensa (6 estados + Cancelamento com Estorno Integral) */}
+              <section className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#123B56] dark:text-[#8DC4EA]">
+                    <Ticket className="h-4 w-4 text-[#FF6B35]" />
+                    Meus Vouchers de Recompensa ({myVouchers.length})
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(['AVAILABLE', 'REDEEMED', 'ISSUED', 'USED', 'EXPIRED', 'CANCELLED'] as RewardVoucherStatus[]).map(
+                    (st) => (
+                      <span
+                        key={st}
+                        className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${VOUCHER_STATUS_META[st].cls}`}
+                      >
+                        {VOUCHER_STATUS_META[st].label}
+                      </span>
+                    )
+                  )}
+                </div>
+
+                <div className="mt-4 max-h-80 space-y-3 overflow-y-auto pr-1">
+                  {myVouchers.length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-[var(--border-hairline)] p-4 text-xs text-[var(--text-secondary)]">
+                      Você ainda não resgatou nenhuma recompensa. Quando resgatar, seu voucher único (<code className="font-mono">BR-REW-...</code>) aparecerá aqui com as regras congeladas e opção de cancelamento com estorno antes do uso.
+                    </p>
+                  ) : (
+                    myVouchers.map((v) => {
+                      const vMeta = VOUCHER_STATUS_META[v.status];
+                      return (
+                        <div
+                          key={v.id}
+                          data-testid={`wallet-voucher-${v.voucher_code}`}
+                          className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5 text-xs"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-mono text-xs font-extrabold text-[#FF6B35]">
+                              {v.voucher_code}
+                            </span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${vMeta.cls}`}>
+                              {vMeta.label}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 font-bold text-[var(--text-primary)]">
+                            {v.snapshot_rules.title}
+                          </p>
+                          <p className="text-[11px] text-[var(--text-secondary)]">
+                            {v.restaurant_name} · {v.snapshot_rules.eligible_item}
+                          </p>
+                          <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
+                            Regras: {v.snapshot_rules.valid_days_hours} · Validade:{' '}
+                            {new Date(v.expires_at).toLocaleDateString('pt-BR')} · -{v.points_spent} RP · Comissão ao parceiro: R$ 0,00
+                          </p>
+
+                          {v.status === 'ISSUED' && (
+                            <div className="mt-2.5 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleCancelVoucher(v.id)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/8 px-3 py-1.5 text-[10px] font-bold text-red-600 hover:bg-red-500/15 dark:text-red-300"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                Cancelar &amp; Estornar Pontos
+                              </button>
+                            </div>
+                          )}
+
+                          {v.status === 'USED' && v.used_at && (
+                            <p className="mt-1.5 text-[10px] font-semibold text-[#397B68] dark:text-[#4CA188]">
+                              Validado no local em {new Date(v.used_at).toLocaleString('pt-BR')}
+                            </p>
+                          )}
+
+                          {v.status === 'CANCELLED' && (
+                            <p className="mt-1.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                              Estorno integral de +{v.points_spent} RP creditado no seu extrato.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </div>
+
+            {/* Transactional History (Auditável e Imutável) */}
             <section className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                <Sparkles className="h-4 w-4 text-[#FF6B35]" />
-                Extrato de Pontos
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  <Sparkles className="h-4 w-4 text-[#FF6B35]" />
+                  Extrato de Pontos
+                </div>
+                <span className="rounded-full bg-[var(--bg-canvas)] px-2.5 py-1 text-[10px] font-semibold text-[var(--text-secondary)]">
+                  Histórico auditável e imutável no cliente (não editável; estornos geram novo lançamento)
+                </span>
               </div>
               <div className="mt-4 max-h-64 divide-y divide-[var(--border-hairline)] overflow-y-auto">
                 {transactions.length === 0 ? (
@@ -1229,6 +1490,12 @@ export function ProfileWalletView({
                     stage === 'VERIFIED_CONSUMPTION';
                   const canDoCheckin = !isClosed && !alreadyCheckedIn;
                   const isDrawerOpen = checkinResId === res.id;
+                  const isCompanionDrawerOpen = companionDrawerResId === res.id;
+                  const companionSlots = (res.group_validated_slots || []).filter(
+                    (s) => s.slot >= 2
+                  );
+                  const totalPeopleValidated =
+                    (alreadyCheckedIn ? 1 : 0) + companionSlots.length;
 
                   return (
                     <div
@@ -1248,6 +1515,11 @@ export function ProfileWalletView({
                             {res.modality === 'DEMAND_OFFER' && stage === 'REQUESTED' && (
                               <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                                 Demanda · Aguardando meta e confirmação do parceiro
+                              </span>
+                            )}
+                            {res.guests > 1 && !isClosed && (
+                              <span className="rounded-full bg-[#123B56]/12 px-2 py-0.5 text-[10px] font-bold text-[#123B56] dark:bg-[#123B56]/40 dark:text-[#8DC4EA]">
+                                Grupo · {totalPeopleValidated}/{res.guests} validados
                               </span>
                             )}
                           </div>
@@ -1285,10 +1557,35 @@ export function ProfileWalletView({
                             <Store className="mt-0.5 h-3 w-3 shrink-0 text-[#397B68]" />
                             <span>{res.payment_instruction || DIRECT_PAYMENT_NOTICE}</span>
                           </p>
+                          <p className="flex items-start gap-1.5 font-semibold text-[#FF6B35]">
+                            <Award className="mt-0.5 h-3 w-3 shrink-0" />
+                            <span>{POINTS_PREVISIT_CHECKIN_NOTICE}</span>
+                          </p>
                           <p className="flex items-start gap-1.5 font-semibold text-[#123B56] dark:text-[#F1E8D8]">
                             <QrCode className="mt-0.5 h-3 w-3 shrink-0 text-[#FF6B35]" />
                             <span>{MANDATORY_CHECKIN_INSTRUCTION}</span>
                           </p>
+                          {res.guests > 1 && (
+                            <p className="flex items-start gap-1.5 text-[var(--text-secondary)]">
+                              <Users className="mt-0.5 h-3 w-3 shrink-0 text-[#123B56] dark:text-[#8DC4EA]" />
+                              <span>
+                                <strong>Regra de Grupo ({res.guests} pessoas):</strong> o titular recebe pontos individuais 1x pelo próprio check-in (sem multiplicação por quantidade de pessoas). Cada acompanhante (#2..#{res.guests}) pode validar sua presença individualmente (0 RP ao titular).
+                              </span>
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {companionSlots.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {companionSlots.map((slot) => (
+                            <span
+                              key={`${res.id}-slot-${slot.slot}`}
+                              className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />#{slot.slot} {slot.participant_label} validado (0 RP ao titular)
+                            </span>
+                          ))}
                         </div>
                       )}
 
@@ -1314,6 +1611,7 @@ export function ProfileWalletView({
                                 stopCamera();
                                 setCheckinResId(null);
                               } else {
+                                setCompanionDrawerResId(null);
                                 setCheckinResId(res.id);
                                 setDrawerCodeOrPin('');
                                 setDrawerFeedback(null);
@@ -1324,6 +1622,36 @@ export function ProfileWalletView({
                           >
                             <QrCode className="h-3.5 w-3.5" />
                             {isDrawerOpen ? 'Fechar Check-in' : 'Fazer Check-in QR Dinâmico'}
+                          </button>
+                        )}
+
+                        {!isClosed && res.guests > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isCompanionDrawerOpen) {
+                                setCompanionDrawerResId(null);
+                              } else {
+                                stopCamera();
+                                setCheckinResId(null);
+                                const usedSlots = new Set(companionSlots.map((s) => s.slot));
+                                let firstFree = 2;
+                                while (firstFree <= res.guests && usedSlots.has(firstFree)) {
+                                  firstFree++;
+                                }
+                                setCompanionSlotInput(Math.min(res.guests, firstFree));
+                                setCompanionNameInput('');
+                                setCompanionCodeOrPin('');
+                                setCompanionFeedback(null);
+                                setCompanionDrawerResId(res.id);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[#123B56]/35 bg-[#123B56]/10 px-3 py-1.5 text-[11px] font-bold text-[#123B56] hover:bg-[#123B56]/15 dark:border-[#8DC4EA]/35 dark:bg-[#123B56]/40 dark:text-[#8DC4EA]"
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                            {isCompanionDrawerOpen
+                              ? 'Fechar Acompanhantes'
+                              : `Validar Acompanhante (#2..${res.guests})`}
                           </button>
                         )}
 
@@ -1420,6 +1748,81 @@ export function ProfileWalletView({
                               }`}
                             >
                               {drawerFeedback.msg}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Group Companion (#2..N) Individual Validation Drawer */}
+                      {isCompanionDrawerOpen && (
+                        <div className="mt-3 space-y-2.5 rounded-2xl border border-[#123B56]/35 bg-[var(--bg-surface)] p-3.5">
+                          <p className="font-bold text-[var(--text-primary)]">
+                            Validação individual de acompanhante — 0 RP ao titular
+                          </p>
+                          <p className="text-[11px] text-[var(--text-secondary)]">
+                            Cada participante (#2 até #{res.guests}) pode validar seu próprio check-in presencial sem multiplicar os Rio Points do titular da reserva.
+                          </p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <div>
+                              <label className="block text-[10px] font-bold text-[var(--text-secondary)]">
+                                Posição no grupo
+                              </label>
+                              <select
+                                value={companionSlotInput}
+                                onChange={(e) => setCompanionSlotInput(Number(e.target.value))}
+                                className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1.5 text-xs text-[var(--text-primary)]"
+                              >
+                                {Array.from({ length: Math.max(0, res.guests - 1) }, (_, idx) => idx + 2).map(
+                                  (slotNum) => (
+                                    <option key={slotNum} value={slotNum}>
+                                      Acompanhante #{slotNum}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-[var(--text-secondary)]">
+                                Nome / identificação (opcional)
+                              </label>
+                              <input
+                                type="text"
+                                value={companionNameInput}
+                                onChange={(e) => setCompanionNameInput(e.target.value)}
+                                placeholder="Ex: Marina Silva"
+                                className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1.5 text-xs text-[var(--text-primary)]"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-[var(--text-secondary)]">
+                              Token QR Dinâmico ou PIN do local
+                            </label>
+                            <input
+                              type="text"
+                              value={companionCodeOrPin}
+                              onChange={(e) => setCompanionCodeOrPin(e.target.value)}
+                              placeholder="Ex: BR-QR-XXXX ou PIN 6 dígitos"
+                              className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 font-mono text-xs text-[var(--text-primary)]"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCompanionDynamicCheckin(res)}
+                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#123B56] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#102F46]"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Confirmar Presença do Acompanhante (0 RP ao titular)
+                          </button>
+                          {companionFeedback && (
+                            <p
+                              className={`rounded-xl px-3 py-2 text-[11px] font-semibold ${
+                                companionFeedback.ok
+                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                  : 'bg-red-500/15 text-red-600 dark:text-red-300'
+                              }`}
+                            >
+                              {companionFeedback.msg}
                             </p>
                           )}
                         </div>

@@ -574,6 +574,10 @@ export function App() {
             setReservations((prev) => [req, ...prev]);
             setNotifications(getNotifications());
           }}
+          onPointsChanged={() => {
+            setPointsBalance(getPointsBalance());
+            setNotifications(getNotifications());
+          }}
         />
       )}
 

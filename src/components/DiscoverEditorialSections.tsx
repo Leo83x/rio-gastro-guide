@@ -21,11 +21,12 @@ import {
 import { calculateMatchScore, getMatchReasonLabel } from '../services/matchService';
 import { computeMissionSummary } from '../services/missionStore';
 import { computePassportSummary } from '../services/passportStore';
+import { getWalletSummary } from '../services/pointsLedger';
 import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
-import { getPointTransactions } from '../services/superappStore';
 import type { ConfiaRecommendation } from '../types/confia';
 import type { UserPreferences } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
+import { POINTS_PREVISIT_CHECKIN_NOTICE } from '../types/verification';
 import { SmartImage } from './SmartImage';
 
 interface DiscoverEditorialSectionsProps {
@@ -107,10 +108,7 @@ export function DiscoverEditorialSections({
   const passport = computePassportSummary(experiences);
   const missionSummary = computeMissionSummary(experiences);
   const savings = computeSavingsSummary();
-  const transactions = getPointTransactions();
-  const pendingPoints = transactions
-    .filter((tx) => tx.type === 'CREDIT' && tx.validation_status === 'PENDING_VALIDATION')
-    .reduce((acc, tx) => acc + tx.amount, 0);
+  const wallet = getWalletSummary();
 
   const curatedPicks = [...experiences]
     .sort((a, b) => {
@@ -518,11 +516,25 @@ export function DiscoverEditorialSections({
             {pointsBalance.toLocaleString('pt-BR')} Rio Points{' '}
             <span className="text-xs font-medium text-white/75">disponíveis</span>
           </h2>
-          {pendingPoints > 0 && (
-            <p className="mt-1 text-[11px] text-amber-200">
-              + {pendingPoints} pts aguardando confirmação de visita elegível
-            </p>
-          )}
+          <div className="mt-2.5 grid grid-cols-3 gap-2 text-[11px]">
+            <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5">
+              <span className="block text-[9px] uppercase tracking-wider text-white/60">Acumulado</span>
+              <strong className="text-white">{wallet.total_accumulated.toLocaleString('pt-BR')} RP</strong>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5">
+              <span className="block text-[9px] uppercase tracking-wider text-white/60">Utilizado</span>
+              <strong className="text-white">{wallet.total_spent.toLocaleString('pt-BR')} RP</strong>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-1.5">
+              <span className="block text-[9px] uppercase tracking-wider text-amber-200/90">Pendente</span>
+              <strong className="text-amber-200">{wallet.pending_points.toLocaleString('pt-BR')} RP</strong>
+            </div>
+          </div>
+
+          <p className="mt-2.5 flex items-start gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] text-[#F1E8D8]">
+            <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#F7931E]" />
+            <span>{POINTS_PREVISIT_CHECKIN_NOTICE}</span>
+          </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
             <div className="rounded-2xl border border-white/15 bg-white/8 p-3.5">

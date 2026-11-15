@@ -10,14 +10,19 @@ import {
   Store,
   TrainFront,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { getPartnerOfferings, submitOfferingRequest } from '../services/opportunityStore';
+import { useEffect, useRef, useState } from 'react';
+import {
+  getPartnerOfferings,
+  incrementOfferingViews,
+  submitOfferingRequest,
+} from '../services/opportunityStore';
 import { createReservationRequest } from '../services/superappStore';
 import type { ReservationRequest } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
 import {
   DIRECT_PAYMENT_NOTICE,
   MANDATORY_CHECKIN_INSTRUCTION,
+  POINTS_PREVISIT_CHECKIN_NOTICE,
 } from '../types/verification';
 
 interface ExperienceIntelligenceBlocksProps {
@@ -66,6 +71,7 @@ export function ExperienceIntelligenceBlocks({
   const [resSaved, setResSaved] = useState<boolean>(false);
   const [offeringMsg, setOfferingMsg] = useState<string>('');
   const [geoCoords, setGeoCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const viewedOfferingsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!locationConsent || typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -119,6 +125,15 @@ export function ExperienceIntelligenceBlocks({
       o.partner_managed_active &&
       !['ENDED_WITHOUT_GOAL', 'CANCELLED', 'COMPLETED', 'DRAFT'].includes(o.status)
   );
+
+  useEffect(() => {
+    for (const off of venueOfferings) {
+      if (!viewedOfferingsRef.current.has(off.id)) {
+        viewedOfferingsRef.current.add(off.id);
+        incrementOfferingViews(off.id);
+      }
+    }
+  }, [venueOfferings]);
 
   const handleReserve = () => {
     const req = createReservationRequest({
@@ -293,6 +308,11 @@ export function ExperienceIntelligenceBlocks({
                       {off.condition_badge}
                     </span>
                     <p className="mt-1 font-bold text-[var(--text-primary)]">{off.title}</p>
+                    {off.eligible_item && (
+                      <p className="text-[11px] font-medium text-[var(--text-primary)]">
+                        Item elegível: {off.eligible_item}
+                      </p>
+                    )}
                     <p className="text-[11px] text-[var(--text-secondary)]">
                       {off.service_date} às {off.time_slot_label} · {remaining} vagas disponíveis
                     </p>
@@ -341,6 +361,10 @@ export function ExperienceIntelligenceBlocks({
               <Store className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{DIRECT_PAYMENT_NOTICE}</span>
             </p>
+            <p className="flex items-start gap-1.5 rounded-lg bg-[#FF6B35]/15 p-2 text-[11px] font-semibold text-[#123B56] dark:text-[#F1E8D8]">
+              <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF6B35]" />
+              <span>{POINTS_PREVISIT_CHECKIN_NOTICE}</span>
+            </p>
             <p className="flex items-start gap-1.5 rounded-lg bg-white/75 p-2 text-[11px] font-semibold text-[#123B56] dark:bg-black/25 dark:text-[#F1E8D8]">
               <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF6B35]" />
               <span>{MANDATORY_CHECKIN_INSTRUCTION}</span>
@@ -380,9 +404,12 @@ export function ExperienceIntelligenceBlocks({
               </select>
             </div>
 
-            <div className="space-y-1 rounded-xl bg-[var(--bg-surface)] p-2.5 text-[10px] text-[var(--text-secondary)]">
+            <div className="space-y-1.5 rounded-xl bg-[var(--bg-surface)] p-2.5 text-[10px] text-[var(--text-secondary)]">
               <p>
                 <strong>Pagamento:</strong> {DIRECT_PAYMENT_NOTICE}
+              </p>
+              <p className="rounded-lg bg-[#FF6B35]/10 px-2 py-1 font-semibold text-[#123B56] dark:text-[#F1E8D8]">
+                {POINTS_PREVISIT_CHECKIN_NOTICE}
               </p>
               <p>
                 <strong>Na chegada:</strong> {MANDATORY_CHECKIN_INSTRUCTION}

@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { EXTERNAL_INTEGRATIONS_REGISTRY } from '../services/integrations/registry';
 import { getPartnerOfferings } from '../services/opportunityStore';
 import { getPartnerCommercialPlan, getPartnerFeeLedger } from '../services/partnerCommercialStore';
+import { getPartnerLoyaltyEconomics } from '../services/rewardMarketplaceStore';
 import {
   getActiveVenueQrToken,
   getVisitProofs,
@@ -61,6 +62,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
   const venueProofs = selected ? getVisitProofs({ restaurantId: selected.id }) : [];
   const venueFees = selected ? getPartnerFeeLedger(selected.id) : [];
   const plan = selected ? getPartnerCommercialPlan(selected.id) : null;
+  const loyaltySummary = selected ? getPartnerLoyaltyEconomics(selected.id) : null;
 
   // Read active token dynamically; trigger re-read when qrRefreshTick updates
   const activeToken: VenueQrToken | null =
@@ -100,7 +102,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#397B68]" />
           <div>
             <strong>BoraRio — Plataforma inteligente de reservas, experiências e geração de demanda:</strong>{' '}
-            o parceiro define as condições comerciais sem desconto obrigatório e sem percentual sobre a conta consumida. O acesso B2B completo e isolado fica em <strong>/parceiros/painel</strong>.
+            o parceiro define as condições comerciais sem desconto obrigatório e sem percentual sobre a conta consumida nem comissão por resgates em Rio Points. O acesso B2B completo e isolado fica em <strong>/parceiros/painel</strong>.
           </div>
         </div>
       </div>
@@ -134,7 +136,7 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
         </div>
 
         {/* Metrics Grid (Zero Fabricated Telemetry) */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
             <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--text-secondary)]">
               <BarChart3 className="h-3.5 w-3.5 text-emerald-500" />
@@ -188,6 +190,18 @@ export function B2BPartnerView({ experiences, reservations }: B2BPartnerViewProp
                 : plan?.billing_model === 'PER_COMPLETED_BOOKING'
                   ? `R$ ${plan.fixed_fee_per_booking_brl.toFixed(2)}/reserva atendida`
                   : 'Plano fixo recorrente'}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-[#397B68]/35 bg-[#397B68]/10 p-4">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#397B68]">
+              Recompensas &amp; Vouchers
+            </p>
+            <p className="font-sans tracking-tight mt-2 text-2xl font-bold text-[var(--text-primary)]">
+              {loyaltySummary?.registered_rewards_count || 0}
+            </p>
+            <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
+              {loyaltySummary?.vouchers_used_count || 0}/{loyaltySummary?.vouchers_issued_count || 0} vouchers · Comissão 0%
             </p>
           </div>
         </div>

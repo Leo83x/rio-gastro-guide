@@ -52,6 +52,20 @@ function appendAuditEvent(params: {
   return event;
 }
 
+export function recordVoucherAuditEvent(params: {
+  event_type: 'REWARD_VOUCHER_VALIDATED' | 'REWARD_VOUCHER_CANCELLED';
+  restaurantId: string;
+  actorRole: CheckinAuditEvent['actor_role'];
+  message: string;
+}): void {
+  appendAuditEvent({
+    event_type: params.event_type,
+    restaurant_id: params.restaurantId,
+    actor_role: params.actorRole,
+    message: params.message,
+  });
+}
+
 export function getCheckinAuditEvents(restaurantId?: string): CheckinAuditEvent[] {
   const events = readJson<CheckinAuditEvent[]>(KEYS.AUDIT_EVENTS, []);
   if (!restaurantId) return events;
@@ -176,8 +190,13 @@ export function getVisitProofs(filters?: {
   });
 }
 
+export function getVisitProofsForReservation(reservationId: string): VisitProofRecord[] {
+  return getVisitProofs().filter((p) => p.reservation_id === reservationId);
+}
+
 export function getVisitProofForReservation(reservationId: string): VisitProofRecord | undefined {
-  return getVisitProofs().find((p) => p.reservation_id === reservationId);
+  const list = getVisitProofsForReservation(reservationId);
+  return list.find((p) => (p.participant_slot ?? 1) === 1) || list[0];
 }
 
 export function hasVerifiedVisitForVenue(experienceId: string): boolean {
@@ -220,10 +239,15 @@ export function validateReservationDynamicCheckin(params: {
   scannedCodeOrPin: string;
   actorContext?: 'USER' | 'PARTNER';
   hasGeolocationEvidence?: boolean;
+  participantSlot?: number;
+  participantLabel?: string;
+  participantUserId?: string;
 }): ValidateCheckinResult {
   const { reservation } = params;
   const actorRole = params.actorContext || 'USER';
   const normalized = params.scannedCodeOrPin.trim().toUpperCase();
+  const participantSlot = Math.max(1, Math.round(params.participantSlot ?? 1));
+  const maxGuests = Math.max(1, reservation.guests || 1);
 
   if (
     reservation.status === 'CANCELLED' ||
@@ -242,6 +266,14 @@ export function validateReservationDynamicCheckin(params: {
       ok: false,
       errorCode: 'INVALID_RESERVATION',
       message: 'Esta reserva está cancelada ou encerrada e não aceita check-in.',
+    };
+  }
+
+  if (participantSlot > maxGuests) {
+    return {
+      ok: false,
+      errorCode: 'INVALID_RESERVATION',
+      message: `Slot #${participantSlot} excede a quantidade de pessoas da reserva (${maxGuests}).`,
     };
   }
 
@@ -265,21 +297,28 @@ export function validateReservationDynamicCheckin(params: {
     };
   }
 
-  // Bloqueio de duplicidade por reserva
-  const existingForBooking = getVisitProofForReservation(reservation.id);
-  if (existingForBooking) {
+  // Bloqueio de duplicidade por participante dentro da mesma reserva (titular slot #1 ou acompanhante #2..N)
+  const existingForSlot = getVisitProofsForReservation(reservation.id).find(
+    (p) =>
+      (p.participant_slot ?? 1) === participantSlot ||
+      (params.participantUserId && p.user_id === params.participantUserId)
+  );
+  if (existingForSlot) {
     appendAuditEvent({
       event_type: 'CHECKIN_REJECTED_DUPLICATE',
       restaurant_id: reservation.experience_id,
       reservation_id: reservation.id,
-      visit_proof_id: existingForBooking.id,
+      visit_proof_id: existingForSlot.id,
       actor_role: actorRole,
-      message: 'Check-in duplicado bloqueado para a mesma reserva.',
+      message: `Check-in duplicado bloqueado para participante #${participantSlot} na mesma reserva.`,
     });
     return {
       ok: false,
       errorCode: 'DUPLICATE',
-      message: 'Check-in já validado anteriormente para esta reserva (proteção antifraude).',
+      message:
+        participantSlot === 1
+          ? 'Check-in já validado anteriormente para esta reserva (proteção antifraude).'
+          : `Participante #${participantSlot} já teve presença validada nesta reserva.`,
     };
   }
 
@@ -397,37 +436,54 @@ export function validateReservationDynamicCheckin(params: {
         : 'CHECKIN_REGISTERED';
 
   const me = getUserProfileIdentity();
+  const resolvedUserId =
+    participantSlot === 1
+      ? me.id
+      : params.participantUserId || `guest-slot-${participantSlot}-${reservation.id}`;
+  const resolvedLabel =
+    params.participantLabel?.trim() ||
+    (participantSlot === 1 ? `${me.display_name} (Titular)` : `Acompanhante #${participantSlot}`);
+
   const proof: VisitProofRecord = {
     id: generateUUID(),
     restaurant_id: reservation.experience_id,
     restaurant_name: reservation.experience_name,
     reservation_id: reservation.id,
-    user_id: me.id,
+    user_id: resolvedUserId,
+    participant_slot: participantSlot,
+    participant_label: resolvedLabel,
+    group_booking_owner_id: me.id,
     qr_token_id: matchedAnyVenue.id,
     qr_code_used: matchedAnyVenue.token_code,
     presence_level: presenceLevel,
     evidence_method: evidenceMethod,
-    guests_count: Math.max(1, reservation.guests || 1),
+    guests_count: participantSlot === 1 ? maxGuests : 1,
     presence_verified_at: new Date().toISOString(),
     is_demonstrative: false,
-    notes: matchedByPin
-      ? 'Check-in validado com código operacional de contingência do estabelecimento.'
-      : 'Check-in validado com QR dinâmico temporário antes do consumo.',
+    notes:
+      participantSlot === 1
+        ? matchedByPin
+          ? 'Check-in validado com código operacional de contingência do estabelecimento.'
+          : 'Check-in validado com QR dinâmico temporário antes do consumo.'
+        : `Check-in individual de acompanhante (#${participantSlot} — ${resolvedLabel}) validado sem pontuar ao titular.`,
   };
 
   const currentProofs = readJson<VisitProofRecord[]>(KEYS.VISIT_PROOFS, []);
   writeJson(KEYS.VISIT_PROOFS, [proof, ...currentProofs]);
 
   appendAuditEvent({
-    event_type: 'CHECKIN_VALIDATED',
+    event_type: participantSlot >= 2 ? 'GROUP_PARTICIPANT_VALIDATED' : 'CHECKIN_VALIDATED',
     restaurant_id: reservation.experience_id,
     reservation_id: reservation.id,
     visit_proof_id: proof.id,
     actor_role: actorRole,
-    message: `Presença validada (${presenceLevel} via ${evidenceMethod}) para ${proof.guests_count} pessoa(s).`,
+    message:
+      participantSlot >= 2
+        ? `Participante de grupo validado individualmente (${resolvedLabel}, slot #${participantSlot} via ${evidenceMethod}). Titular recebe 0 pontos extras.`
+        : `Presença validada (${presenceLevel} via ${evidenceMethod}) para reserva de ${maxGuests} pessoa(s).`,
   });
 
-  if (supabase && isValidUuid(reservation.id) && isValidUuid(me.id)) {
+  if (participantSlot === 1 && supabase && isValidUuid(reservation.id) && isValidUuid(me.id)) {
     void supabase
       .rpc('validate_dynamic_qr_checkin', {
         p_reservation_id: reservation.id,
@@ -440,9 +496,11 @@ export function validateReservationDynamicCheckin(params: {
   return {
     ok: true,
     message:
-      presenceLevel === 'VERIFIED_VISIT'
-        ? 'Visita Verificada registrada com sucesso via QR dinâmico!'
-        : 'Check-in de chegada registrado! Aguardando evidência complementar para consumo verificado.',
+      participantSlot >= 2
+        ? `Check-in individual de ${resolvedLabel} validado!`
+        : presenceLevel === 'VERIFIED_VISIT'
+          ? 'Visita Verificada registrada com sucesso via QR dinâmico!'
+          : 'Check-in de chegada registrado! Aguardando evidência complementar para consumo verificado.',
     proof,
     evidenceMethod,
   };
