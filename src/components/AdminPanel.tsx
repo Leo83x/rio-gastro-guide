@@ -12,6 +12,7 @@ import {
   KeyRound,
   Loader2,
   MapPin,
+  MoonStar,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -57,6 +58,7 @@ import {
   type MirrorImageResult,
 } from '../services/venueMedia';
 import type { ReservationRequest } from '../types/experience';
+import type { NightlifeEvent } from '../types/nightlife';
 import type {
   ClaimRequest,
   ImageOrigin,
@@ -65,16 +67,20 @@ import type {
   ValidationStatus,
 } from '../types/restaurant';
 import { B2BPartnerView } from './B2BPartnerView';
+import { NightlifeAdminTab } from './NightlifeAdminTab';
 import { SmartImage } from './SmartImage';
 
 interface AdminPanelProps {
   restaurants: Restaurant[];
   claims: ClaimRequest[];
   reservations: ReservationRequest[];
+  nightlifeEvents: NightlifeEvent[];
+  initialTab?: AdminTab;
   onDatabaseUpdated: () => Promise<void>;
+  onNightlifeUpdated: () => Promise<void>;
 }
 
-type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b';
+export type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b' | 'nightlife';
 type LiveSource = 'outscraper_api' | 'openstreetmap' | 'google_places_api';
 type StatusFilter = 'ALL' | ValidationStatus;
 
@@ -109,10 +115,17 @@ export function AdminPanel({
   restaurants,
   claims,
   reservations,
+  nightlifeEvents,
+  initialTab = 'overpass',
   onDatabaseUpdated,
+  onNightlifeUpdated,
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<AdminTab>('overpass');
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
   const storageMode = getStorageMode();
+  const pendingNightlifeCount = useMemo(
+    () => nightlifeEvents.filter((e) => e.curation_status === 'PENDENTE').length,
+    [nightlifeEvents]
+  );
 
   // Mode 1: Multi-Source Live Extractor State
   const [liveSource, setLiveSource] = useState<LiveSource>('outscraper_api');
@@ -770,10 +783,40 @@ export function AdminPanel({
           <BarChart3 className="h-4 w-4" />
           Visão do Parceiro (B2B)
         </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('nightlife');
+            setStaged([]);
+          }}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+            activeTab === 'nightlife'
+              ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
+              : 'border border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          <MoonStar className="h-4 w-4" />
+          Eventos &amp; Noite Carioca (
+          {pendingNightlifeCount > 0
+            ? `${pendingNightlifeCount} pend.`
+            : `${nightlifeEvents.length}`}
+          )
+        </button>
       </div>
 
       {activeTab === 'b2b' && (
         <B2BPartnerView experiences={restaurants} reservations={reservations} />
+      )}
+
+      {activeTab === 'nightlife' && (
+        <NightlifeAdminTab
+          permanentVenues={restaurants}
+          nightlifeEvents={nightlifeEvents}
+          onNightlifeUpdated={onNightlifeUpdated}
+          onShowToast={showToast}
+          onShowError={(msg) => setErrorMessage(msg)}
+        />
       )}
 
       {/* Tab 1: Multi-Source Live Extractor */}

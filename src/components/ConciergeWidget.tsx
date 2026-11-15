@@ -1,14 +1,21 @@
-import { ArrowRight, ExternalLink, Send, Sparkles, X } from 'lucide-react';
+import { ArrowRight, ExternalLink, MoonStar, Send, Sparkles, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { queryBoraIa, type BoraIaMatch } from '../services/boraIaService';
+import {
+  queryBoraIa,
+  type BoraIaMatch,
+  type BoraIaNightlifeMatch,
+} from '../services/boraIaService';
+import { NIGHTLIFE_SUBAREA_META, type NightlifeEvent } from '../types/nightlife';
 import type { Restaurant } from '../types/restaurant';
 
 interface ConciergeWidgetProps {
   experiences: Restaurant[];
+  nightlifeEvents?: NightlifeEvent[];
   externalPrompt?: string | null;
   onConsumeExternalPrompt?: () => void;
   onSendToPlanner?: (promptText: string) => void;
   onSelectExperience: (item: Restaurant) => void;
+  onSelectNightlifeEvent?: (event: NightlifeEvent) => void;
 }
 
 interface ChatMessage {
@@ -16,6 +23,7 @@ interface ChatMessage {
   sender: 'user' | 'bot';
   text: string;
   matches?: BoraIaMatch[];
+  nightlifeMatches?: BoraIaNightlifeMatch[];
   originQuery?: string;
 }
 
@@ -23,14 +31,17 @@ const QUICK_PROMPTS = [
   'Onde jantar hoje em Botafogo até R$ 250 para casal?',
   'O que fazer com crianças neste fim de semana?',
   'Lugares com música ao vivo sem fila',
+  'Samba, show ou festa para curtir hoje à noite no Rio',
 ];
 
 export function ConciergeWidget({
   experiences,
+  nightlifeEvents = [],
   externalPrompt,
   onConsumeExternalPrompt,
   onSendToPlanner,
   onSelectExperience,
+  onSelectNightlifeEvent,
 }: ConciergeWidgetProps) {
   const [open, setOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -40,7 +51,7 @@ export function ConciergeWidget({
     {
       id: 'welcome',
       sender: 'bot',
-      text: 'Olá! Sou a Bora IA. Cruzo o catálogo real do BoraRio, o seu Cofre de Intenções, indicações autorizadas da sua Rede Confia e o clima do Rio agora. O que você quer viver?',
+      text: 'Olá! Sou a Bora IA. Cruzo o catálogo real do BoraRio, a agenda curada de A Noite Carioca, o seu Cofre de Intenções, indicações autorizadas da sua Rede Confia e o clima do Rio agora. O que você quer viver?',
     },
   ]);
 
@@ -70,6 +81,7 @@ export function ConciergeWidget({
         includeVault: true,
         includeConfia: true,
         includeClub: true,
+        nightlifeEvents,
       });
 
       const botMsg: ChatMessage = {
@@ -77,6 +89,7 @@ export function ConciergeWidget({
         sender: 'bot',
         text: res.answer,
         matches: res.matches,
+        nightlifeMatches: res.nightlifeMatches,
         originQuery: trimmed,
       };
       setMessages((prev) => [...prev, botMsg]);
@@ -136,7 +149,7 @@ export function ConciergeWidget({
               <div>
                 <p className="text-sm font-bold leading-tight">Bora IA Concierge</p>
                 <p className="text-[11px] text-[#F1E8D8]">
-                  Correspondência real: Catálogo + Cofre + Confia + Clima
+                  Correspondência real: Catálogo + Noite + Cofre + Confia
                 </p>
               </div>
             </div>
@@ -152,66 +165,98 @@ export function ConciergeWidget({
 
           {/* Messages */}
           <div className="flex-1 space-y-3 overflow-y-auto bg-[#ECE5DD] p-3.5 dark:bg-[#0B141A]">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
-              >
+            {messages.map((m) => {
+              const hasMatches = (m.matches && m.matches.length > 0) || false;
+              const hasNightlifeMatches = (m.nightlifeMatches && m.nightlifeMatches.length > 0) || false;
+              return (
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed shadow-xs ${
-                    m.sender === 'user'
-                      ? 'bg-[#DCF8C6] text-[#111B21] dark:bg-[#005C4B] dark:text-white'
-                      : 'bg-white text-[#111B21] dark:bg-[#202C33] dark:text-[#E9EDEF]'
-                  }`}
+                  key={m.id}
+                  className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
-                  {m.text}
-                </div>
-
-                {m.matches && m.matches.length > 0 && (
-                  <div className="mt-2 w-full space-y-2">
-                    {m.matches.map((match) => (
-                      <div
-                        key={match.venue.id}
-                        onClick={() => {
-                          onSelectExperience(match.venue);
-                          setOpen(false);
-                        }}
-                        className="cursor-pointer rounded-xl border border-black/10 bg-white p-2.5 shadow-xs transition-colors hover:border-[#FF6B35] dark:border-white/10 dark:bg-[#202C33]"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <strong className="text-xs text-[#111B21] dark:text-white">
-                            {match.venue.name}
-                          </strong>
-                          <span className="rounded bg-[#FF6B35]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#FF6B35]">
-                            {match.venue.attributes?.is_free ? 'Gratuito' : match.venue.price_range}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[11px] text-neutral-600 dark:text-neutral-300">
-                          {match.venue.neighborhood} · {match.venue.macro_category || match.venue.category}
-                        </p>
-                        <p className="mt-1 text-[10px] font-semibold text-[#397B68] dark:text-[#4CA188]">
-                          Origem: {match.reasonTag} →
-                        </p>
-                      </div>
-                    ))}
-
-                    {onSendToPlanner && m.originQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSendToPlanner(m.originQuery || '');
-                          setOpen(false);
-                        }}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#123B56] py-2 text-[11px] font-bold text-white hover:bg-[#102F46]"
-                      >
-                        Montar roteiro completo com esta intenção
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed shadow-xs ${
+                      m.sender === 'user'
+                        ? 'bg-[#DCF8C6] text-[#111B21] dark:bg-[#005C4B] dark:text-white'
+                        : 'bg-white text-[#111B21] dark:bg-[#202C33] dark:text-[#E9EDEF]'
+                    }`}
+                  >
+                    {m.text}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {(hasMatches || hasNightlifeMatches) && (
+                    <div className="mt-2 w-full space-y-2">
+                      {m.nightlifeMatches?.map((nl) => (
+                        <div
+                          key={nl.event.id}
+                          onClick={() => {
+                            onSelectNightlifeEvent?.(nl.event);
+                            setOpen(false);
+                          }}
+                          className="cursor-pointer rounded-xl border border-[#FF6B35]/35 bg-[#0E2235] p-2.5 text-white shadow-xs transition-colors hover:border-[#FF6B35]"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#FFB347]">
+                              <MoonStar className="h-3 w-3" />
+                              {NIGHTLIFE_SUBAREA_META[nl.event.sub_area].shortLabel}
+                            </span>
+                            <span className="rounded bg-[#FF6B35] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              {nl.event.price_display_label}
+                            </span>
+                          </div>
+                          <strong className="mt-1 block text-xs text-white">{nl.event.title}</strong>
+                          <p className="mt-0.5 text-[11px] text-[#F1E8D8]/85">
+                            {nl.event.venue_name} · {nl.event.neighborhood}
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold text-[#95E4CA]">
+                            {nl.reasonTag} →
+                          </p>
+                        </div>
+                      ))}
+
+                      {m.matches?.map((match) => (
+                        <div
+                          key={match.venue.id}
+                          onClick={() => {
+                            onSelectExperience(match.venue);
+                            setOpen(false);
+                          }}
+                          className="cursor-pointer rounded-xl border border-black/10 bg-white p-2.5 shadow-xs transition-colors hover:border-[#FF6B35] dark:border-white/10 dark:bg-[#202C33]"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <strong className="text-xs text-[#111B21] dark:text-white">
+                              {match.venue.name}
+                            </strong>
+                            <span className="rounded bg-[#FF6B35]/15 px-1.5 py-0.5 text-[10px] font-bold text-[#FF6B35]">
+                              {match.venue.attributes?.is_free ? 'Gratuito' : match.venue.price_range}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-neutral-600 dark:text-neutral-300">
+                            {match.venue.neighborhood} · {match.venue.macro_category || match.venue.category}
+                          </p>
+                          <p className="mt-1 text-[10px] font-semibold text-[#397B68] dark:text-[#4CA188]">
+                            Origem: {match.reasonTag} →
+                          </p>
+                        </div>
+                      ))}
+
+                      {onSendToPlanner && m.originQuery && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onSendToPlanner(m.originQuery || '');
+                            setOpen(false);
+                          }}
+                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#123B56] py-2 text-[11px] font-bold text-white hover:bg-[#102F46]"
+                        >
+                          Montar roteiro completo com esta intenção
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {loading && (
               <div className="text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
                 Consultando fontes do BoraRio...

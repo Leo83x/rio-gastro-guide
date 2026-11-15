@@ -16,6 +16,7 @@ import {
   Lock,
   LogOut,
   Moon,
+  MoonStar,
   PauseCircle,
   PlayCircle,
   QrCode,
@@ -33,6 +34,8 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { BrandLogo } from '../components/BrandLogo';
 import { upsertRestaurants } from '../services/database';
+import { checkNightlifeCompleteness, getRioTodayIso } from '../services/nightlife/nightlifeDedup';
+import { submitPartnerNightlifeEvent } from '../services/nightlife/nightlifeStore';
 import {
   createPartnerOffering,
   getDemandParticipations,
@@ -76,6 +79,12 @@ import {
 } from '../services/visitProofStore';
 import type { ReservationRequest } from '../types/experience';
 import type { PartnerOffering } from '../types/marketplace';
+import {
+  NIGHTLIFE_SUBAREA_META,
+  type NightlifeCurationStatus,
+  type NightlifeEvent,
+  type NightlifeSubArea,
+} from '../types/nightlife';
 import type {
   PartnerBillingModel,
   PartnerCommercialPlan,
@@ -90,10 +99,12 @@ import {
 interface PartnerDashboardProps {
   restaurants: Restaurant[];
   reservations: ReservationRequest[];
+  nightlifeEvents?: NightlifeEvent[];
   isDark: boolean;
   onToggleTheme: () => void;
   onNavigate: (route: AppRoute) => void;
   onDatabaseUpdated: () => Promise<void>;
+  onNightlifeUpdated?: () => Promise<void>;
   onReservationsUpdated?: (next: ReservationRequest[]) => void;
   onSyncAppState?: () => void;
 }
@@ -103,6 +114,7 @@ type PartnerTab =
   | 'offers'
   | 'demand'
   | 'rewards'
+  | 'nightlife'
   | 'checkin'
   | 'billing'
   | 'profile';
@@ -144,6 +156,33 @@ const STAGE_BADGE: Record<ReservationLifecycleStage, { label: string; cls: strin
   },
 };
 
+const PARTNER_NIGHTLIFE_STATUS_BADGE: Record<NightlifeCurationStatus, { label: string; cls: string }> = {
+  PENDENTE: {
+    label: 'Pendente de curadoria',
+    cls: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+  },
+  PROGRAMADO: {
+    label: 'Programado',
+    cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
+  },
+  PUBLICADO: {
+    label: 'Publicado em A noite carioca',
+    cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  },
+  REJEITADO: {
+    label: 'Rejeitado na curadoria',
+    cls: 'bg-red-500/15 text-red-600 dark:text-red-300',
+  },
+  CANCELADO: {
+    label: 'Cancelado',
+    cls: 'bg-red-500/15 text-red-600 dark:text-red-300',
+  },
+  EXPIRADO: {
+    label: 'Expirado',
+    cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
+  },
+};
+
 function getEffectiveStage(res: ReservationRequest): ReservationLifecycleStage {
   if (res.stage) return res.stage;
   if (res.status === 'CONFIRMED') return 'CONFIRMED';
@@ -154,10 +193,12 @@ function getEffectiveStage(res: ReservationRequest): ReservationLifecycleStage {
 export function PartnerDashboard({
   restaurants,
   reservations,
+  nightlifeEvents = [],
   isDark,
   onToggleTheme,
   onNavigate,
   onDatabaseUpdated,
+  onNightlifeUpdated,
   onReservationsUpdated,
   onSyncAppState,
 }: PartnerDashboardProps) {
@@ -242,6 +283,22 @@ export function PartnerDashboard({
   const [editRewQty, setEditRewQty] = useState(10);
   const [editRewHours, setEditRewHours] = useState('');
   const [voucherCodeInput, setVoucherCodeInput] = useState('');
+
+  // Tab 4B: Agenda Noturna da Casa (envio para curadoria do Nightlife Radar)
+  const [nlTitle, setNlTitle] = useState('');
+  const [nlSubArea, setNlSubArea] = useState<NightlifeSubArea>('SAMBA_PAGODE');
+  const [nlGenres, setNlGenres] = useState('Samba, Pagode');
+  const [nlDate, setNlDate] = useState(() => getRioTodayIso());
+  const [nlStartTime, setNlStartTime] = useState('21:00');
+  const [nlEndTime, setNlEndTime] = useState('02:00');
+  const [nlIsFree, setNlIsFree] = useState(false);
+  const [nlPriceMin, setNlPriceMin] = useState('45');
+  const [nlTicketUrl, setNlTicketUrl] = useState('');
+  const [nlLineup, setNlLineup] = useState('');
+  const [nlSummary, setNlSummary] = useState('');
+  const [nlCoverUrl, setNlCoverUrl] = useState('');
+  const [nlAgeRating, setNlAgeRating] = useState('18+');
+  const [nlSubmitting, setNlSubmitting] = useState(false);
 
   // Tab 5: Dynamic Check-in & Verification
   const [qrTtlSeconds, setQrTtlSeconds] = useState(300);
@@ -330,6 +387,11 @@ export function PartnerDashboard({
     return getPartnerLoyaltyEconomics(activeTenant.id);
   }, [activeTenant, storeVersion]);
 
+  const tenantNightlifeEvents = useMemo(() => {
+    if (!activeTenant) return [];
+    return nightlifeEvents.filter((ev) => ev.venue_id === activeTenant.id);
+  }, [activeTenant, nightlifeEvents]);
+
   const hasCondition1Configured = tenantOfferings.some(
     (o) => o.modality !== 'TRADITIONAL_BOOKING' && o.status !== 'CANCELLED' && o.status !== 'DRAFT'
   );
@@ -365,6 +427,52 @@ export function PartnerDashboard({
     activeTenant && storeVersion >= 0 ? getPartnerFeeLedger(activeTenant.id) : [];
 
   // Handlers
+  const handleSubmitPartnerNightlife = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!activeTenant || !nlTitle.trim()) return;
+    setNlSubmitting(true);
+    try {
+      const genresList = nlGenres
+        .split(',')
+        .map((g) => g.trim())
+        .filter(Boolean);
+      const lineupList = nlLineup
+        .split(',')
+        .map((l) => l.trim())
+        .filter(Boolean);
+      const res = await submitPartnerNightlifeEvent(
+        {
+          title: nlTitle.trim(),
+          sub_area: nlSubArea,
+          music_genres: genresList.length > 0 ? genresList : NIGHTLIFE_SUBAREA_META[nlSubArea].defaultGenres,
+          event_date: nlDate,
+          start_time: nlStartTime,
+          end_time: nlEndTime.trim() || undefined,
+          is_free: nlIsFree,
+          price_min_brl: nlIsFree ? 0 : Number(nlPriceMin) || undefined,
+          ticket_url: nlTicketUrl.trim() || undefined,
+          lineup: lineupList,
+          short_summary: nlSummary.trim(),
+          cover_image: nlCoverUrl.trim() || undefined,
+          age_rating: nlAgeRating,
+        },
+        activeTenant
+      );
+      await onNightlifeUpdated?.();
+      setOpFeedback({ ok: res.ok, msg: res.message });
+      if (res.ok) {
+        setNlTitle('');
+        setNlLineup('');
+        setNlSummary('');
+        setNlTicketUrl('');
+        setNlCoverUrl('');
+      }
+      bumpStore();
+    } finally {
+      setNlSubmitting(false);
+    }
+  };
+
   const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
     if (!activeTenant) return;
@@ -927,6 +1035,11 @@ export function PartnerDashboard({
                   id: 'rewards' as const,
                   label: `Condição 2 · Minha Recompensa BoraRio (${tenantRewards.length})`,
                   icon: Ticket,
+                },
+                {
+                  id: 'nightlife' as const,
+                  label: `Agenda Noturna da Casa (${tenantNightlifeEvents.length})`,
+                  icon: MoonStar,
                 },
                 {
                   id: 'checkin' as const,
@@ -2219,6 +2332,288 @@ export function PartnerDashboard({
                     </section>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* TAB 4B: AGENDA NOTURNA DA CASA (ENVIO PARA CURADORIA) */}
+            {activeTab === 'nightlife' && (
+              <div className="grid gap-6 lg:grid-cols-12">
+                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-5">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                    <MoonStar className="h-4 w-4" />
+                    Agenda Noturna · Submissão do Parceiro
+                  </div>
+                  <h2 className="mt-1 font-sans text-lg font-bold tracking-tight">
+                    Enviar Evento para A Noite Carioca
+                  </h2>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                    Divulgue shows, rodas de samba, festas ou noites especiais em{' '}
+                    <strong>{activeTenant.name}</strong>. Todo envio entra obrigatoriamente em fila{' '}
+                    <strong>PENDENTE</strong> de curadoria antes de aparecer na Home pública.
+                  </p>
+
+                  <form
+                    onSubmit={(e) => void handleSubmitPartnerNightlife(e)}
+                    className="mt-4 space-y-3 text-xs"
+                  >
+                    <div>
+                      <label className="font-bold">Título do evento *</label>
+                      <input
+                        type="text"
+                        required
+                        value={nlTitle}
+                        onChange={(e) => setNlTitle(e.target.value)}
+                        placeholder="Ex: Roda de Samba Especial na Varanda"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                      />
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="font-bold">Subárea na Noite Carioca *</label>
+                        <select
+                          value={nlSubArea}
+                          onChange={(e) => setNlSubArea(e.target.value as NightlifeSubArea)}
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        >
+                          {(Object.keys(NIGHTLIFE_SUBAREA_META) as NightlifeSubArea[]).map((key) => (
+                            <option key={key} value={key}>
+                              {NIGHTLIFE_SUBAREA_META[key].label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-bold">Data do evento *</label>
+                        <input
+                          type="date"
+                          required
+                          value={nlDate}
+                          onChange={(e) => setNlDate(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div>
+                        <label className="font-bold">Início *</label>
+                        <input
+                          type="text"
+                          required
+                          value={nlStartTime}
+                          onChange={(e) => setNlStartTime(e.target.value)}
+                          placeholder="21:00"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold">Término previsto</label>
+                        <input
+                          type="text"
+                          value={nlEndTime}
+                          onChange={(e) => setNlEndTime(e.target.value)}
+                          placeholder="02:00"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold">Faixa etária</label>
+                        <input
+                          type="text"
+                          value={nlAgeRating}
+                          onChange={(e) => setNlAgeRating(e.target.value)}
+                          placeholder="18+"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="flex flex-col justify-end">
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 font-bold">
+                          <input
+                            type="checkbox"
+                            checked={nlIsFree}
+                            onChange={(e) => setNlIsFree(e.target.checked)}
+                          />
+                          Entrada gratuita / Sem couvert
+                        </label>
+                      </div>
+                      <div>
+                        <label className="font-bold">
+                          {nlIsFree ? 'Valor (gratuito)' : 'Valor mínimo (R$)'}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          disabled={nlIsFree}
+                          value={nlIsFree ? '0' : nlPriceMin}
+                          onChange={(e) => setNlPriceMin(e.target.value)}
+                          placeholder="45"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs disabled:opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="font-bold">Gêneros musicais</label>
+                        <input
+                          type="text"
+                          value={nlGenres}
+                          onChange={(e) => setNlGenres(e.target.value)}
+                          placeholder="Samba, Pagode"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold">Line-up / Atrações</label>
+                        <input
+                          type="text"
+                          value={nlLineup}
+                          onChange={(e) => setNlLineup(e.target.value)}
+                          placeholder="Grupo da Casa, DJ Convidado"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="font-bold">Link oficial de ingresso ou lista (opcional)</label>
+                      <input
+                        type="url"
+                        value={nlTicketUrl}
+                        onChange={(e) => setNlTicketUrl(e.target.value)}
+                        placeholder="https://www.sympla.com.br/evento/..."
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold">URL de arte/flyer autorizado (opcional)</label>
+                      <input
+                        type="url"
+                        value={nlCoverUrl}
+                        onChange={(e) => setNlCoverUrl(e.target.value)}
+                        placeholder="https://... (deixe vazio para arte editorial da categoria)"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold">Resumo da noite *</label>
+                      <textarea
+                        rows={2}
+                        value={nlSummary}
+                        onChange={(e) => setNlSummary(e.target.value)}
+                        placeholder="Descreva a atmosfera, horário da atração principal e regras de entrada..."
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={nlSubmitting}
+                      className="w-full rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white shadow-sm disabled:opacity-50"
+                    >
+                      {nlSubmitting
+                        ? 'Enviando para Curadoria...'
+                        : 'Enviar Programação para Curadoria'}
+                    </button>
+                  </form>
+                </section>
+
+                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-7">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-sans text-lg font-bold">
+                        Agenda da Casa em Curadoria ({tenantNightlifeEvents.length})
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Eventos enviados para <strong>{activeTenant.name}</strong> ou vinculados automaticamente pela curadoria do BoraRio Nightlife Radar.
+                      </p>
+                    </div>
+                  </div>
+
+                  {tenantNightlifeEvents.length === 0 ? (
+                    <div className="mt-4 rounded-2xl border border-dashed border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-8 text-center">
+                      <MoonStar className="mx-auto h-7 w-7 text-[var(--text-secondary)] opacity-60" />
+                      <p className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                        Nenhum evento noturno enviado por {activeTenant.name} ainda
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                        Use o formulário ao lado para cadastrar sua programação. Após aprovação em Curadoria, o evento passa a aparecer em &ldquo;A noite carioca&rdquo; vinculado à sua casa.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {tenantNightlifeEvents.map((ev: NightlifeEvent) => {
+                        const st = PARTNER_NIGHTLIFE_STATUS_BADGE[ev.curation_status];
+                        const comp = checkNightlifeCompleteness(ev);
+                        return (
+                          <div
+                            key={ev.id}
+                            data-testid={`partner-nightlife-item-${ev.id}`}
+                            className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span
+                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${st.cls}`}
+                                >
+                                  {st.label}
+                                </span>
+                                <span className="rounded-full bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                                  {NIGHTLIFE_SUBAREA_META[ev.sub_area].shortLabel}
+                                </span>
+                              </div>
+                              <span
+                                className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                                  comp.complete
+                                    ? 'text-emerald-700 dark:text-emerald-300'
+                                    : 'text-amber-700 dark:text-amber-300'
+                                }`}
+                              >
+                                {comp.complete ? (
+                                  <>
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Ficha completa
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertCircle className="h-3.5 w-3.5" />
+                                    Pendências: {comp.missing_fields.join(', ')}
+                                  </>
+                                )}
+                              </span>
+                            </div>
+
+                            <h4 className="mt-2 font-sans text-base font-bold text-[var(--text-primary)]">
+                              {ev.title}
+                            </h4>
+                            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                              {ev.event_date} · {ev.start_time}
+                              {ev.end_time ? `–${ev.end_time}` : ''} ·{' '}
+                              <strong>{ev.price_display_label}</strong>
+                              {ev.alternate_ticket_urls && ev.alternate_ticket_urls.length > 0
+                                ? ` · +${ev.alternate_ticket_urls.length} link(s) alternativo(s)`
+                                : ''}
+                            </p>
+                            <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
+                              {ev.short_summary}
+                            </p>
+                            {ev.rejection_reason && (
+                              <p className="mt-2 rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-600 dark:text-red-300">
+                                Nota da curadoria: {ev.rejection_reason}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
               </div>
             )}
 
