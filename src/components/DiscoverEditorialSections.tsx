@@ -262,13 +262,13 @@ export function DiscoverEditorialSections({
 
   return (
     <div className="mb-12 space-y-11">
-      {/* SEÇÃO 01 · VANTAGENS REAIS DISPONÍVEIS AGORA */}
+      {/* SEÇÃO 01 · VANTAGENS REAIS DISPONÍVEIS AGORA (CARROSSEL HORIZONTAL VIP DE ALTA CONVERSÃO) */}
       <section aria-labelledby="home-block-opportunities">
         <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6B35]/12 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#FF6B35]">
               <Gift className="h-3.5 w-3.5" />
-              Vantagens &amp; Ofertas de Hoje
+              Vantagens &amp; Janelas VIP
             </span>
             <h2
               id="home-block-opportunities"
@@ -277,7 +277,7 @@ export function DiscoverEditorialSections({
               Vantagens reais para aproveitar agora
             </h2>
             <p className="text-xs text-[var(--text-secondary)]">
-              Cortesias, menus especiais e vagas de última hora com condições exclusivas nos estabelecimentos.
+              Cortesias, menus especiais e vagas de última hora com economia exclusiva nos estabelecimentos.
             </p>
           </div>
           <button
@@ -286,80 +286,159 @@ export function DiscoverEditorialSections({
             className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#0E2235] via-[#123B56] to-[#0077B6] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:brightness-110 transition ring-1 ring-white/15"
           >
             <Crown className="h-3.5 w-3.5 text-[#FFB347]" />
-            <span>Abrir Bora Club</span>
+            <span>Ver todas no Bora Club</span>
             <ArrowRight className="h-3.5 w-3.5 text-white/80" />
           </button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {livePartnerOfferings.map((off) => {
-            const linkedVenue = experiences.find((e) => e.id === off.restaurant_id);
-            return (
-              <div
-                key={off.id}
-                onClick={() => {
-                  if (linkedVenue) {
-                    onSelectExperience(linkedVenue);
-                  } else {
-                    onGoToClub({ section: 'offerings', modality: off.modality });
-                  }
-                }}
-                className="group flex flex-col justify-between rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-[#FF6B35]/55 cursor-pointer"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs font-semibold text-[var(--text-secondary)]">
-                      {off.restaurant_name} · {off.neighborhood}
-                    </span>
-                    <span className="shrink-0 rounded-full bg-[#FF6B35]/12 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35]">
-                      {off.condition_badge || 'Hoje'}
+        {/* Carrossel Horizontal Deslizante ("Swipe") com 1.2 cards visíveis */}
+        <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex overflow-x-auto gap-3.5 sm:gap-4 snap-x snap-mandatory pb-3 pt-1 no-scrollbar scroll-smooth">
+            {livePartnerOfferings.map((off) => {
+              const linkedVenue = experiences.find((e) => e.id === off.restaurant_id);
+              const venueImg =
+                off.image_url ||
+                linkedVenue?.cover_image ||
+                linkedVenue?.gallery?.[0] ||
+                'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80';
+              const remaining = Math.max(0, off.capacity_total - off.reserved_count);
+              const isDemand = off.modality === 'DEMAND_OFFER';
+              const minGoal = off.min_demand_goal || 15;
+              const progressTotal = isDemand ? minGoal : off.capacity_total;
+              const progressCurrent = off.reserved_count;
+              const progressPct = Math.min(100, Math.round((progressCurrent / progressTotal) * 100));
+              const savings = off.estimated_savings_brl;
+              const timingLabel =
+                off.condition_badge ||
+                (off.time_slot_label ? `⏰ Hoje às ${off.time_slot_label}` : '⏰ Hoje');
+
+              return (
+                <div
+                  key={off.id}
+                  onClick={() => {
+                    if (linkedVenue) {
+                      onSelectExperience(linkedVenue);
+                    } else {
+                      onGoToClub({ section: 'offerings', modality: off.modality });
+                    }
+                  }}
+                  className="group relative flex w-[84vw] max-w-[340px] sm:w-[320px] md:w-[340px] shrink-0 snap-start flex-col justify-between overflow-hidden rounded-3xl border border-white/10 bg-[#0A1828] text-white shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:border-white/25 cursor-pointer h-[285px]"
+                >
+                  {/* Foto de fundo do restaurante com degradê escuro */}
+                  <div className="absolute inset-0 z-0">
+                    <img
+                      src={venueImg}
+                      alt={off.restaurant_name}
+                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A1828] via-[#0A1828]/70 to-black/45" />
+                    <div className="absolute inset-0 bg-black/20" />
+                  </div>
+
+                  {/* Topo do Card: Badge Verde de Economia + Gatilho de Horário/Urgência */}
+                  <div className="relative z-10 flex items-center justify-between gap-2 p-3.5">
+                    {savings > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-xs font-black text-white shadow-lg shadow-emerald-950/40">
+                        Economize R$ {savings}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35] px-2.5 py-1 text-xs font-black text-white shadow-lg">
+                        ✨ Vantagem VIP
+                      </span>
+                    )}
+
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-[11px] font-bold text-white shadow-md backdrop-blur-md">
+                      <Clock3 className="h-3 w-3 text-[#FFB347]" />
+                      <span>{timingLabel}</span>
                     </span>
                   </div>
-                  <h3 className="mt-2.5 font-sans text-sm font-bold leading-snug text-[var(--text-primary)] group-hover:text-[#FF6B35]">
-                    {off.benefit_summary || off.title}
-                  </h3>
-                  {off.estimated_savings_brl > 0 && (
-                    <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                      Economia: R$ {off.estimated_savings_brl}
-                    </p>
-                  )}
-                  {off.time_slot_label && (
-                    <p className="mt-1.5 text-[11px] text-[var(--text-secondary)]">
-                      Janela: {off.time_slot_label} · {off.category}
-                    </p>
-                  )}
-                </div>
 
-                <div className="mt-4 flex items-center justify-between border-t border-[var(--border-hairline)] pt-2.5 text-xs">
-                  <span className="font-bold text-[#FF6B35] group-hover:underline">
-                    Garantir vantagem →
-                  </span>
-                  {off.capacity_total > 0 && (
-                    <span className="text-[10px] text-[var(--text-secondary)]">
-                      {off.capacity_total - off.reserved_count} vagas
-                    </span>
-                  )}
+                  {/* Centro/Base da Foto: Local + Benefício Apetitoso */}
+                  <div className="relative z-10 px-4 pb-2">
+                    <p className="flex items-center gap-1 text-xs font-bold text-[#F1E8D8] drop-shadow-md">
+                      <MapPin className="h-3 w-3 shrink-0 text-[#FF6B35]" />
+                      <span className="truncate">
+                        {off.restaurant_name} · {off.neighborhood}
+                      </span>
+                    </p>
+                    <h3 className="mt-1 font-sans text-[15px] font-extrabold leading-tight text-white drop-shadow-md group-hover:text-[#FFB347] transition-colors line-clamp-2">
+                      {off.benefit_summary || off.title}
+                    </h3>
+                  </div>
+
+                  {/* Faixa Inferior: Escassez Visual (Barra de Progresso) + Botão Reservar */}
+                  <div className="relative z-10 flex items-center justify-between gap-3 border-t border-white/10 bg-[#07111D]/90 p-3.5 backdrop-blur-md">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center justify-between text-[11px] font-bold text-[#F1E8D8]">
+                        <span className="truncate flex items-center gap-1">
+                          {isDemand
+                            ? '⚡ Meta quase batida'
+                            : remaining <= 3
+                              ? '🔥 Últimas mesas'
+                              : '🔥 Mesas reservadas'}
+                        </span>
+                        <span className="shrink-0 font-extrabold text-white text-[11px]">
+                          {isDemand
+                            ? `${off.reserved_count}/${minGoal}`
+                            : `${off.reserved_count}/${off.capacity_total}`}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-white/20">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            progressPct >= 75
+                              ? 'bg-gradient-to-r from-[#FF6B35] to-[#EF4444]'
+                              : 'bg-gradient-to-r from-[#10B981] to-[#FF6B35]'
+                          }`}
+                          style={{ width: `${Math.max(12, progressPct)}%` }}
+                        />
+                      </div>
+                      <p className="mt-0.5 truncate text-[10px] text-white/70">
+                        {isDemand
+                          ? `Faltam ${Math.max(0, minGoal - off.reserved_count)} para destravar`
+                          : `Restam ${remaining} de ${off.capacity_total} mesas`}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-extrabold text-white shadow-md hover:brightness-110 active:scale-95 transition"
+                    >
+                      <span>Reservar</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
+        {/* Rodapé com filtros rápidos de modalidade sem termos burocráticos */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-              Modalidades ativas:
+              Janelas ativas:
             </span>
-            {MODALITIES_TODAY.map((mod) => (
-              <button
-                key={mod.id}
-                type="button"
-                onClick={() => onGoToClub({ section: 'offerings', modality: mod.id })}
-                className="rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:border-[#FF6B35]/40 hover:text-[var(--text-primary)] transition"
-              >
-                {mod.title}
-              </button>
-            ))}
+            {MODALITIES_TODAY.map((mod) => {
+              const friendlyLabels: Record<CommercialModality, string> = {
+                TRADITIONAL_BOOKING: '🔥 Mesas VIP de Hoje',
+                INDIVIDUAL_OFFER: '🥩 Menus do Chef',
+                DEMAND_OFFER: '⚡ Destraves Coletivos',
+                LAST_MINUTE: '⏰ Última Hora',
+              };
+              return (
+                <button
+                  key={mod.id}
+                  type="button"
+                  onClick={() => onGoToClub({ section: 'offerings', modality: mod.id })}
+                  className="rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)] hover:border-[#FF6B35]/40 hover:text-[var(--text-primary)] transition"
+                >
+                  {friendlyLabels[mod.id] || mod.title}
+                </button>
+              );
+            })}
           </div>
 
           <p className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">

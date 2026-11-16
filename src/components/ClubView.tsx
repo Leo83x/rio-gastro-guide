@@ -534,16 +534,26 @@ export function ClubView({
                 Nenhuma oportunidade encontrada com os filtros selecionados. Limpe os filtros para ver todas as modalidades.
               </div>
             ) : (
-              <div className="grid gap-5 md:grid-cols-2">
+              <div className="flex flex-col gap-4.5 sm:gap-5">
                 {filteredOfferings.map((off) => {
+                  const linkedVenue = experiences.find((e) => e.id === off.restaurant_id);
+                  const venueImg =
+                    off.image_url ||
+                    linkedVenue?.cover_image ||
+                    linkedVenue?.gallery?.[0] ||
+                    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80';
                   const meta = MODALITY_META[off.modality];
                   const ModIcon = meta.icon;
                   const remaining = Math.max(0, off.capacity_total - off.reserved_count);
                   const isDemand = off.modality === 'DEMAND_OFFER';
-                  const minGoal = off.min_demand_goal || 10;
-                  const demandPct = isDemand
-                    ? Math.min(100, Math.round((off.reserved_count / minGoal) * 100))
-                    : 0;
+                  const minGoal = off.min_demand_goal || 15;
+                  const progressTotal = isDemand ? minGoal : off.capacity_total;
+                  const progressCurrent = off.reserved_count;
+                  const progressPct = Math.min(100, Math.round((progressCurrent / progressTotal) * 100));
+                  const savings = off.estimated_savings_brl;
+                  const timingLabel =
+                    off.condition_badge ||
+                    (off.time_slot_label ? `Hoje às ${off.time_slot_label}` : 'Hoje');
                   const isOpenDrawer = activeRequestOfferingId === off.id;
                   const unavailable =
                     !off.partner_managed_active ||
@@ -555,212 +565,247 @@ export function ClubView({
                   return (
                     <article
                       key={off.id}
-                      className="flex flex-col justify-between rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 shadow-xs"
+                      className="group flex flex-col sm:flex-row overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-xs transition hover:shadow-lg hover:border-[#FF6B35]/40"
                     >
-                      <div>
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-bold ${meta.badgeCls}`}
-                          >
-                            <ModIcon className="h-3.5 w-3.5" />
-                            {meta.label}
-                          </span>
+                      {/* Miniatura Quadrada / Retangular de Alta Resolução à Esquerda */}
+                      <div className="relative h-48 sm:h-auto sm:w-64 sm:min-w-[256px] shrink-0 overflow-hidden bg-[#0A1828]">
+                        <img
+                          src={venueImg}
+                          alt={off.restaurant_name}
+                          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        {/* Degradê cinematográfico para contraste perfeito */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent sm:bg-gradient-to-r sm:from-transparent sm:to-black/35" />
 
-                          <div className="flex items-center gap-1.5">
-                            {off.is_demonstrative && (
-                              <span className="rounded-full bg-[var(--bg-canvas)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                                Piloto / Demo
+                        {/* Badges sobre a foto */}
+                        <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3 gap-2">
+                          {savings > 0 ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-xs font-black text-white shadow-md">
+                              Economize R$ {savings}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35] px-2.5 py-1 text-xs font-black text-white shadow-md">
+                              ✨ VIP
+                            </span>
+                          )}
+
+                          <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md backdrop-blur-md">
+                            <Clock3 className="h-3 w-3 text-[#FFB347]" />
+                            <span>{timingLabel}</span>
+                          </span>
+                        </div>
+
+                        {/* Bairro / Localização no mobile */}
+                        <div className="absolute bottom-2 left-3 right-3 sm:hidden">
+                          <span className="text-xs font-bold text-white drop-shadow">
+                            {off.restaurant_name} · {off.neighborhood}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Corpo do Card com Tipografia Clara e Informações de Apetite */}
+                      <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
+                        <div>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
+                              <span className="font-extrabold text-[var(--text-primary)]">
+                                {off.restaurant_name}
+                              </span>
+                              <span>·</span>
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin className="h-3 w-3 text-[#FF6B35]" />
+                                {off.neighborhood}
+                              </span>
+                              <span>·</span>
+                              <span>{off.price_range}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 ml-auto">
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${meta.badgeCls}`}
+                              >
+                                <ModIcon className="h-3 w-3" />
+                                {meta.shortLabel}
+                              </span>
+                              <span
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                  off.status === 'CONFIRMED'
+                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                    : off.status === 'GOAL_REACHED'
+                                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                      : off.status === 'ENDED_WITHOUT_GOAL' || off.status === 'CANCELLED'
+                                        ? 'bg-red-500/15 text-red-600 dark:text-red-300'
+                                        : 'bg-[#FF6B35]/12 text-[#FF6B35]'
+                                }`}
+                              >
+                                {off.status === 'GOAL_REACHED'
+                                  ? 'Meta atingida · Aguardando casa'
+                                  : off.status === 'CONFIRMED'
+                                    ? 'Confirmada pelo parceiro'
+                                    : off.status === 'SOLD_OUT'
+                                      ? 'Vagas esgotadas'
+                                      : `${remaining} vagas abertas`}
+                              </span>
+                            </div>
+                          </div>
+
+                          <h3 className="mt-2 font-sans text-base sm:text-lg font-black leading-snug text-[var(--text-primary)] group-hover:text-[#FF6B35] transition-colors">
+                            {off.benefit_summary || off.title}
+                          </h3>
+
+                          {off.description && (
+                            <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)] line-clamp-2">
+                              {off.description}
+                            </p>
+                          )}
+
+                          {/* Condição comercial e acerto direto */}
+                          <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs">
+                            <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]">
+                              <Clock3 className="h-3.5 w-3.5 text-[#FF6B35]" />
+                              <span>
+                                Janela: <strong>{off.time_slot_label}</strong> ({off.valid_days_hours || 'Hoje'})
+                              </span>
+                            </span>
+
+                            {off.base_price_brl != null && off.partner_condition_price_brl != null && (
+                              <span className="text-[var(--text-secondary)]">
+                                De <span className="line-through">R$ {off.base_price_brl.toFixed(2)}</span> por{' '}
+                                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
+                                  R$ {off.partner_condition_price_brl.toFixed(2)}
+                                </strong>{' '}
+                                <span className="text-[10px] text-[var(--text-secondary)]">
+                                  (pago direto no local)
+                                </span>
                               </span>
                             )}
-                            <span
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                                off.status === 'CONFIRMED'
-                                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                                  : off.status === 'GOAL_REACHED'
-                                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                                    : off.status === 'ENDED_WITHOUT_GOAL' || off.status === 'CANCELLED'
-                                      ? 'bg-red-500/15 text-red-600 dark:text-red-300'
-                                      : 'bg-[#FF6B35]/12 text-[#FF6B35]'
-                              }`}
-                            >
-                              {off.status === 'GOAL_REACHED'
-                                ? 'Meta atingida · Aguardando confirmação do parceiro'
-                                : off.status === 'CONFIRMED'
-                                  ? 'Confirmada pelo parceiro'
-                                  : off.status === 'ENDED_WITHOUT_GOAL'
-                                    ? 'Encerrada sem meta'
-                                    : off.status === 'CANCELLED'
-                                      ? 'Encerrada pelo parceiro'
-                                      : off.status === 'SOLD_OUT'
-                                        ? 'Vagas esgotadas'
-                                        : `${remaining} vagas reais`}
-                            </span>
                           </div>
-                        </div>
 
-                        <div className="mt-3">
-                          <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                            <strong className="text-[var(--text-primary)]">{off.restaurant_name}</strong>
-                            <span>·</span>
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-[#FF6B35]" />
-                              {off.neighborhood}
-                            </span>
-                            <span>·</span>
-                            <span>{off.price_range}</span>
-                          </div>
-                          <h3 className="mt-1 font-sans text-lg font-bold leading-snug text-[var(--text-primary)]">
-                            {off.title}
-                          </h3>
-                          <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-                            {off.description}
-                          </p>
-                        </div>
-
-                        {/* Commercial Terms & Direct Payment Clarity */}
-                        <div className="mt-3 space-y-1.5 rounded-2xl bg-[var(--bg-canvas)] p-3 text-[11px]">
-                          <p className="font-semibold text-[var(--text-primary)]">
-                            Condição: {off.benefit_summary}
-                          </p>
-                          {off.eligible_item && (
-                            <p className="text-[var(--text-secondary)]">
-                              Item elegível: <strong>{off.eligible_item}</strong>
-                            </p>
-                          )}
-                          <p className="text-[var(--text-secondary)]">
-                            Janela: <strong>{off.service_date}</strong> às{' '}
-                            <strong>{off.time_slot_label}</strong>
-                            {off.valid_days_hours ? ` (${off.valid_days_hours})` : ''} · Vagas restantes:{' '}
-                            <strong>
-                              {remaining}/{off.capacity_total}
-                            </strong>
-                          </p>
-                          {off.base_price_brl != null && off.partner_condition_price_brl != null && (
-                            <p className="text-[var(--text-secondary)]">
-                              Referência do parceiro: de{' '}
-                              <span className="line-through">R$ {off.base_price_brl.toFixed(2)}</span> por{' '}
-                              <strong className="text-[#397B68] dark:text-[#4CA188]">
-                                R$ {off.partner_condition_price_brl.toFixed(2)}
-                              </strong>{' '}
-                              (acerto no local)
-                            </p>
-                          )}
-                          <p className="text-[10px] text-[var(--text-secondary)]">
-                            {off.rules_summary}
-                          </p>
-                        </div>
-
-                        {/* Progress for DEMAND_OFFER without misleading premature confirmation */}
-                        {isDemand && (
-                          <div className="mt-3">
-                            <div className="mb-1 flex items-center justify-between text-[11px]">
-                              <span className="font-semibold text-[var(--text-primary)]">
-                                {off.reserved_count}/{minGoal} manifestações para atingir a meta
+                          {/* Barra de Progresso de Vagas Ocupadas */}
+                          <div className="mt-3 rounded-2xl bg-[var(--bg-canvas)] p-2.5">
+                            <div className="mb-1 flex items-center justify-between text-[11px] font-bold">
+                              <span className="text-[var(--text-primary)] flex items-center gap-1">
+                                {isDemand
+                                  ? '⚡ Meta coletiva'
+                                  : remaining <= 3
+                                    ? '🔥 Últimas mesas'
+                                    : '🔥 Lotação da janela'}
                               </span>
-                              <span className="font-bold text-[#FF6B35]">{demandPct}%</span>
+                              <span className="text-[#FF6B35] font-extrabold">
+                                {isDemand
+                                  ? `${off.reserved_count}/${minGoal} adesões`
+                                  : `${off.reserved_count}/${off.capacity_total} mesas`}
+                              </span>
                             </div>
                             <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] transition-all"
-                                style={{ width: `${demandPct}%` }}
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  progressPct >= 75
+                                    ? 'bg-gradient-to-r from-[#FF6B35] to-[#EF4444]'
+                                    : 'bg-gradient-to-r from-[#10B981] to-[#FF6B35]'
+                                }`}
+                                style={{ width: `${Math.max(10, progressPct)}%` }}
                               />
                             </div>
                             <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
-                              Cada participante mantém reserva individual independente. Não confirmada antes do parceiro validar.
+                              {isDemand
+                                ? `Destrave garantido ao atingir ${minGoal} adesões individuais.`
+                                : `Restam ${remaining} mesas disponíveis para reserva nesta janela.`}
                             </p>
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      {/* Inline Request Drawer or Action Buttons */}
-                      <div className="mt-4 border-t border-[var(--border-hairline)] pt-3">
-                        {isOpenDrawer ? (
-                          <div className="space-y-2.5 rounded-2xl border border-[#FF6B35]/35 bg-[var(--bg-canvas)] p-3 text-xs">
-                            <p className="font-bold text-[var(--text-primary)]">
-                              Solicitar vaga sem checkout no app
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <label className="text-[11px] font-semibold text-[var(--text-secondary)]">
-                                Pessoas:
-                              </label>
-                              <select
-                                value={requestGuests}
-                                onChange={(e) => setRequestGuests(Number(e.target.value))}
-                                className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-bold text-[var(--text-primary)]"
-                              >
-                                {[1, 2, 3, 4, 6].map((n) => (
-                                  <option key={n} value={n} disabled={n > remaining}>
-                                    {n} {n === 1 ? 'pessoa' : 'pessoas'}
-                                  </option>
-                                ))}
-                              </select>
-                              <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
-                                <input
-                                  type="checkbox"
-                                  checked={whatsappReminder}
-                                  onChange={(e) => setWhatsappReminder(e.target.checked)}
-                                  className="rounded accent-[#FF6B35]"
-                                />
-                                Lembrete WhatsApp
-                              </label>
+                        {/* Inline Request Drawer or Action Buttons */}
+                        <div className="mt-4 border-t border-[var(--border-hairline)] pt-3">
+                          {isOpenDrawer ? (
+                            <div className="space-y-2.5 rounded-2xl border border-[#FF6B35]/35 bg-[var(--bg-canvas)] p-3 text-xs">
+                              <p className="font-bold text-[var(--text-primary)]">
+                                Solicitar vaga sem checkout no app
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <label className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                                  Pessoas:
+                                </label>
+                                <select
+                                  value={requestGuests}
+                                  onChange={(e) => setRequestGuests(Number(e.target.value))}
+                                  className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-bold text-[var(--text-primary)]"
+                                >
+                                  {[1, 2, 3, 4, 6].map((n) => (
+                                    <option key={n} value={n} disabled={n > remaining}>
+                                      {n} {n === 1 ? 'pessoa' : 'pessoas'}
+                                    </option>
+                                  ))}
+                                </select>
+                                <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+                                  <input
+                                    type="checkbox"
+                                    checked={whatsappReminder}
+                                    onChange={(e) => setWhatsappReminder(e.target.checked)}
+                                    className="rounded accent-[#FF6B35]"
+                                  />
+                                  Lembrete WhatsApp
+                                </label>
+                              </div>
+
+                              <p className="text-[10px] text-[var(--text-secondary)]">
+                                <Info className="mr-1 inline h-3 w-3 text-[#FF6B35]" />
+                                {off.payment_instructions}
+                              </p>
+                              <p className="rounded-lg bg-[#FF6B35]/10 px-2 py-1 text-[10px] font-semibold text-[#123B56] dark:text-[#F1E8D8]">
+                                {POINTS_PREVISIT_CHECKIN_NOTICE}
+                              </p>
+                              <p className="text-[10px] font-medium text-[#123B56] dark:text-[#F1E8D8]">
+                                Check-in: {MANDATORY_CHECKIN_INSTRUCTION}
+                              </p>
+
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSubmitRequest(off)}
+                                  className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2 text-xs font-bold text-white shadow-sm hover:brightness-110 transition"
+                                >
+                                  {isDemand
+                                    ? 'Registrar Manifestação Individual'
+                                    : 'Enviar Solicitação de Reserva'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveRequestOfferingId(null)}
+                                  className="rounded-xl border border-[var(--border-hairline)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
                             </div>
-
-                            <p className="text-[10px] text-[var(--text-secondary)]">
-                              <Info className="mr-1 inline h-3 w-3 text-[#FF6B35]" />
-                              {off.payment_instructions}
-                            </p>
-                            <p className="rounded-lg bg-[#FF6B35]/10 px-2 py-1 text-[10px] font-semibold text-[#123B56] dark:text-[#F1E8D8]">
-                              {POINTS_PREVISIT_CHECKIN_NOTICE}
-                            </p>
-                            <p className="text-[10px] font-medium text-[#123B56] dark:text-[#F1E8D8]">
-                              Check-in: {MANDATORY_CHECKIN_INSTRUCTION}
-                            </p>
-
+                          ) : (
                             <div className="flex gap-2">
                               <button
                                 type="button"
-                                onClick={() => handleSubmitRequest(off)}
-                                className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2 text-xs font-bold text-white"
+                                disabled={unavailable}
+                                onClick={() => {
+                                  setRequestGuests(Math.min(2, Math.max(1, remaining)));
+                                  setActiveRequestOfferingId(off.id);
+                                }}
+                                className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white shadow-sm transition hover:brightness-110 active:scale-95 disabled:opacity-45"
                               >
-                                {isDemand
-                                  ? 'Registrar Manifestação Individual'
-                                  : 'Enviar Solicitação de Reserva'}
+                                {unavailable
+                                  ? 'Indisponível nesta janela'
+                                  : isDemand
+                                    ? 'Manifestar Interesse no Destrave'
+                                    : 'Reservar Mesa com Vantagem'}
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setActiveRequestOfferingId(null)}
-                                className="rounded-xl border border-[var(--border-hairline)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)]"
+                                onClick={() => openVenue(off.restaurant_id)}
+                                className="rounded-xl border border-[var(--border-hairline)] px-4 py-2.5 text-xs font-bold text-[var(--text-primary)] hover:border-[#FF6B35] hover:bg-[var(--bg-subtle)] transition"
                               >
-                                Cancelar
+                                Ver casa
                               </button>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              disabled={unavailable}
-                              onClick={() => {
-                                setRequestGuests(Math.min(2, Math.max(1, remaining)));
-                                setActiveRequestOfferingId(off.id);
-                              }}
-                              className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white transition hover:opacity-95 disabled:opacity-45"
-                            >
-                              {unavailable
-                                ? 'Indisponível nesta janela'
-                                : isDemand
-                                  ? 'Manifestar Interesse Individual'
-                                  : 'Solicitar Horário / Condição'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openVenue(off.restaurant_id)}
-                              className="rounded-xl border border-[var(--border-hairline)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
-                            >
-                              Local
-                            </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </article>
                   );

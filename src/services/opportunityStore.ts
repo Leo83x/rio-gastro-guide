@@ -45,29 +45,31 @@ function buildStarterOfferings(): PartnerOffering[] {
       price_range: '$$$',
       modality: 'TRADITIONAL_BOOKING',
       status: 'PUBLISHED',
-      title: 'Reserva Tradicional de Salão — Sem Desconto Obrigatório',
+      title: 'Mesa VIP no Forno a Lenha com Sobremesa Cortesia',
       description:
-        'Garanta sua mesa em janela tradicional de atendimento com autonomia total do cardápio da casa.',
-      benefit_summary: 'Mesa confirmada pelo estabelecimento em janela prioritária',
-      rules_summary: 'Reserva tradicional sem exigência de desconto. Sujeita à confirmação de mesa do parceiro.',
-      eligibility_rules: 'Válido para reservas individuais ou de grupos dentro da capacidade do turno.',
+        'Mesa reservada no salão nobre com forno a lenha, 1 entrada especial da casa e sobremesa artesanal cortesia.',
+      benefit_summary: '🍕 Pizza Especial da Casa + Sobremesa Cortesia do Forno',
+      rules_summary: 'Válido para a janela das 20h. Apresente seu check-in BoraRio ao maitre na chegada.',
+      eligibility_rules: 'Reserva garantida para mesas de até 4 pessoas.',
       cancellation_policy: 'Cancelamento sem ônus pelo app até 2 horas antes do horário marcado.',
       payment_instructions: DIRECT_PAYMENT_NOTICE,
-      has_discount: false,
-      condition_badge: 'Reserva Tradicional',
-      estimated_savings_brl: 0,
+      has_discount: true,
+      condition_badge: '⏰ Hoje às 20:00',
+      estimated_savings_brl: 45,
       service_date: today,
       time_slot_label: '20:00',
       starts_at: nowIso,
       ends_at: getFutureIso(72),
-      capacity_total: 24,
-      reserved_count: 6,
-      eligible_item: 'Mesa em salão principal (reserva tradicional)',
+      capacity_total: 10,
+      reserved_count: 7,
+      eligible_item: 'Pizza especial + Sobremesa cortesia',
       offer_category: 'Gastronomia',
       valid_days_hours: 'Todos os dias · 19h às 22h',
       views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
+      image_url:
+        'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1000&q=80',
       created_at: nowIso,
       updated_at: nowIso,
     },
@@ -80,16 +82,16 @@ function buildStarterOfferings(): PartnerOffering[] {
       price_range: '$$$$',
       modality: 'INDIVIDUAL_OFFER',
       status: 'PUBLISHED',
-      title: 'Oferta Individual — Menu Executivo Especial do Chef',
+      title: 'Menu Executivo do Chef com Rodízio de Acompanhamentos',
       description:
-        'Condição exclusiva criada pelo estabelecimento para uso imediato por 1 cliente ou mesa, sem depender de meta mínima.',
-      benefit_summary: 'Entrada + Prato principal com condição diferenciada definida pela casa',
-      rules_summary: 'Válido para almoço em dias úteis dentro da janela indicada. Apresente o check-in QR antes do consumo.',
+        'Cortes nobres grelhados com rodízio contínuo de acompanhamentos franceses e taça de vinho cortesia.',
+      benefit_summary: '🥩 Rodízio de Acompanhamentos do Chef + 1 Taça de Vinho',
+      rules_summary: 'Válido para almoço na janela das 13h. Apresente o check-in QR antes do consumo.',
       eligibility_rules: 'Uso individual ou em grupo independente de quórum coletivo.',
       cancellation_policy: 'Alteração ou cancelamento livre até 2 horas antes da janela.',
       payment_instructions: DIRECT_PAYMENT_NOTICE,
       has_discount: true,
-      condition_badge: 'Oferta Individual',
+      condition_badge: '⏰ Almoço às 13:00',
       base_price_brl: 190,
       partner_condition_price_brl: 145,
       estimated_savings_brl: 45,
@@ -97,14 +99,16 @@ function buildStarterOfferings(): PartnerOffering[] {
       time_slot_label: '13:00',
       starts_at: nowIso,
       ends_at: getFutureIso(48),
-      capacity_total: 16,
-      reserved_count: 4,
-      eligible_item: 'Menu Executivo (Entrada + Prato Principal)',
+      capacity_total: 12,
+      reserved_count: 9,
+      eligible_item: 'Menu Executivo (Entrada + Prato Principal + Vinho)',
       offer_category: 'Gastronomia',
       valid_days_hours: 'Segunda a Sexta · 12h às 15h30',
       views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
+      image_url:
+        'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80',
       created_at: nowIso,
       updated_at: nowIso,
     },
@@ -117,17 +121,17 @@ function buildStarterOfferings(): PartnerOffering[] {
       price_range: '$$$$',
       modality: 'DEMAND_OFFER',
       status: 'CAPTURING',
-      title: 'Reserva Inteligente por Demanda — Menu Degustação em 3 Tempos',
+      title: 'Menu Degustação em 3 Tempos com Welcome Drink',
       description:
-        'Manifeste interesse individual para esta janela. Cada participante mantém sua própria reserva independente e não precisa compartilhar mesa.',
-      benefit_summary: 'Menu completo em 3 tempos com condição especial quando a demanda atingir a meta',
+        'Alta gastronomia italiana em 3 tempos (Entrada + Prato Principal + Sobremesa) com welcome drink do sommelier.',
+      benefit_summary: '🔥 Menu Degustação em 3 Tempos + Welcome Drink Exclusivo',
       rules_summary:
         'Sua solicitação só se torna reserva confirmada após o alcance da meta e confirmação expressa do estabelecimento.',
       eligibility_rules: 'Participantes independentes na mesma data/janela de atendimento.',
       cancellation_policy: 'Sem cobrança no app; caso a meta não seja atingida, a solicitação é encerrada sem ônus.',
       payment_instructions: DIRECT_PAYMENT_NOTICE,
       has_discount: true,
-      condition_badge: 'Reserva por Demanda',
+      condition_badge: '⚡ Meta Quase Batida',
       base_price_brl: 310,
       partner_condition_price_brl: 235,
       estimated_savings_brl: 75,
@@ -135,8 +139,8 @@ function buildStarterOfferings(): PartnerOffering[] {
       time_slot_label: '20:30',
       starts_at: nowIso,
       ends_at: getFutureIso(36),
-      capacity_total: 30,
-      reserved_count: 14,
+      capacity_total: 20,
+      reserved_count: 15,
       min_demand_goal: 20,
       eligible_item: 'Menu Degustação Completo em 3 Tempos',
       offer_category: 'Gastronomia',
@@ -144,6 +148,8 @@ function buildStarterOfferings(): PartnerOffering[] {
       views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
+      image_url:
+        'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80',
       created_at: nowIso,
       updated_at: nowIso,
     },
@@ -156,34 +162,121 @@ function buildStarterOfferings(): PartnerOffering[] {
       price_range: '$$',
       modality: 'LAST_MINUTE',
       status: 'PUBLISHED',
-      title: 'Oportunidade de Última Hora — Mesas no Salão Superior Hoje',
+      title: 'Pôr do Sol no Salão Superior com Petiscos da Casa',
       description:
-        'Vagas abertas pelo parceiro para preenchimento inteligente da janela de fim de tarde de hoje.',
-      benefit_summary: 'Empada de camarão cortesia por pessoa na chegada validada',
+        'Mesas exclusivas na janela com vista panorâmica para a Baía de Guanabara, porção de empadas e chopp gelado.',
+      benefit_summary: '🍺 Empadas de Camarão + Chopp Gelado no Pôr do Sol',
       rules_summary: 'Válido apenas para a janela de hoje descrita ao lado, mediante vagas remanescentes reais.',
       eligibility_rules: 'Solicitação sujeita à disponibilidade imediata da janela.',
       cancellation_policy: 'Avise caso não possa comparecer para liberar o lugar na fila.',
       payment_instructions: DIRECT_PAYMENT_NOTICE,
-      has_discount: false,
-      condition_badge: 'Última Hora · Hoje',
-      estimated_savings_brl: 22,
+      has_discount: true,
+      condition_badge: '🔥 Restam 2 mesas',
+      estimated_savings_brl: 35,
       service_date: today,
       time_slot_label: '18:00',
       starts_at: nowIso,
       ends_at: getFutureIso(8),
-      capacity_total: 12,
-      reserved_count: 5,
+      capacity_total: 8,
+      reserved_count: 6,
       eligible_item: 'Empada de camarão cortesia + mesa no salão superior',
       offer_category: 'Gastronomia',
       valid_days_hours: 'Hoje · 17h30 às 19h30',
       views_count: 0,
       partner_managed_active: true,
       is_demonstrative: true,
+      image_url:
+        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80',
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+    {
+      id: 'off-rooftop-xian',
+      restaurant_id: '22222222-2222-4222-8222-000000000010',
+      restaurant_name: 'Xian Rio — Rooftop Bossa Nova Mall',
+      neighborhood: 'Centro',
+      category: 'Contemporâneo',
+      price_range: '$$$',
+      modality: 'INDIVIDUAL_OFFER',
+      status: 'PUBLISHED',
+      title: 'Sunset VIP no Deck com Coquetel Autoral',
+      description:
+        'Mesa reservada na área panorâmica de frente para o Pão de Açúcar com drink autoral de boas-vindas.',
+      benefit_summary: '🍸 Drink Autoral de Boas-Vindas + Vista Panorâmica do Pão de Açúcar',
+      rules_summary: 'Válido para happy hour na janela das 18h30. Acerto direto no local.',
+      eligibility_rules: 'Mesas de 2 a 4 pessoas.',
+      cancellation_policy: 'Cancelamento livre até 2 horas antes.',
+      payment_instructions: DIRECT_PAYMENT_NOTICE,
+      has_discount: true,
+      condition_badge: '⏰ Sexta às 18:30',
+      estimated_savings_brl: 50,
+      service_date: today,
+      time_slot_label: '18:30',
+      starts_at: nowIso,
+      ends_at: getFutureIso(56),
+      capacity_total: 15,
+      reserved_count: 11,
+      eligible_item: 'Drink autoral da casa + mesa panorâmica',
+      offer_category: 'Gastronomia',
+      valid_days_hours: 'Hoje · 18h às 21h',
+      views_count: 0,
+      partner_managed_active: true,
+      is_demonstrative: true,
+      image_url:
+        'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?auto=format&fit=crop&w=1000&q=80',
       created_at: nowIso,
       updated_at: nowIso,
     },
   ];
 }
+
+const STARTER_ENRICHMENT_MAP: Record<string, Partial<PartnerOffering>> = {
+  'off-trad-braz': {
+    title: 'Mesa VIP no Forno a Lenha com Sobremesa Cortesia',
+    benefit_summary: '🍕 Pizza Especial da Casa + Sobremesa Cortesia do Forno',
+    condition_badge: '⏰ Hoje às 20:00',
+    estimated_savings_brl: 45,
+    capacity_total: 10,
+    reserved_count: 7,
+    time_slot_label: '20:00',
+    image_url:
+      'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1000&q=80',
+  },
+  'off-indiv-ct': {
+    title: 'Menu Executivo do Chef com Rodízio de Guarnições',
+    benefit_summary: '🥩 Rodízio de Acompanhamentos do Chef + 1 Taça de Vinho',
+    condition_badge: '⏰ Almoço às 13:00',
+    estimated_savings_brl: 45,
+    capacity_total: 12,
+    reserved_count: 9,
+    time_slot_label: '13:00',
+    image_url:
+      'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80',
+  },
+  'off-demand-gero': {
+    title: 'Menu Degustação em 3 Tempos com Welcome Drink',
+    benefit_summary: '🔥 Menu Degustação em 3 Tempos + Welcome Drink Exclusivo',
+    condition_badge: '⚡ Meta Quase Batida',
+    estimated_savings_brl: 75,
+    capacity_total: 20,
+    reserved_count: 15,
+    min_demand_goal: 20,
+    time_slot_label: '20:30',
+    image_url:
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1000&q=80',
+  },
+  'off-last-urca': {
+    title: 'Pôr do Sol no Salão Superior com Petiscos da Casa',
+    benefit_summary: '🍺 Empadas de Camarão + Chopp Gelado no Pôr do Sol',
+    condition_badge: '🔥 Restam 2 mesas',
+    estimated_savings_brl: 35,
+    capacity_total: 8,
+    reserved_count: 6,
+    time_slot_label: '18:00',
+    image_url:
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1000&q=80',
+  },
+};
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -208,6 +301,34 @@ export function getPartnerOfferings(filters?: {
   if (list.length === 0) {
     list = buildStarterOfferings();
     writeJson(KEYS.OFFERINGS, list);
+  } else {
+    // Enriquecimento automático de fotos e textos apetitosos para itens existentes
+    let updated = false;
+    list = list.map((item) => {
+      const enrichment = STARTER_ENRICHMENT_MAP[item.id];
+      if (enrichment && (!item.image_url || item.benefit_summary.includes('Mesa confirmada') || item.benefit_summary.includes('condição diferenciada'))) {
+        updated = true;
+        return {
+          ...item,
+          ...enrichment,
+        };
+      }
+      return item;
+    });
+
+    // Se o Xian não estiver na lista inicial existente, adiciona
+    if (!list.some((i) => i.id === 'off-rooftop-xian')) {
+      const starterList = buildStarterOfferings();
+      const xian = starterList.find((i) => i.id === 'off-rooftop-xian');
+      if (xian) {
+        list.push(xian);
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      writeJson(KEYS.OFFERINGS, list);
+    }
   }
   return list.filter((o) => {
     if (!filters?.includeDrafts && o.status === 'DRAFT') return false;
