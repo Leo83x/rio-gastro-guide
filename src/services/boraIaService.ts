@@ -1,10 +1,12 @@
 import type { ConfiaRecommendation } from '../types/confia';
 import type { ItinerarySourceOrigin } from '../types/experience';
 import type { IntentVaultItem } from '../types/intention';
+import type { NightlifeEvent } from '../types/nightlife';
 import type { Restaurant } from '../types/restaurant';
 import { getVisibleConfiaRecommendations } from './confiaStore';
 import { fetchRioWeatherLive, type RioWeatherSnapshot } from './integrations/registry';
 import { getIntentVaultItems } from './intentVaultStore';
+import { isEventVisiblePublicly } from './nightlife/nightlifeDedup';
 import { DEMONSTRATIVE_CLUB_OFFERS } from './superappStore';
 
 export interface BoraIaMatch {
@@ -13,9 +15,15 @@ export interface BoraIaMatch {
   reasonTag: string;
 }
 
+export interface BoraIaNightlifeMatch {
+  event: NightlifeEvent;
+  reasonTag: string;
+}
+
 export interface BoraIaResponse {
   answer: string;
   matches: BoraIaMatch[];
+  nightlifeMatches: BoraIaNightlifeMatch[];
   weather?: RioWeatherSnapshot;
   usedSources: ItinerarySourceOrigin[];
 }
@@ -27,6 +35,7 @@ export async function queryBoraIa(
     includeVault?: boolean;
     includeConfia?: boolean;
     includeClub?: boolean;
+    nightlifeEvents?: NightlifeEvent[];
   } = { includeVault: true, includeConfia: true, includeClub: true }
 ): Promise<BoraIaResponse> {
   const q = rawQuery.trim().toLowerCase();
@@ -76,7 +85,13 @@ export async function queryBoraIa(
       score += 5;
     }
     if (
-      (q.includes('música') || q.includes('show') || q.includes('samba') || q.includes('noite')) &&
+      (q.includes('música') ||
+        q.includes('show') ||
+        q.includes('samba') ||
+        q.includes('noite') ||
+        q.includes('festa') ||
+        q.includes('balada') ||
+        q.includes('pagode')) &&
       (item.attributes?.live_music ||
         item.macro_category === 'Eventos & Shows' ||
         item.macro_category === 'Vida Noturna')
@@ -150,21 +165,75 @@ export async function queryBoraIa(
     .slice(0, 4)
     .map(({ venue, sourceOrigin, reasonTag }) => ({ venue, sourceOrigin, reasonTag }));
 
+  // Correspondência paralela sobre eventos noturnos curados publicados em A noite carioca
+  const isNightlifeIntent =
+    q.includes('noite') ||
+    q.includes('samba') ||
+    q.includes('pagode') ||
+    q.includes('festa') ||
+    q.includes('balada') ||
+    q.includes('show') ||
+    q.includes('rooftop') ||
+    q.includes('eletrôn') ||
+    q.includes('funk') ||
+    q.includes('sexta') ||
+    q.includes('sábado') ||
+    q.includes('sabado') ||
+    q.includes('domingo') ||
+    q.includes('hoje') ||
+    q.includes('gratuit');
+
+  const now = new Date();
+  const activeEvents = (options.nightlifeEvents || []).filter((ev) =>
+    isEventVisiblePublicly(ev, now)
+  );
+  const scoredEvents = activeEvents
+    .map((ev) => {
+      let score = isNightlifeIntent ? 2 : 0;
+      const hay = `${ev.title} ${ev.venue_name} ${ev.neighborhood} ${ev.sub_area} ${ev.music_genres.join(' ')} ${ev.short_summary} ${ev.lineup.join(' ')}`.toLowerCase();
+
+      if ((q.includes('samba') || q.includes('pagode')) && ev.sub_area === 'SAMBA_PAGODE') score += 6;
+      if ((q.includes('festa') || q.includes('balada') || q.includes('eletrôn') || q.includes('funk')) && ev.sub_area === 'FESTAS_BALADAS') score += 6;
+      if ((q.includes('show') || q.includes('música') || q.includes('ao vivo')) && ev.sub_area === 'SHOWS') score += 6;
+      if ((q.includes('rooftop') || q.includes('sunset') || q.includes('jazz')) && ev.sub_area === 'ROOFTOPS_EXPERIENCIAS') score += 6;
+      if (q.includes('gratuit') && ev.is_free) score += 4;
+
+      const words = q.split(/\s+/).filter((w) => w.length > 3);
+      for (const w of words) {
+        if (hay.includes(w)) score += 3;
+      }
+
+      return { event: ev, score };
+    })
+    .filter((item) => item.score >= 3)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ event }) => ({
+      event,
+      reasonTag: `A Noite Carioca · ${event.event_date} às ${event.start_time}`,
+    }));
+
   const rainHint =
     weather?.source === 'open-meteo-live' && weather.isRaining
       ? ' Considerei o clima de chuva atual no Rio priorizando locais cobertos.'
       : '';
 
+  const totalCount = topMatches.length + scoredEvents.length;
   const answer =
-    topMatches.length > 0
-      ? `Encontrei ${topMatches.length} sugestões por correspondência inteligente direta no catálogo real do BoraRio${
-          usedSources.has('cofre') ? ' e no seu Cofre de Intenções' : ''
-        }${usedSources.has('confia') ? ' com indicações da sua Rede Confia' : ''}.${rainHint}`
-      : 'Não encontrei correspondência exata no catálogo atual. Tente informar um bairro (ex: Botafogo, Ipanema, Centro), orçamento ou momento!';
+    totalCount > 0
+      ? `Encontrei ${topMatches.length} lugar(es) no catálogo${
+          scoredEvents.length > 0
+            ? ` e ${scoredEvents.length} evento(s) curado(s) em A Noite Carioca`
+            : ''
+        }${usedSources.has('cofre') ? ' cruzando com seu Cofre de Intenções' : ''}${
+          usedSources.has('confia') ? ' e indicações da sua Rede Confia' : ''
+        }.${rainHint}`
+      : 'Não encontrei correspondência exata no catálogo atual. Tente informar um bairro (ex: Botafogo, Ipanema, Lapa), tipo de noite (samba, festa, show) ou orçamento!';
 
   return {
     answer,
     matches: topMatches,
+    nightlifeMatches: scoredEvents,
     weather,
     usedSources: Array.from(usedSources),
   };

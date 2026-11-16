@@ -1,6 +1,6 @@
 import { Bookmark, CheckCircle2, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AdminPanel } from './components/AdminPanel';
+import { AdminPanel, type AdminTab } from './components/AdminPanel';
 import { BrandLogo } from './components/BrandLogo';
 import { ClubView } from './components/ClubView';
 import { ConciergeWidget } from './components/ConciergeWidget';
@@ -9,6 +9,8 @@ import { IntentCaptureModal } from './components/confia/IntentCaptureModal';
 import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
+import { NightlifeEventModal } from './components/NightlifeEventModal';
+import { NightlifeSection } from './components/NightlifeSection';
 import { PersonalizeModal } from './components/PersonalizeModal';
 import { PlannerView } from './components/PlannerView';
 import {
@@ -30,6 +32,7 @@ import {
 import { getAllRestaurants, getClaimRequests } from './services/database';
 import { addIntentVaultItem, getIntentVaultItems } from './services/intentVaultStore';
 import { calculateMatchScore, getMatchReasonLabel } from './services/matchService';
+import { getAllNightlifeEvents } from './services/nightlife/nightlifeStore';
 import { usePwaStatus } from './services/pwa';
 import { useAppRoute } from './services/router';
 import { captureReferralCodeFromUrl } from './services/referralStore';
@@ -44,6 +47,7 @@ import {
 import type { ConfiaRecommendation, TrustCircle, TrustConnection } from './types/confia';
 import type { NotificationItem, ReservationRequest, UserPreferences } from './types/experience';
 import type { IntentVaultItem } from './types/intention';
+import { NIGHTLIFE_SUBAREA_META, type NightlifeEvent } from './types/nightlife';
 import type { CommercialModality } from './types/partnerCommercial';
 import type { ClaimRequest, Restaurant, RestaurantCategory } from './types/restaurant';
 import type { GeoCoords } from './utils/geo';
@@ -57,8 +61,10 @@ export function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('discover');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [claims, setClaims] = useState<ClaimRequest[]>([]);
+  const [nightlifeEvents, setNightlifeEvents] = useState<NightlifeEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [selectedNightlifeEvent, setSelectedNightlifeEvent] = useState<NightlifeEvent | null>(null);
   const [showPersonalize, setShowPersonalize] = useState(false);
 
   // Superapp State
@@ -74,6 +80,8 @@ export function App() {
   );
   const [catalogExpanded, setCatalogExpanded] = useState(false);
   const [filterDrawerSignal, setFilterDrawerSignal] = useState(0);
+  const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('overpass');
+  const [adminDeepLinkNonce, setAdminDeepLinkNonce] = useState(0);
   const [clubDeepLink, setClubDeepLink] = useState<{
     section: 'offerings' | 'rewards';
     modality: CommercialModality | 'ALL';
@@ -140,12 +148,22 @@ export function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  const reloadNightlife = useCallback(async () => {
+    const nl = await getAllNightlifeEvents({ runSweep: true });
+    setNightlifeEvents(nl);
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rests, claimList] = await Promise.all([getAllRestaurants(), getClaimRequests()]);
+      const [rests, claimList, nlEvents] = await Promise.all([
+        getAllRestaurants(),
+        getClaimRequests(),
+        getAllNightlifeEvents({ runSweep: true }),
+      ]);
       setRestaurants(rests);
       setClaims(claimList);
+      setNightlifeEvents(nlEvents);
     } finally {
       setLoading(false);
     }
@@ -380,6 +398,62 @@ export function App() {
     setActiveTab('confia');
   };
 
+  const savedNightlifeKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of vaultItems) {
+      if (item.status !== 'ARCHIVED') {
+        if (item.title) set.add(item.title);
+        if (item.source_url) set.add(item.source_url);
+      }
+    }
+    return set;
+  }, [vaultItems]);
+
+  const handleSaveNightlifeToVault = (ev: NightlifeEvent) => {
+    if (savedNightlifeKeys.has(ev.title) || (ev.ticket_url && savedNightlifeKeys.has(ev.ticket_url))) {
+      setToast({
+        text: `"${ev.title}" já está salvo no seu Cofre de Intenções.`,
+        showVaultAction: true,
+      });
+      return;
+    }
+
+    const next = addIntentVaultItem({
+      title: ev.title,
+      source_type: 'web_link',
+      source_url: ev.ticket_url || ev.source_url,
+      category_tag: 'Vida Noturna',
+      neighborhood_tag: ev.neighborhood,
+      linked_venue_id: ev.venue_id,
+      linked_venue_name: ev.venue_name,
+      notes: `${NIGHTLIFE_SUBAREA_META[ev.sub_area].label} · ${ev.event_date} às ${ev.start_time} · ${ev.price_display_label}`,
+      status: 'SAVED',
+      processing_status: 'COMPLETED',
+      processing_message: 'Evento curado de A Noite Carioca salvo no seu Cofre.',
+    });
+    setVaultItems(next);
+    setToast({
+      text: `"${ev.title}" guardado no seu Cofre de Intenções!`,
+      showVaultAction: true,
+    });
+  };
+
+  const handleFilterPermanentNightlife = () => {
+    setFilters((prev) => ({ ...prev, macroCategory: 'Vida Noturna' }));
+    setTimeout(() => {
+      document
+        .getElementById('home-block-catalog')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
+
+  const navigateToAdminNightlife = () => {
+    setAdminInitialTab('nightlife');
+    setAdminDeepLinkNonce((n) => n + 1);
+    navigate('/admin');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // 1. Public Landing Page (/)
   if (route === '/') {
     return (
@@ -411,10 +485,12 @@ export function App() {
       <PartnerDashboard
         restaurants={restaurants}
         reservations={reservations}
+        nightlifeEvents={nightlifeEvents}
         isDark={isDark}
         onToggleTheme={() => setIsDark((prev) => !prev)}
         onNavigate={navigate}
         onDatabaseUpdated={loadData}
+        onNightlifeUpdated={reloadNightlife}
         onReservationsUpdated={setReservations}
         onSyncAppState={() => {
           setPointsBalance(getPointsBalance());
@@ -493,10 +569,14 @@ export function App() {
 
       {effectiveTab === 'admin' && (
         <AdminPanel
+          key={`admin-${adminInitialTab}-${adminDeepLinkNonce}`}
           restaurants={restaurants}
           claims={claims}
           reservations={reservations}
+          nightlifeEvents={nightlifeEvents}
+          initialTab={adminInitialTab}
           onDatabaseUpdated={loadData}
+          onNightlifeUpdated={reloadNightlife}
         />
       )}
 
@@ -530,6 +610,8 @@ export function App() {
             {showEditorialDiscover && !loading && (
               <DiscoverEditorialSections
                 experiences={restaurants}
+                nightlifeEvents={nightlifeEvents}
+                savedNightlifeKeys={savedNightlifeKeys}
                 preferences={preferences}
                 userCoords={userCoords}
                 vaultCount={activeVaultCount}
@@ -539,6 +621,10 @@ export function App() {
                 confiaCountsByVenue={confiaCountsByVenue}
                 pointsBalance={pointsBalance}
                 onSelectExperience={setSelectedRestaurant}
+                onFilterPermanentNightlife={handleFilterPermanentNightlife}
+                onSaveNightlifeToVault={handleSaveNightlifeToVault}
+                onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
+                onGoToAdminNightlife={navigateToAdminNightlife}
                 onRequestLocation={handleRequestLocation}
                 onScrollToCatalog={() =>
                   document
@@ -555,6 +641,20 @@ export function App() {
                 onGoToProfile={navigateToProfile}
                 onOpenPersonalize={() => setShowPersonalize(true)}
               />
+            )}
+
+            {!showEditorialDiscover && !loading && filters.macroCategory === 'Vida Noturna' && (
+              <div className="mb-10">
+                <NightlifeSection
+                  events={nightlifeEvents}
+                  permanentVenues={restaurants}
+                  savedEventTitlesOrUrls={savedNightlifeKeys}
+                  onSelectPermanentVenue={setSelectedRestaurant}
+                  onSaveEventToVault={handleSaveNightlifeToVault}
+                  onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
+                  onGoToAdminNightlife={navigateToAdminNightlife}
+                />
+              </div>
             )}
 
             {loading ? (
@@ -824,7 +924,15 @@ export function App() {
             <button type="button" onClick={() => navigate('/parceiros')} className="hover:text-[#FF765E]">
               Área de Parceiros
             </button>
-            <button type="button" onClick={() => navigate('/admin')} className="hover:text-[#FF765E]">
+            <button
+              type="button"
+              onClick={() => {
+                setAdminInitialTab('overpass');
+                setAdminDeepLinkNonce((n) => n + 1);
+                navigate('/admin');
+              }}
+              className="hover:text-[#FF765E]"
+            >
               Administração
             </button>
           </div>
@@ -866,6 +974,7 @@ export function App() {
       {effectiveTab !== 'admin' && (
         <ConciergeWidget
           experiences={restaurants}
+          nightlifeEvents={nightlifeEvents}
           externalPrompt={pendingBoraIaPrompt}
           onConsumeExternalPrompt={() => setPendingBoraIaPrompt(null)}
           onSendToPlanner={(promptText) => {
@@ -873,6 +982,7 @@ export function App() {
             setActiveTab('planner');
           }}
           onSelectExperience={setSelectedRestaurant}
+          onSelectNightlifeEvent={setSelectedNightlifeEvent}
         />
       )}
 
@@ -898,6 +1008,33 @@ export function App() {
               text: 'Intenção guardada no seu Cofre privado!',
               showVaultAction: effectiveTab !== 'confia',
             });
+          }}
+        />
+      )}
+
+      {selectedNightlifeEvent && (
+        <NightlifeEventModal
+          event={selectedNightlifeEvent}
+          linkedVenue={
+            selectedNightlifeEvent.venue_id
+              ? restaurants.find((r) => r.id === selectedNightlifeEvent.venue_id) || null
+              : null
+          }
+          inVault={
+            savedNightlifeKeys.has(selectedNightlifeEvent.title) ||
+            (selectedNightlifeEvent.ticket_url
+              ? savedNightlifeKeys.has(selectedNightlifeEvent.ticket_url)
+              : false)
+          }
+          onClose={() => setSelectedNightlifeEvent(null)}
+          onOpenPermanentVenue={(venue) => {
+            setSelectedNightlifeEvent(null);
+            setSelectedRestaurant(venue);
+          }}
+          onSaveToVault={handleSaveNightlifeToVault}
+          onAskBoraIa={(promptText) => {
+            setSelectedNightlifeEvent(null);
+            setPendingBoraIaPrompt(promptText);
           }}
         />
       )}

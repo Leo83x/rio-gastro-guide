@@ -35,6 +35,7 @@ import { getPartnerRewards } from '../services/rewardMarketplaceStore';
 import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
 import type { ConfiaRecommendation } from '../types/confia';
 import type { UserPreferences } from '../types/experience';
+import type { NightlifeEvent } from '../types/nightlife';
 import type { CommercialModality } from '../types/partnerCommercial';
 import type { Restaurant } from '../types/restaurant';
 import {
@@ -44,11 +45,14 @@ import {
   WALLET_NON_MONETARY_NOTICE,
 } from '../types/verification';
 import { formatDistanceKm, haversineKm, type GeoCoords } from '../utils/geo';
+import { NightlifeSection } from './NightlifeSection';
 import type { ProfileFocusTarget, ProfileSectionTab } from './ProfileWalletView';
 import { SmartImage } from './SmartImage';
 
 interface DiscoverEditorialSectionsProps {
   experiences: Restaurant[];
+  nightlifeEvents: NightlifeEvent[];
+  savedNightlifeKeys: Set<string>;
   preferences: UserPreferences;
   userCoords?: GeoCoords | null;
   vaultCount: number;
@@ -58,6 +62,10 @@ interface DiscoverEditorialSectionsProps {
   confiaCountsByVenue: Map<string, number>;
   pointsBalance: number;
   onSelectExperience: (item: Restaurant) => void;
+  onFilterPermanentNightlife?: () => void;
+  onSaveNightlifeToVault?: (event: NightlifeEvent) => void;
+  onAskBoraIa?: (promptText: string) => void;
+  onGoToAdminNightlife?: () => void;
   onRequestLocation?: () => void;
   onScrollToCatalog?: () => void;
   onGoToExploreMap: () => void;
@@ -116,6 +124,8 @@ const MODALITIES_TODAY: Array<{
 
 export function DiscoverEditorialSections({
   experiences,
+  nightlifeEvents,
+  savedNightlifeKeys,
   preferences,
   userCoords = null,
   vaultCount,
@@ -125,6 +135,10 @@ export function DiscoverEditorialSections({
   confiaCountsByVenue,
   pointsBalance,
   onSelectExperience,
+  onFilterPermanentNightlife,
+  onSaveNightlifeToVault,
+  onAskBoraIa,
+  onGoToAdminNightlife,
   onRequestLocation,
   onScrollToCatalog,
   onGoToExploreMap,
@@ -300,6 +314,18 @@ export function DiscoverEditorialSections({
           </div>
         </div>
       </section>
+
+      {/* SEÇÃO 2.5: A NOITE CARIOCA (Agenda Noturna Curada — após O que vale a pena viver hoje?) */}
+      <NightlifeSection
+        events={nightlifeEvents}
+        permanentVenues={experiences}
+        savedEventTitlesOrUrls={savedNightlifeKeys}
+        onSelectPermanentVenue={onSelectExperience}
+        onFilterPermanentNightlife={onFilterPermanentNightlife}
+        onSaveEventToVault={onSaveNightlifeToVault}
+        onAskBoraIa={onAskBoraIa}
+        onGoToAdminNightlife={onGoToAdminNightlife}
+      />
 
       {/* SEÇÃO 3: PERTO DE VOCÊ NO RIO (Grade visual compacta + proximidade opcional) */}
       <section aria-labelledby="home-block-nearby">
