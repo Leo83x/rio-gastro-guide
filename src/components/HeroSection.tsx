@@ -230,39 +230,40 @@ export function HeroSection({
         <img
           src={isDark ? rioHeroNight : rioHeroDay}
           alt="Paisagem atmosférica do Rio de Janeiro"
-          className="absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-500"
+          className="absolute inset-0 h-full w-full object-cover object-[80%_center] sm:object-center transition-opacity duration-500"
         />
 
         {isDark ? (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/45 via-[#08192B]/25 to-[#07111C]/78"
-          />
+          <>
+            {/* Gradiente vertical sutil para transição atmosférica e contraste perfeito */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/45 via-[#06101B]/15 to-[#06101B]/85"
+            />
+            {/* Gradiente horizontal suave no mobile mantendo o texto nítido na área limpa do céu */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#06101B]/60 via-[#06101B]/20 to-transparent sm:from-transparent"
+            />
+          </>
         ) : (
           <>
+            {/* Gradiente vertical natural mantendo as cores douradas vivas e transição suave */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(8,26,44,0) 0%, rgba(8,26,44,0.32) 34%, rgba(8,26,44,0.58) 64%, rgba(7,22,38,0.84) 100%)',
-              }}
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0A1826]/40 via-transparent to-[#0A1826]/80"
             />
-            {/* Bruma clara atrás do header fixo para contrastar a logo no modo dia */}
+            {/* Gradiente horizontal suave no mobile para garantir texto branco perfeitamente nítido sobre o céu */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-[106px] sm:h-[118px]"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(250,247,242,0.97) 0%, rgba(250,247,242,0.88) 48%, rgba(250,247,242,0.36) 76%, rgba(250,247,242,0) 100%)',
-              }}
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0A1826]/55 via-[#0A1826]/20 to-transparent sm:from-transparent"
             />
           </>
         )}
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div className="max-w-xl">
+            <div className="max-w-[280px] sm:max-w-md lg:max-w-xl">
               <p
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] ${heroGlassClass}`}
               >
@@ -270,11 +271,13 @@ export function HeroSection({
                 {greeting}
               </p>
 
-              <h1 className="mt-2.5 text-2xl font-extrabold leading-tight tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.75),0_1px_3px_rgba(5,14,24,0.85)] sm:text-4xl">
-                O que você está a fim de fazer?
+              <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.85),0_1px_3px_rgba(5,14,24,0.95)] sm:text-4xl">
+                A cidade acontece.
+                <br />
+                <span className="text-[#F1E8D8]">Você aproveita.</span>
               </h1>
-              <p className="mt-1.5 text-xs font-semibold text-[#F1E8D8] [text-shadow:0_1px_6px_rgba(5,14,24,0.8)] sm:text-sm">
-                Encontre experiências, oportunidades e programas no Rio.
+              <p className="mt-1.5 text-xs font-semibold text-[#F1E8D8]/95 [text-shadow:0_1px_6px_rgba(5,14,24,0.9)] sm:text-sm">
+                Encontre gastronomia, noites e passeios com vantagens reais no Rio.
               </p>
             </div>
 

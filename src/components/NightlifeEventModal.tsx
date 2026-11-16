@@ -23,6 +23,7 @@ import {
 } from '../types/nightlife';
 import type { Restaurant } from '../types/restaurant';
 import { NightlifeCoverArt } from './NightlifeCoverArt';
+import { buildNineNineUrl, launchNineNineRide } from '../utils/mobility';
 
 interface NightlifeEventModalProps {
   event: NightlifeEvent;
@@ -94,6 +95,13 @@ export function NightlifeEventModal({
       : `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${destinationQuery}`;
 
   const isSoldOut = event.availability_status === 'ESGOTADO';
+
+  const rideCoords = {
+    latitude: event.latitude || -22.9068,
+    longitude: event.longitude || -43.1729,
+    name: event.venue_name || event.title,
+  };
+  const nineNineUrl = buildNineNineUrl(rideCoords);
 
   return (
     <div
@@ -336,6 +344,19 @@ export function NightlifeEventModal({
             >
               <Car className="h-3.5 w-3.5" />
               Uber
+            </a>
+
+            <a
+              href={nineNineUrl}
+              onClick={(e) => {
+                e.preventDefault();
+                launchNineNineRide(rideCoords);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[#FFCC00]/15 px-3.5 py-2.5 text-xs font-bold text-amber-900 dark:text-amber-200 hover:border-[#FFCC00] transition active:scale-95"
+              title="Abrir no app 99 com trajeto pré-configurado"
+            >
+              <Car className="h-3.5 w-3.5 text-[#E6A800]" />
+              99
             </a>
           </div>
 

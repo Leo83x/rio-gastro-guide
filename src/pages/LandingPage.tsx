@@ -237,30 +237,28 @@ export function LandingPage({
         <img
           src={isDark ? rioHeroNight : rioHeroDay}
           alt="Rio de Janeiro"
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full object-cover object-[80%_center] sm:object-center"
         />
         {isDark ? (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/60 via-[#0A1D30]/45 to-[#07111C]/90"
-          />
+          <>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#06101B]/55 via-[#06101B]/25 to-[#06101B]/90"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#06101B]/60 via-[#06101B]/20 to-transparent sm:from-transparent"
+            />
+          </>
         ) : (
           <>
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(8,26,44,0.05) 0%, rgba(8,26,44,0.45) 36%, rgba(8,26,44,0.68) 65%, rgba(7,22,38,0.9) 100%)',
-              }}
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0A1826]/40 via-transparent to-[#0A1826]/85"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-[112px] sm:h-[128px]"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(250,247,242,0.97) 0%, rgba(250,247,242,0.88) 48%, rgba(250,247,242,0.36) 78%, rgba(250,247,242,0) 100%)',
-              }}
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0A1826]/55 via-[#0A1826]/20 to-transparent sm:from-transparent"
             />
           </>
         )}

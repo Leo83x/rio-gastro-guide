@@ -25,6 +25,12 @@ import {
   POINTS_PREVISIT_CHECKIN_NOTICE,
 } from '../types/verification';
 import { haversineKm } from '../utils/geo';
+import {
+  buildGoogleMapsUrl,
+  buildNineNineUrl,
+  buildUberUrl,
+  launchNineNineRide,
+} from '../utils/mobility';
 
 interface ExperienceIntelligenceBlocksProps {
   experience: Restaurant;
@@ -99,11 +105,17 @@ export function ExperienceIntelligenceBlocks({
     experience.neighborhood === 'Centro' ||
     experience.neighborhood === 'Ipanema';
 
-  const uberUrl = `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[latitude]=${experience.latitude}&dropoff[longitude]=${experience.longitude}&dropoff[nickname]=${encodeURIComponent(
-    experience.name
-  )}`;
-  const nineNineUrl = `https://99app.com/`;
-  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${experience.latitude},${experience.longitude}`;
+  const rideCoords = {
+    latitude: experience.latitude,
+    longitude: experience.longitude,
+    name: experience.name,
+    userLat: refLat,
+    userLon: refLon,
+  };
+
+  const uberUrl = buildUberUrl(rideCoords);
+  const nineNineUrl = buildNineNineUrl(rideCoords);
+  const googleMapsUrl = buildGoogleMapsUrl(experience.latitude, experience.longitude);
 
   const currentBar = HOURS_CURVE.find((h) => parseInt(h.hour, 10) === currentHour);
   const currentPct = currentBar?.pct ?? 52;
@@ -262,9 +274,12 @@ export function ExperienceIntelligenceBlocks({
           </a>
           <a
             href={nineNineUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-lg bg-[#FFCC00] px-3 py-1.5 text-[11px] font-bold text-black hover:opacity-90"
+            onClick={(e) => {
+              e.preventDefault();
+              launchNineNineRide(rideCoords);
+            }}
+            className="inline-flex items-center gap-1 rounded-lg bg-[#FFCC00] px-3 py-1.5 text-[11px] font-bold text-black transition hover:opacity-90 active:scale-95"
+            title="Abrir no app 99 com destino pré-configurado"
           >
             Abrir 99 <ExternalLink className="h-3 w-3" />
           </a>
