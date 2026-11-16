@@ -32,13 +32,15 @@ function readLocalRestaurants(): Restaurant[] {
 
     const parsed = (JSON.parse(raw) as Restaurant[]).map(normalizeRecord);
 
-    // Non-destructive one-time merge of new multi-category Rio experiences
-    if (!localStorage.getItem(STORAGE_KEY_SUPERAPP_MERGED) && parsed.length > 0) {
-      const existingExtIds = new Set(parsed.map((p) => p.external_id));
-      const toAppend = SEED_EXPERIENCES.filter((s) => !existingExtIds.has(s.external_id));
-      const merged = [...parsed, ...toAppend];
+    // Non-destructive continuous sync of seed experiences (e.g. newly added rooftops and venues)
+    const existingIds = new Set(parsed.map((p) => p.id || p.external_id));
+    const missingSeeds = SEED_EXPERIENCES.filter(
+      (s) => !existingIds.has(s.id) && !existingIds.has(s.external_id)
+    );
+    if (missingSeeds.length > 0) {
+      const merged = [...parsed, ...missingSeeds];
       localStorage.setItem(STORAGE_KEY_RESTAURANTS, JSON.stringify(merged));
-      localStorage.setItem(STORAGE_KEY_SUPERAPP_MERGED, '1');
+      localStorage.setItem(STORAGE_KEY_SUPERAPP_MERGED, '2');
       return merged;
     }
 

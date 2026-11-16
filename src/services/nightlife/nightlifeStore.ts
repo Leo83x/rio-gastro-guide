@@ -29,6 +29,8 @@ import {
   normalizeTimeHHmm,
 } from './nightlifeDedup';
 
+import { buildStarterCuratedNightlifeEvents } from './defaultNightlifeEvents';
+
 export const NIGHTLIFE_EVENTS_STORAGE_KEY = 'borario_nightlife_events_v1';
 export const NIGHTLIFE_RUNS_STORAGE_KEY = 'borario_nightlife_runs_v1';
 const SESSION_SYMPLA_TOKEN_KEY = 'borario_session_sympla_token';
@@ -46,12 +48,20 @@ function sanitizeStoredCoverUrl(raw?: string): string {
 export function readLocalNightlifeEvents(): NightlifeEvent[] {
   try {
     const raw = localStorage.getItem(NIGHTLIFE_EVENTS_STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      const seeded = buildStarterCuratedNightlifeEvents();
+      writeLocalNightlifeEvents(seeded);
+      return seeded;
+    }
     const parsed = JSON.parse(raw) as NightlifeEvent[];
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      const seeded = buildStarterCuratedNightlifeEvents();
+      writeLocalNightlifeEvents(seeded);
+      return seeded;
+    }
     return deduplicateEventsList(parsed);
   } catch {
-    return [];
+    return buildStarterCuratedNightlifeEvents();
   }
 }
 
@@ -226,6 +236,13 @@ export async function getAllNightlifeEvents(options: { runSweep?: boolean } = { 
     } catch {
       // keep local fallback seamlessly
     }
+  }
+
+  const hasRooftops = items.some(
+    (ev) => ev.sub_area === 'ROOFTOPS_EXPERIENCIAS' && ev.curation_status === 'PUBLICADO'
+  );
+  if (!hasRooftops) {
+    items = deduplicateEventsList([...items, ...buildStarterCuratedNightlifeEvents()]);
   }
 
   items = deduplicateEventsList(items);

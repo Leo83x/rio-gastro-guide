@@ -48,7 +48,12 @@ import {
 import type { ConfiaRecommendation, TrustConnection } from './types/confia';
 import type { NotificationItem, ReservationRequest, UserPreferences } from './types/experience';
 import type { IntentVaultItem } from './types/intention';
-import { NIGHTLIFE_SUBAREA_META, type NightlifeEvent } from './types/nightlife';
+import {
+  NIGHTLIFE_SUBAREA_META,
+  type NightlifeDateFilter,
+  type NightlifeEvent,
+  type NightlifeSubArea,
+} from './types/nightlife';
 import type { CommercialModality } from './types/partnerCommercial';
 import type { ClaimRequest, Restaurant, RestaurantCategory } from './types/restaurant';
 import type { GeoCoords } from './utils/geo';
@@ -67,6 +72,10 @@ export function App() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [selectedNightlifeEvent, setSelectedNightlifeEvent] = useState<NightlifeEvent | null>(null);
   const [showPersonalize, setShowPersonalize] = useState(false);
+
+  // Nightlife Sub-filters
+  const [nightlifeSubAreaFilter, setNightlifeSubAreaFilter] = useState<NightlifeSubArea | 'ALL'>('ALL');
+  const [nightlifeDateFilter, setNightlifeDateFilter] = useState<NightlifeDateFilter>('ALL');
 
   // Superapp State
   const [preferences, setPreferences] = useState<UserPreferences>(() => getUserPreferences());
@@ -274,8 +283,60 @@ export function App() {
         } else if (filters.macroCategory === 'Vida Noturna') {
           const isNight =
             r.macro_category === 'Vida Noturna' ||
-            r.macro_category === 'Eventos & Shows';
+            r.macro_category === 'Eventos & Shows' ||
+            (r.category || '').toLowerCase().includes('bar') ||
+            (r.category || '').toLowerCase().includes('boteco') ||
+            (r.category || '').toLowerCase().includes('rooftop');
           if (!isNight) return false;
+
+          if (nightlifeSubAreaFilter !== 'ALL') {
+            const cat = (r.category || '').toLowerCase();
+            const name = (r.name || '').toLowerCase();
+            const desc = (r.description || '').toLowerCase();
+            const tags = (r.moment_tags || []).join(' ').toLowerCase();
+            const fullText = `${name} ${cat} ${desc} ${tags}`;
+
+            if (nightlifeSubAreaFilter === 'ROOFTOPS_EXPERIENCIAS') {
+              const isRooftop =
+                cat.includes('rooftop') ||
+                name.includes('rooftop') ||
+                desc.includes('rooftop') ||
+                fullText.includes('vista panorâmica') ||
+                fullText.includes('lounge');
+              if (!isRooftop) return false;
+            } else if (nightlifeSubAreaFilter === 'SAMBA_PAGODE') {
+              const isSamba =
+                cat.includes('samba') ||
+                cat.includes('pagode') ||
+                fullText.includes('samba') ||
+                fullText.includes('pagode') ||
+                fullText.includes('roda de samba') ||
+                name.includes('rato') ||
+                name.includes('scenarium');
+              if (!isSamba) return false;
+            } else if (nightlifeSubAreaFilter === 'FESTAS_BALADAS') {
+              const isParty =
+                cat.includes('balada') ||
+                cat.includes('festa') ||
+                fullText.includes('balada') ||
+                fullText.includes('festa') ||
+                fullText.includes('dj') ||
+                fullText.includes('eletrônica') ||
+                name.includes('bosque');
+              if (!isParty) return false;
+            } else if (nightlifeSubAreaFilter === 'SHOWS') {
+              const isShow =
+                cat.includes('show') ||
+                cat.includes('teatro') ||
+                fullText.includes('show') ||
+                fullText.includes('ao vivo') ||
+                fullText.includes('concerto') ||
+                name.includes('circo') ||
+                name.includes('fundição') ||
+                name.includes('theatro');
+              if (!isShow) return false;
+            }
+          }
         } else if ((r.macro_category || 'Gastronomia') !== filters.macroCategory) {
           return false;
         }
@@ -324,7 +385,7 @@ export function App() {
     }
 
     return list;
-  }, [restaurants, filters, preferences]);
+  }, [restaurants, filters, preferences, nightlifeSubAreaFilter]);
 
   const handleRestaurantClaimed = (restaurantId: string) => {
     setRestaurants((prev) =>
@@ -712,6 +773,15 @@ export function App() {
                 }}
                 onGoToProfile={navigateToProfile}
                 onOpenPersonalize={() => setShowPersonalize(true)}
+                activeNightlifeSubArea={nightlifeSubAreaFilter}
+                onNightlifeSubAreaChange={(sub) => {
+                  setNightlifeSubAreaFilter(sub);
+                  if (sub !== 'ALL') {
+                    setFilters((prev) => ({ ...prev, macroCategory: 'Vida Noturna' }));
+                  }
+                }}
+                activeNightlifeDateFilter={nightlifeDateFilter}
+                onNightlifeDateFilterChange={setNightlifeDateFilter}
               />
             )}
 
@@ -725,6 +795,10 @@ export function App() {
                   onSaveEventToVault={handleSaveNightlifeToVault}
                   onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
                   onGoToAdminNightlife={isAdminAuthenticated ? navigateToAdminNightlife : undefined}
+                  activeSubArea={nightlifeSubAreaFilter}
+                  onSubAreaChange={setNightlifeSubAreaFilter}
+                  activeDateFilter={nightlifeDateFilter}
+                  onDateFilterChange={setNightlifeDateFilter}
                 />
               </div>
             )}
@@ -792,15 +866,76 @@ export function App() {
                     >
                       {showEditorialDiscover
                         ? 'Catálogo Completo do Rio'
-                        : `Resultados para você (${filteredRestaurants.length})`}
+                        : filters.macroCategory === 'Vida Noturna'
+                          ? nightlifeSubAreaFilter === 'ROOFTOPS_EXPERIENCIAS'
+                            ? `Rooftops & Bares Panorâmicos (${filteredRestaurants.length})`
+                            : nightlifeSubAreaFilter === 'SAMBA_PAGODE'
+                              ? `Rodas de Samba & Botecos Tradicionais (${filteredRestaurants.length})`
+                              : nightlifeSubAreaFilter === 'FESTAS_BALADAS'
+                                ? `Festas & Baladas no Rio (${filteredRestaurants.length})`
+                                : nightlifeSubAreaFilter === 'SHOWS'
+                                  ? `Casas de Shows & Palcos no Rio (${filteredRestaurants.length})`
+                                  : `Opções da Noite Carioca (${filteredRestaurants.length})`
+                          : `Resultados para você (${filteredRestaurants.length})`}
                     </h2>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {showEditorialDiscover
                         ? isCatalogTruncated
                           ? `Amostra inicial com ${visibleCatalogRestaurants.length} de ${filteredRestaurants.length} experiências no Rio.`
                           : `Exibindo todas as ${filteredRestaurants.length} experiências do catálogo.`
-                        : 'Filtros aplicados sobre o catálogo completo do Rio.'}
+                        : filters.macroCategory === 'Vida Noturna'
+                          ? 'Estabelecimentos e programações noturnas filtrados no Rio.'
+                          : 'Filtros aplicados sobre o catálogo completo do Rio.'}
                     </p>
+                    {filters.macroCategory === 'Vida Noturna' &&
+                      (nightlifeSubAreaFilter !== 'ALL' || nightlifeDateFilter !== 'ALL') && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {nightlifeSubAreaFilter !== 'ALL' && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#123B56]/10 px-2.5 py-0.5 text-xs font-semibold text-[#123B56] dark:bg-sky-900/30 dark:text-sky-300">
+                              {nightlifeSubAreaFilter === 'ROOFTOPS_EXPERIENCIAS' && 'Rooftops e experiências'}
+                              {nightlifeSubAreaFilter === 'SAMBA_PAGODE' && 'Samba e pagode'}
+                              {nightlifeSubAreaFilter === 'FESTAS_BALADAS' && 'Festas e baladas'}
+                              {nightlifeSubAreaFilter === 'SHOWS' && 'Shows'}
+                              <button
+                                type="button"
+                                onClick={() => setNightlifeSubAreaFilter('ALL')}
+                                className="ml-1 hover:opacity-75"
+                                title="Remover filtro de subárea"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          )}
+                          {nightlifeDateFilter !== 'ALL' && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#FF765E]/15 px-2.5 py-0.5 text-xs font-semibold text-[#FF765E]">
+                              {nightlifeDateFilter === 'TODAY' && 'Dia: Hoje'}
+                              {nightlifeDateFilter === 'TOMORROW' && 'Dia: Amanhã'}
+                              {nightlifeDateFilter === 'FRIDAY' && 'Dia: Sexta-feira'}
+                              {nightlifeDateFilter === 'SATURDAY' && 'Dia: Sábado'}
+                              {nightlifeDateFilter === 'SUNDAY' && 'Dia: Domingo'}
+                              {nightlifeDateFilter === 'FREE' && 'Entrada Franca'}
+                              <button
+                                type="button"
+                                onClick={() => setNightlifeDateFilter('ALL')}
+                                className="ml-1 hover:opacity-75"
+                                title="Remover filtro de data"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNightlifeSubAreaFilter('ALL');
+                              setNightlifeDateFilter('ALL');
+                            }}
+                            className="text-xs text-[var(--text-secondary)] underline hover:text-[var(--text-primary)]"
+                          >
+                            Limpar filtros da noite
+                          </button>
+                        </div>
+                      )}
                   </div>
 
                   {showEditorialDiscover && (

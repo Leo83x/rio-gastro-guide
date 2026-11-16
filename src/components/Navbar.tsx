@@ -249,23 +249,6 @@ export function Navbar({
               )}
             </div>
 
-            {/* Profile Avatar (alinhado com o visual de referência) */}
-            <button
-              type="button"
-              onClick={() => onSelectTab('profile')}
-              title="Meu Perfil e Carteira BoraRio"
-              aria-label="Abrir Perfil"
-              className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 transition-transform hover:scale-105 active:scale-95 ${
-                isOverHero
-                  ? 'border-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.3)]'
-                  : 'border-[var(--border-hairline)]'
-              }`}
-            >
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white">
-                <User className="h-4 w-4" />
-              </div>
-            </button>
-
             <button
               type="button"
               onClick={onToggleTheme}

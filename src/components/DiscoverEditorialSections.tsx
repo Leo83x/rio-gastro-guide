@@ -37,7 +37,7 @@ import { getPartnerRewards } from '../services/rewardMarketplaceStore';
 import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
 import type { ConfiaRecommendation } from '../types/confia';
 import type { UserPreferences } from '../types/experience';
-import type { NightlifeEvent } from '../types/nightlife';
+import type { NightlifeDateFilter, NightlifeEvent, NightlifeSubArea } from '../types/nightlife';
 import type { CommercialModality } from '../types/partnerCommercial';
 import type { Restaurant } from '../types/restaurant';
 import {
@@ -79,6 +79,10 @@ interface DiscoverEditorialSectionsProps {
   onGoToConfia: () => void;
   onGoToProfile: (opts?: { section?: ProfileSectionTab; focus?: ProfileFocusTarget }) => void;
   onOpenPersonalize: () => void;
+  activeNightlifeSubArea?: NightlifeSubArea | 'ALL';
+  onNightlifeSubAreaChange?: (subArea: NightlifeSubArea | 'ALL') => void;
+  activeNightlifeDateFilter?: NightlifeDateFilter;
+  onNightlifeDateFilterChange?: (dateFilter: NightlifeDateFilter) => void;
 }
 
 const MODALITIES_TODAY: Array<{
@@ -149,6 +153,10 @@ export function DiscoverEditorialSections({
   onGoToConfia: _onGoToConfia,
   onGoToProfile,
   onOpenPersonalize,
+  activeNightlifeSubArea,
+  onNightlifeSubAreaChange,
+  activeNightlifeDateFilter,
+  onNightlifeDateFilterChange,
 }: DiscoverEditorialSectionsProps) {
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showPassportList, setShowPassportList] = useState(false);
@@ -275,9 +283,11 @@ export function DiscoverEditorialSections({
           <button
             type="button"
             onClick={() => onGoToClub({ section: 'offerings', modality: 'ALL' })}
-            className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/12 px-3.5 py-1.5 text-xs font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white transition"
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#0E2235] via-[#123B56] to-[#0077B6] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:brightness-110 transition ring-1 ring-white/15"
           >
-            Ver todas no Bora Club <ArrowRight className="h-3.5 w-3.5" />
+            <Crown className="h-3.5 w-3.5 text-[#FFB347]" />
+            <span>Abrir Bora Club</span>
+            <ArrowRight className="h-3.5 w-3.5 text-white/80" />
           </button>
         </div>
 
@@ -369,6 +379,10 @@ export function DiscoverEditorialSections({
         onSaveEventToVault={onSaveNightlifeToVault}
         onAskBoraIa={onAskBoraIa}
         onGoToAdminNightlife={onGoToAdminNightlife}
+        activeSubArea={activeNightlifeSubArea}
+        onSubAreaChange={onNightlifeSubAreaChange}
+        activeDateFilter={activeNightlifeDateFilter}
+        onDateFilterChange={onNightlifeDateFilterChange}
       />
 
       {/* SEÇÃO 03 · SUA PRIMEIRA MISSÃO NO BORARIO (Progressão Imediata de Benefícios) */}
@@ -1146,8 +1160,9 @@ export function DiscoverEditorialSections({
                   setShowHowItWorksModal(false);
                   onGoToClub({ section: 'offerings', modality: 'ALL' });
                 }}
-                className="rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2 text-xs font-bold text-white"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#0E2235] via-[#123B56] to-[#0077B6] px-4 py-2 text-xs font-bold text-white shadow-xs hover:brightness-110 transition ring-1 ring-white/15"
               >
+                <Crown className="h-3.5 w-3.5 text-[#FFB347]" />
                 Explorar Bora Club
               </button>
               <button

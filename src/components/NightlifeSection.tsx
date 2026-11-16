@@ -39,6 +39,10 @@ interface NightlifeSectionProps {
   onSaveEventToVault?: (event: NightlifeEvent) => void;
   onAskBoraIa?: (promptText: string) => void;
   onGoToAdminNightlife?: () => void;
+  activeSubArea?: NightlifeSubArea | 'ALL';
+  onSubAreaChange?: (subArea: NightlifeSubArea | 'ALL') => void;
+  activeDateFilter?: NightlifeDateFilter;
+  onDateFilterChange?: (dateFilter: NightlifeDateFilter) => void;
 }
 
 const SUBAREA_FILTERS: Array<{
@@ -71,12 +75,29 @@ export function NightlifeSection({
   onFilterPermanentNightlife,
   onSaveEventToVault,
   onAskBoraIa,
+  activeSubArea,
+  onSubAreaChange,
+  activeDateFilter,
+  onDateFilterChange,
 }: NightlifeSectionProps) {
-  const [subAreaFilter, setSubAreaFilter] = useState<NightlifeSubArea | 'ALL'>('ALL');
-  const [dateFilter, setDateFilter] = useState<NightlifeDateFilter>('ALL');
+  const [internalSubAreaFilter, setInternalSubAreaFilter] = useState<NightlifeSubArea | 'ALL'>('ALL');
+  const [internalDateFilter, setInternalDateFilter] = useState<NightlifeDateFilter>('ALL');
   const [expanded, setExpanded] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<NightlifeEvent | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  const subAreaFilter = activeSubArea !== undefined ? activeSubArea : internalSubAreaFilter;
+  const dateFilter = activeDateFilter !== undefined ? activeDateFilter : internalDateFilter;
+
+  const handleSubAreaClick = (sub: NightlifeSubArea | 'ALL') => {
+    setInternalSubAreaFilter(sub);
+    onSubAreaChange?.(sub);
+  };
+
+  const handleDateClick = (df: NightlifeDateFilter) => {
+    setInternalDateFilter(df);
+    onDateFilterChange?.(df);
+  };
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
@@ -101,6 +122,50 @@ export function NightlifeSection({
       return true;
     });
   }, [activePublished, subAreaFilter, dateFilter, nowMs]);
+
+  const matchingPermanentVenues = useMemo(() => {
+    if (subAreaFilter === 'ALL') return [];
+    return permanentVenues.filter((v) => {
+      const cat = (v.category || '').toLowerCase();
+      const name = (v.name || '').toLowerCase();
+      const desc = (v.description || '').toLowerCase();
+
+      if (subAreaFilter === 'ROOFTOPS_EXPERIENCIAS') {
+        return (
+          cat.includes('rooftop') ||
+          name.includes('rooftop') ||
+          desc.includes('rooftop') ||
+          desc.includes('vista panorâmica')
+        );
+      }
+      if (subAreaFilter === 'SAMBA_PAGODE') {
+        return (
+          cat.includes('samba') ||
+          name.includes('samba') ||
+          desc.includes('samba') ||
+          name.includes('scenarium') ||
+          name.includes('rato')
+        );
+      }
+      if (subAreaFilter === 'FESTAS_BALADAS') {
+        return (
+          cat.includes('balada') ||
+          cat.includes('festa') ||
+          name.includes('bosque') ||
+          name.includes('circo')
+        );
+      }
+      if (subAreaFilter === 'SHOWS') {
+        return (
+          cat.includes('show') ||
+          cat.includes('teatro') ||
+          name.includes('circo') ||
+          name.includes('municipal')
+        );
+      }
+      return false;
+    });
+  }, [permanentVenues, subAreaFilter]);
 
   const visibleEvents = expanded ? filteredEvents : filteredEvents.slice(0, 6);
 
@@ -154,7 +219,7 @@ export function NightlifeSection({
             <button
               key={sub.id}
               type="button"
-              onClick={() => setSubAreaFilter(sub.id)}
+              onClick={() => handleSubAreaClick(sub.id)}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
                 active
                   ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
@@ -176,7 +241,7 @@ export function NightlifeSection({
             <button
               key={df.id}
               type="button"
-              onClick={() => setDateFilter(df.id)}
+              onClick={() => handleDateClick(df.id)}
               className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition ${
                 active
                   ? 'bg-white text-[#0D1E30]'
@@ -222,25 +287,51 @@ export function NightlifeSection({
           </div>
         </div>
       ) : filteredEvents.length === 0 ? (
-        <div className="mt-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/6 p-5 text-center sm:flex-row sm:text-left">
-          <div>
-            <p className="text-sm font-bold text-white">
-              Nenhum evento encontrado para este filtro.
-            </p>
-            <p className="text-xs text-[#F1E8D8]/80">
-              Há {activePublished.length} evento(s) na programação completa de A noite carioca.
-            </p>
+        <div className="mt-5 space-y-4">
+          <div className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/6 p-5 text-center sm:flex-row sm:text-left">
+            <div>
+              <p className="text-sm font-bold text-white">
+                Nenhum evento com ingresso aberto para esta data específica.
+              </p>
+              <p className="text-xs text-[#F1E8D8]/80">
+                {matchingPermanentVenues.length > 0
+                  ? `Confira as casas e rooftops recomendados abertos abaixo:`
+                  : `Há ${activePublished.length} evento(s) na programação completa de A noite carioca.`}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                handleSubAreaClick('ALL');
+                handleDateClick('ALL');
+              }}
+              className="shrink-0 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#0D1E30]"
+            >
+              Ver toda a programação ({activePublished.length})
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSubAreaFilter('ALL');
-              setDateFilter('ALL');
-            }}
-            className="shrink-0 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#0D1E30]"
-          >
-            Ver toda a programação ({activePublished.length})
-          </button>
+
+          {matchingPermanentVenues.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {matchingPermanentVenues.map((venue) => (
+                <div
+                  key={venue.id}
+                  onClick={() => onSelectPermanentVenue(venue)}
+                  className="group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/10 p-3.5 transition hover:bg-white/20"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-white group-hover:text-[#FFB347]">
+                      {venue.name}
+                    </p>
+                    <p className="truncate text-xs text-[#F1E8D8]/80">
+                      {venue.neighborhood} · {venue.category}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-bold text-[#FFB347]">Ver casa →</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <>
