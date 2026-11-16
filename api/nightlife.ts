@@ -1,6 +1,9 @@
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   NightlifeAvailabilityStatus,
+  NightlifeEvent,
   NightlifeEventDraft,
+  NightlifeIngestionRun,
   NightlifeSourcePlatform,
   NightlifeSubArea,
 } from '../src/types/nightlife.ts';
@@ -31,6 +34,11 @@ const ALLOWED_TICKETING_HOSTS = [
   'www.agendario.com',
   'tasendo.com.br',
   'www.tasendo.com.br',
+  'riotur.rio',
+  'www.riotur.rio',
+  'riotur.prefeitura.rio',
+  'visitrio.com.br',
+  'www.visitrio.com.br',
 ];
 
 const ALLOWED_IMAGE_CDN_HOSTS = [
@@ -42,6 +50,9 @@ const ALLOWED_IMAGE_CDN_HOSTS = [
   's3.amazonaws.com',
   'shotgun-media.s3.amazonaws.com',
   'img.evbuc.com',
+  'riotur.rio',
+  'www.riotur.rio',
+  'visitrio.com.br',
 ];
 
 const MAX_HTML_BYTES = 1_500_000;
@@ -94,6 +105,8 @@ function detectPlatformFromHost(hostname: string): NightlifeSourcePlatform {
   if (h.includes('ticket360')) return 'TICKET360';
   if (h.includes('tasendo')) return 'TA_SENDO';
   if (h.includes('agendario')) return 'AGENDA_RIO';
+  if (h.includes('riotur')) return 'RIOTUR';
+  if (h.includes('visitrio')) return 'VISIT_RIO';
   return 'MANUAL_ADMIN';
 }
 
@@ -290,13 +303,230 @@ function parseJsonLdEvents(html: string): Array<Record<string, unknown>> {
   return out;
 }
 
-async function handleParseUrl(targetRaw: string): Promise<Response> {
+function getSupabaseServerClient(): SupabaseClient | null {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    '';
+
+  if (!url || !key) return null;
+
+  return createClient(url, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+async function handleAdminList(): Promise<Response> {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return jsonResponse(200, {
+      ok: true,
+      events: [],
+      storage: 'local_only',
+      message: 'SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_URL não configuradas no servidor Vercel.',
+    });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('nightlife_events')
+      .select('*')
+      .order('is_featured', { ascending: false })
+      .order('starts_at', { ascending: true });
+
+    if (error) {
+      return jsonResponse(500, {
+        ok: false,
+        error: error.message,
+        storage: 'error',
+      });
+    }
+
+    return jsonResponse(200, {
+      ok: true,
+      events: data || [],
+      count: (data || []).length,
+      storage: 'supabase',
+    });
+  } catch (err) {
+    return jsonResponse(502, {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Falha ao consultar banco Supabase.',
+    });
+  }
+}
+
+async function handleGetPublished(): Promise<Response> {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return jsonResponse(200, { ok: true, events: [], storage: 'local_only' });
+  }
+  try {
+    const nowIso = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('nightlife_events')
+      .select('*')
+      .in('curation_status', ['PUBLICADO', 'PROGRAMADO'])
+      .gte('ends_at', nowIso)
+      .order('is_featured', { ascending: false })
+      .order('starts_at', { ascending: true });
+
+    if (error) {
+      return jsonResponse(500, { ok: false, error: error.message });
+    }
+    return jsonResponse(200, { ok: true, events: data || [], storage: 'supabase' });
+  } catch (err) {
+    return jsonResponse(502, {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Erro ao obter eventos publicados.',
+    });
+  }
+}
+
+async function handleAdminMutate(request: Request): Promise<Response> {
+  if (request.method !== 'POST') {
+    return jsonResponse(405, { error: 'Método POST obrigatório para mutações.' });
+  }
+
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return jsonResponse(503, {
+      ok: false,
+      error: 'SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_URL não configuradas no servidor Vercel. Operação persistida apenas no navegador.',
+      storage: 'local_only',
+    });
+  }
+
+  try {
+    const body = (await request.json()) as {
+      action?: string;
+      events?: NightlifeEvent[];
+      id?: string;
+      run?: NightlifeIngestionRun;
+    };
+
+    const mutationAction = body?.action;
+
+    if (mutationAction === 'upsert-events') {
+      const events = Array.isArray(body?.events) ? body.events : [];
+      if (events.length === 0) {
+        return jsonResponse(200, { ok: true, count: 0, storage: 'supabase' });
+      }
+
+      // Supabase upsert in batches of 50
+      const chunkSize = 50;
+      let insertedCount = 0;
+      for (let i = 0; i < events.length; i += chunkSize) {
+        const chunk = events.slice(i, i + chunkSize);
+        const { error } = await supabase
+          .from('nightlife_events')
+          .upsert(chunk, { onConflict: 'external_key' });
+        if (error) {
+          return jsonResponse(500, { ok: false, error: error.message, chunk_index: i });
+        }
+        insertedCount += chunk.length;
+      }
+
+      return jsonResponse(200, {
+        ok: true,
+        count: insertedCount,
+        storage: 'supabase',
+      });
+    }
+
+    if (mutationAction === 'delete-event') {
+      const id = body?.id;
+      if (!id) {
+        return jsonResponse(400, { ok: false, error: 'ID do evento é obrigatório.' });
+      }
+      const { error } = await supabase
+        .from('nightlife_events')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        return jsonResponse(500, { ok: false, error: error.message });
+      }
+      return jsonResponse(200, { ok: true, id, storage: 'supabase' });
+    }
+
+    if (mutationAction === 'clear-all') {
+      const { error } = await supabase
+        .from('nightlife_events')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (error) {
+        return jsonResponse(500, { ok: false, error: error.message });
+      }
+      return jsonResponse(200, { ok: true, storage: 'supabase' });
+    }
+
+    if (mutationAction === 'append-run') {
+      const run = body?.run;
+      if (!run) {
+        return jsonResponse(400, { ok: false, error: 'Dados da run de ingestão são obrigatórios.' });
+      }
+      const { error } = await supabase
+        .from('nightlife_ingestion_runs')
+        .insert(run);
+
+      if (error) {
+        return jsonResponse(200, { ok: true, warning: error.message, storage: 'partial' });
+      }
+      return jsonResponse(200, { ok: true, run, storage: 'supabase' });
+    }
+
+    if (mutationAction === 'get-runs') {
+      const { data, error } = await supabase
+        .from('nightlife_ingestion_runs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (error) {
+        return jsonResponse(200, { ok: true, runs: [] });
+      }
+      return jsonResponse(200, { ok: true, runs: data || [], storage: 'supabase' });
+    }
+
+    return jsonResponse(400, {
+      ok: false,
+      error: `Ação de mutação '${mutationAction}' não reconhecida.`,
+    });
+  } catch (err) {
+    return jsonResponse(500, {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Erro interno ao processar mutação administrativa.',
+    });
+  }
+}
+
+interface ParseUrlResult {
+  ok: boolean;
+  status?: number;
+  platform?: NightlifeSourcePlatform;
+  has_structured_jsonld?: boolean;
+  draft?: NightlifeEventDraft;
+  error?: string;
+  blocked_by_protection?: boolean;
+  code?: string;
+  source_url?: string;
+}
+
+async function handleParseUrlCore(targetRaw: string): Promise<ParseUrlResult> {
   const safeUrl = validateSafeHttpsUrl(targetRaw, ALLOWED_TICKETING_HOSTS);
   if (!safeUrl) {
-    return jsonResponse(400, {
+    return {
+      ok: false,
+      status: 400,
       error:
-        'URL não autorizada ou inválida. Use links HTTPS de plataformas de eventos/casas permitidas (Sympla, Ingresse, Shotgun, Eventbrite, Eventim, Ticketmaster, Ticket360 ou casas parceiras).',
-    });
+        'URL não autorizada ou inválida. Use links HTTPS de plataformas de eventos permitidas (Sympla, Ingresse, Shotgun, Eventbrite, Eventim, Ticketmaster, Riotur ou casas parceiras).',
+    };
   }
 
   const platform = detectPlatformFromHost(safeUrl.hostname);
@@ -313,7 +543,7 @@ async function handleParseUrl(targetRaw: string): Promise<Response> {
     });
 
     if (res.url && !validateSafeHttpsUrl(res.url, ALLOWED_TICKETING_HOSTS)) {
-      return jsonResponse(403, { error: 'Redirecionamento externo fora da allowlist de eventos.' });
+      return { ok: false, status: 403, error: 'Redirecionamento externo fora da allowlist de eventos.' };
     }
 
     const htmlText = (await res.text()).slice(0, MAX_HTML_BYTES);
@@ -327,20 +557,24 @@ async function handleParseUrl(targetRaw: string): Promise<Response> {
       lowerHtml.includes('verify you are human') ||
       lowerHtml.includes('attention required! | cloudflare')
     ) {
-      return jsonResponse(422, {
+      return {
+        ok: false,
+        status: 422,
         blocked_by_protection: true,
         code: 'EXTRACTION_BLOCKED_MANUAL_REQUIRED',
         platform,
         source_url: safeUrl.toString(),
         error:
           'Esta página possui proteção anti-bot/CAPTCHA ativa. O BoraRio nunca burla proteções externas — preencha os campos do evento manualmente na fila de curadoria.',
-      });
+      };
     }
 
     if (!res.ok) {
-      return jsonResponse(res.status >= 400 ? res.status : 502, {
+      return {
+        ok: false,
+        status: res.status >= 400 ? res.status : 502,
         error: `A origem retornou HTTP ${res.status}.`,
-      });
+      };
     }
 
     const jsonLdEvents = parseJsonLdEvents(htmlText);
@@ -351,10 +585,12 @@ async function handleParseUrl(targetRaw: string): Promise<Response> {
     const rawTitle = String(ev?.name || ogTitle || titleTagMatch?.[1] || '').trim();
 
     if (!rawTitle) {
-      return jsonResponse(422, {
+      return {
+        ok: false,
+        status: 422,
         code: 'INCOMPLETE_METADATA',
         error: 'Não foi possível localizar título estruturado (JSON-LD/OpenGraph) nesta página.',
-      });
+      };
     }
 
     const rawDesc = String(
@@ -437,15 +673,369 @@ async function handleParseUrl(targetRaw: string): Promise<Response> {
       is_demonstrative: false,
     };
 
-    return jsonResponse(200, {
+    return {
       ok: true,
+      status: 200,
       platform,
       has_structured_jsonld: Boolean(ev),
       draft,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 502,
+      error: `Falha ao ler URL do evento: ${err instanceof Error ? err.message : 'erro de rede'}`,
+    };
+  }
+}
+
+async function handleParseUrl(targetRaw: string): Promise<Response> {
+  const result = await handleParseUrlCore(targetRaw);
+  return jsonResponse(result.status || (result.ok ? 200 : 400), result);
+}
+
+async function handleParseUrls(request: Request): Promise<Response> {
+  if (request.method !== 'POST') {
+    return jsonResponse(405, { error: 'Método POST obrigatório para parse-urls.' });
+  }
+  try {
+    const body = (await request.json()) as { urls?: string[] };
+    const rawUrls = Array.isArray(body?.urls) ? body.urls : [];
+    const cleanUrls = rawUrls
+      .map((u) => (typeof u === 'string' ? u.trim() : ''))
+      .filter((u) => u.startsWith('http'))
+      .slice(0, 30);
+
+    if (cleanUrls.length === 0) {
+      return jsonResponse(400, {
+        error: 'Nenhuma URL válida fornecida. Envie um array com até 30 links de eventos.',
+      });
+    }
+
+    const drafts: NightlifeEventDraft[] = [];
+    const errors: Array<{ url: string; error: string }> = [];
+
+    // Process concurrently in chunks of 4
+    const concurrency = 4;
+    for (let i = 0; i < cleanUrls.length; i += concurrency) {
+      const chunk = cleanUrls.slice(i, i + concurrency);
+      await Promise.all(
+        chunk.map(async (url) => {
+          try {
+            const res = await handleParseUrlCore(url);
+            if (res.ok && res.draft) {
+              drafts.push(res.draft);
+            } else {
+              errors.push({ url, error: res.error || 'Falha na extração de metadados da URL.' });
+            }
+          } catch (err) {
+            errors.push({
+              url,
+              error: err instanceof Error ? err.message : 'Erro ao processar página remota.',
+            });
+          }
+        })
+      );
+    }
+
+    return jsonResponse(200, {
+      ok: true,
+      total_requested: cleanUrls.length,
+      success_count: drafts.length,
+      error_count: errors.length,
+      drafts,
+      errors,
+    });
+  } catch (err) {
+    return jsonResponse(400, {
+      error: `Formato de requisição inválido: ${err instanceof Error ? err.message : 'JSON inválido'}`,
+    });
+  }
+}
+
+function parseRioturContent(conteudoHtml: string): {
+  venue: string;
+  address: string;
+  schedule: string;
+  startTime: string;
+  ticketUrl: string;
+  isFree: boolean;
+  plainText: string;
+} {
+  const decoded = (conteudoHtml || '')
+    .replace(/&#8211;/g, '-')
+    .replace(/&#8217;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#038;/g, '&');
+
+  let ticketUrl = '';
+  const linkMatch = decoded.match(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>/i);
+  if (linkMatch && linkMatch[1]?.startsWith('http')) {
+    ticketUrl = linkMatch[1].trim();
+  }
+
+  let venue = '';
+  const localMatch =
+    decoded.match(/<strong>\s*Local:?\s*<\/strong>\s*:?\s*([^<]+)/i) ||
+    decoded.match(/Local:?\s*<\/strong>\s*:?\s*([^<]+)/i) ||
+    decoded.match(/Local:\s*([^<\n\r]+)/i);
+  if (localMatch) {
+    venue = localMatch[1].replace(/^[–\-:\s]+/, '').trim();
+  }
+
+  let address = '';
+  const enderecoMatch =
+    decoded.match(/<strong>\s*Endere[cç]o:?\s*<\/strong>\s*:?\s*([^<]+)/i) ||
+    decoded.match(/Endere[cç]o:\s*([^<\n\r]+)/i);
+  if (enderecoMatch) {
+    address = enderecoMatch[1].replace(/^[–\-:\s]+/, '').trim();
+  }
+
+  let schedule = '';
+  const horarioMatch =
+    decoded.match(/<strong>\s*Hor[aá]rios?:?\s*<\/strong>\s*:?\s*([^<]+)/i) ||
+    decoded.match(/Hor[aá]rios?:\s*([^<\n\r]+)/i);
+  if (horarioMatch) {
+    schedule = horarioMatch[1].replace(/^[–\-:\s]+/, '').trim();
+  }
+
+  let startTime = '20:00';
+  const timeMatch = schedule.match(/(\d{1,2})h(?:(\d{2}))?/i) || schedule.match(/(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const hours = String(timeMatch[1]).padStart(2, '0');
+    const mins = timeMatch[2] ? String(timeMatch[2]).padStart(2, '0') : '00';
+    startTime = `${hours}:${mins}`;
+  }
+
+  const isFree = /gratuito|entrada franca|gr[aá]tis|free/i.test(decoded);
+  const plainText = decoded.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  return { venue, address, schedule, startTime, ticketUrl, isFree, plainText };
+}
+
+function buildStartEndIsoRioLocal(
+  eventDate: string,
+  startTime: string,
+  endTime?: string
+): { startsAtIso: string; endsAtIso: string } {
+  const cleanDate = /^\d{4}-\d{2}-\d{2}$/.test(eventDate)
+    ? eventDate
+    : new Date().toISOString().slice(0, 10);
+  const cleanStart = /^\d{2}:\d{2}$/.test(startTime) ? startTime : '20:00';
+  const startsAt = new Date(`${cleanDate}T${cleanStart}:00-03:00`);
+  const safeStart = Number.isNaN(startsAt.getTime()) ? new Date() : startsAt;
+
+  let safeEnd: Date;
+  if (endTime && /^\d{2}:\d{2}$/.test(endTime)) {
+    const candidateEnd = new Date(`${cleanDate}T${endTime}:00-03:00`);
+    if (!Number.isNaN(candidateEnd.getTime())) {
+      safeEnd = candidateEnd <= safeStart
+        ? new Date(candidateEnd.getTime() + 24 * 3600 * 1000)
+        : candidateEnd;
+    } else {
+      safeEnd = new Date(safeStart.getTime() + 6 * 3600 * 1000);
+    }
+  } else {
+    safeEnd = new Date(safeStart.getTime() + 6 * 3600 * 1000);
+  }
+
+  return {
+    startsAtIso: safeStart.toISOString(),
+    endsAtIso: safeEnd.toISOString(),
+  };
+}
+
+interface RioturRawItem {
+  id?: number | string;
+  titulo?: string;
+  conteudo?: string;
+  data_inicio?: string;
+  data_fim?: string;
+  thumbnail?: string;
+}
+
+async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Response> {
+  let mesParam = reqUrl.searchParams.get('mes') || '';
+  let anoParam = reqUrl.searchParams.get('ano') || '';
+  let syncMonthsCount = Math.min(3, Math.max(1, parseInt(reqUrl.searchParams.get('sync_months') || '2', 10)));
+
+  if (request.method === 'POST') {
+    try {
+      const body = (await request.json()) as { mes?: string | number; ano?: string | number; sync_months?: number };
+      if (body.mes) mesParam = String(body.mes);
+      if (body.ano) anoParam = String(body.ano);
+      if (body.sync_months) syncMonthsCount = Math.min(3, Math.max(1, body.sync_months));
+    } catch {
+      // ignore empty body
+    }
+  }
+
+  const now = new Date();
+  const baseMonth = mesParam ? parseInt(mesParam, 10) : now.getMonth() + 1;
+  const baseYear = anoParam ? parseInt(anoParam, 10) : now.getFullYear();
+
+  try {
+    // 1. Fetch agenda page to obtain fresh session nonce
+    const pageRes = await fetch('https://riotur.rio/agenda/', {
+      method: 'GET',
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8',
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+
+    if (!pageRes.ok) {
+      return jsonResponse(502, {
+        error: `Falha ao acessar https://riotur.rio/agenda/ (HTTP ${pageRes.status}).`,
+      });
+    }
+
+    const pageHtml = await pageRes.text();
+    const nonceMatch =
+      pageHtml.match(/action:\s*['"]buscar_eventos['"],[\s\S]*?nonce:\s*['"]([a-zA-Z0-9]+)['"]/i) ||
+      pageHtml.match(/nonce:\s*['"]([a-zA-Z0-9]+)['"]/i);
+
+    const nonce = nonceMatch ? nonceMatch[1] : '';
+    if (!nonce) {
+      return jsonResponse(502, {
+        error: 'Não foi possível extrair o token de sessão (nonce) da agenda da Riotur.',
+      });
+    }
+
+    // 2. Fetch events across requested months
+    const rawEventsMap = new Map<string, RioturRawItem>();
+
+    for (let mOffset = 0; mOffset < syncMonthsCount; mOffset++) {
+      let targetMonth = baseMonth + mOffset;
+      let targetYear = baseYear;
+      while (targetMonth > 12) {
+        targetMonth -= 12;
+        targetYear += 1;
+      }
+
+      const postBody = new URLSearchParams({
+        action: 'buscar_eventos',
+        mes: String(targetMonth),
+        ano: String(targetYear),
+        nonce,
+      });
+
+      const ajaxRes = await fetch('https://riotur.rio/wp-admin/admin-ajax.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        body: postBody.toString(),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!ajaxRes.ok) continue;
+
+      const ajaxJson = (await ajaxRes.json()) as {
+        success?: boolean;
+        data?: Record<string, RioturRawItem[] | RioturRawItem>;
+      };
+
+      if (ajaxJson?.success && ajaxJson?.data && typeof ajaxJson.data === 'object') {
+        for (const dateKey of Object.keys(ajaxJson.data)) {
+          const val = ajaxJson.data[dateKey];
+          const items = Array.isArray(val) ? val : [val];
+          for (const it of items) {
+            if (!it || !it.titulo) continue;
+            if (it.titulo.toLowerCase().includes('evento teste')) continue;
+            const uniqueKey = it.id
+              ? `id:${it.id}`
+              : `${it.titulo.trim().toLowerCase()}:${it.data_inicio || dateKey}`;
+            if (!rawEventsMap.has(uniqueKey)) {
+              rawEventsMap.set(uniqueKey, { ...it, data_inicio: it.data_inicio || dateKey });
+            }
+          }
+        }
+      }
+    }
+
+    const uniqueRaw = Array.from(rawEventsMap.values());
+
+    // 3. Map into NightlifeEventDraft
+    const drafts: NightlifeEventDraft[] = uniqueRaw.map((it) => {
+      const title = String(it.titulo || '').trim();
+      const content = String(it.conteudo || '');
+      const parsed = parseRioturContent(content);
+
+      const venueName = (parsed.venue || 'Local no Rio de Janeiro').trim();
+      const address = (parsed.address || `${venueName}, Rio de Janeiro - RJ`).trim();
+      const neighborhood = extractNeighborhood(`${address} ${venueName} ${title}`);
+      const rawDate = String(it.data_inicio || '').trim();
+      const eventDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+        ? rawDate
+        : new Date().toISOString().slice(0, 10);
+
+      const startTime = parsed.startTime || '20:00';
+      const { startsAtIso, endsAtIso } = buildStartEndIsoRioLocal(eventDate, startTime);
+      const { subArea, genres } = inferSubAreaAndGenres(`${title} ${parsed.plainText}`);
+      const thumbnail = it.thumbnail && it.thumbnail.startsWith('http') ? it.thumbnail.trim() : '';
+
+      const isFree = parsed.isFree;
+      const priceLabel = isFree
+        ? 'Entrada Franca'
+        : parsed.ticketUrl
+          ? 'Consultar ingressos'
+          : 'Consultar no local';
+
+      return {
+        external_key: `riotur:${it.id || title}`,
+        source_platform: 'RIOTUR' as const,
+        source_external_id: it.id ? String(it.id) : undefined,
+        source_url: parsed.ticketUrl || 'https://riotur.rio/agenda/',
+        title,
+        short_summary: summarizeCleanly(parsed.plainText, venueName, neighborhood),
+        sub_area: subArea,
+        music_genres: genres,
+        moment_tags: ['friends', 'culture'],
+        age_rating: /infantil|crian[cç]a/i.test(`${title} ${parsed.plainText}`) ? 'Livre' : '18+',
+        venue_name: venueName,
+        neighborhood,
+        address,
+        event_date: eventDate,
+        start_time: startTime,
+        starts_at: startsAtIso,
+        ends_at: endsAtIso,
+        is_free: isFree,
+        price_display_label: priceLabel,
+        ticket_url: parsed.ticketUrl || undefined,
+        availability_status: isFree ? ('GRATUITO' as const) : ('DISPONIVEL' as const),
+        lineup: [],
+        cover_image: thumbnail,
+        image_origin: thumbnail ? ('PRESS_KIT_LICENSED' as const) : ('NONE' as const),
+        image_license_note: thumbnail
+          ? 'Divulgação oficial da Riotur / Prefeitura da Cidade do Rio de Janeiro.'
+          : 'Sem arte oficial retornada.',
+        is_featured: false,
+        is_demonstrative: false,
+      };
+    });
+
+    return jsonResponse(200, {
+      ok: true,
+      months_synced: syncMonthsCount,
+      base_month: baseMonth,
+      base_year: baseYear,
+      raw_count: uniqueRaw.length,
+      drafts_count: drafts.length,
+      drafts,
     });
   } catch (err) {
     return jsonResponse(502, {
-      error: `Falha ao ler URL do evento: ${err instanceof Error ? err.message : 'erro de rede'}`,
+      ok: false,
+      error: `Falha ao sincronizar com agenda oficial da Riotur: ${err instanceof Error ? err.message : 'erro de rede'}`,
     });
   }
 }
@@ -781,6 +1371,26 @@ async function routeRequest(request: Request): Promise<Response> {
   const pathAction = reqUrl.pathname.replace(/^\/api\/nightlife\/?/, '').replace(/^\/+/, '');
   const action = queryAction || pathAction;
 
+  if (action === 'admin-list') {
+    return handleAdminList();
+  }
+
+  if (action === 'admin-mutate') {
+    return handleAdminMutate(request);
+  }
+
+  if (action === 'get-published') {
+    return handleGetPublished();
+  }
+
+  if (action === 'parse-urls') {
+    return handleParseUrls(request);
+  }
+
+  if (action === 'fetch-riotur') {
+    return handleFetchRiotur(request, reqUrl);
+  }
+
   if (action === 'parse-url') {
     let target = reqUrl.searchParams.get('url') || '';
     if (!target && request.method === 'POST') {
@@ -807,7 +1417,8 @@ async function routeRequest(request: Request): Promise<Response> {
   }
 
   return jsonResponse(404, {
-    error: 'Ação nightlife inválida (permitidas: parse-url, fetch-sympla, fetch-ingresse, mirror-image).',
+    error:
+      'Ação nightlife inválida (permitidas: admin-list, admin-mutate, get-published, parse-urls, fetch-riotur, parse-url, fetch-sympla, fetch-ingresse, mirror-image).',
   });
 }
 

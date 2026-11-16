@@ -13,6 +13,7 @@ import {
   Globe2,
   KeyRound,
   Link2,
+  ListPlus,
   Loader2,
   MoonStar,
   Plus,
@@ -45,7 +46,9 @@ import {
   clearAllNightlifeEvents,
   deleteNightlifeEvent,
   extractNightlifeFromUrl,
+  extractNightlifeFromUrls,
   getIngestionRuns,
+  getNightlifeCloudStatus,
   getSessionNightlifeCredentials,
   ingestNightlifeBatch,
   rejectNightlifeEvent,
@@ -54,6 +57,7 @@ import {
   scheduleNightlifeEvent,
   setNightlifeAvailability,
   syncIngresseNightlifeEvents,
+  syncRioturNightlifeEvents,
   syncSymplaNightlifeEvents,
   toggleFeaturedNightlifeEvent,
   updateNightlifeEvent,
@@ -121,12 +125,30 @@ export function NightlifeAdminTab({
   const [runs, setRuns] = useState<NightlifeIngestionRun[]>([]);
   const [busyAction, setBusyAction] = useState<string>('');
 
-  // Mode 1: URL Extraction
+  // Mode 1: URL Extraction (Single vs Batch)
+  const [urlSubTab, setUrlSubTab] = useState<'single' | 'batch'>('single');
   const [urlInput, setUrlInput] = useState('');
+  const [batchUrlsInput, setBatchUrlsInput] = useState('');
+  const [batchUrlsResults, setBatchUrlsResults] = useState<{
+    total: number;
+    success: number;
+    errors: Array<{ url: string; error: string }>;
+  } | null>(null);
   const [urlExtractedDraft, setUrlExtractedDraft] = useState<NightlifeEventDraft | null>(null);
   const [urlWarning, setUrlWarning] = useState('');
 
-  // Mode 2: API Keys (Session-only, NEVER persisted in code or localStorage)
+  // Mode 2: Riotur Official Calendar Sync + API Keys
+  const [rioturMonth, setRioturMonth] = useState(() => new Date().getMonth() + 1);
+  const [rioturYear, setRioturYear] = useState(() => new Date().getFullYear());
+  const [rioturMonthsCount, setRioturMonthsCount] = useState(2);
+
+  // Cloud status (Supabase Server Persistence)
+  const [cloudStatus, setCloudStatus] = useState<{
+    configured: boolean;
+    storage: 'supabase' | 'local_only' | 'error';
+    message: string;
+  } | null>(null);
+
   const initialCreds = useMemo(() => getSessionNightlifeCredentials(), []);
   const [symplaToken, setSymplaToken] = useState(initialCreds.symplaToken);
   const [ingresseKey, setIngresseKey] = useState(initialCreds.ingresseKey);
@@ -178,6 +200,9 @@ export function NightlifeAdminTab({
     let active = true;
     void getIngestionRuns().then((list) => {
       if (active) setRuns(list);
+    });
+    void getNightlifeCloudStatus().then((st) => {
+      if (active) setCloudStatus(st);
     });
     return () => {
       active = false;
@@ -256,7 +281,101 @@ export function NightlifeAdminTab({
     }
   };
 
+  const handleBatchUrlsExtract = async (e: FormEvent) => {
+    e.preventDefault();
+    const lines = batchUrlsInput
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('http'));
+
+    if (lines.length === 0) {
+      onShowError('Cole pelo menos um link HTTPS válido de evento (um por linha).');
+      return;
+    }
+
+    setBusyAction('batch-urls-extract');
+    setBatchUrlsResults(null);
+    try {
+      const res = await extractNightlifeFromUrls(lines);
+      if (!res.ok) {
+        onShowError(res.error || 'Falha ao processar lote de links.');
+        return;
+      }
+
+      let insertedPending = 0;
+      let deduped = 0;
+      if (res.drafts.length > 0) {
+        const batch = await ingestNightlifeBatch({
+          drafts: res.drafts,
+          sourceCode: 'batch_urls_extractor',
+          sourcePlatform: res.drafts[0]?.source_platform || 'MANUAL_ADMIN',
+          triggerType: 'MANUAL',
+          permanentVenues,
+        });
+        insertedPending = batch.insertedPending;
+        deduped = batch.dedupedUpdated;
+        await onNightlifeUpdated();
+        await refreshRuns();
+        setQueueFilter('PENDENTE');
+      }
+
+      setBatchUrlsResults({
+        total: res.totalRequested,
+        success: res.successCount,
+        errors: res.errors,
+      });
+
+      if (res.successCount > 0) {
+        onShowToast(
+          `Lote processado: ${res.successCount} evento(s) extraído(s), ${insertedPending} adicionado(s) em PENDENTE e ${deduped} deduplicado(s).`
+        );
+      } else {
+        onShowError('Nenhum evento pôde ser extraído dos links informados. Verifique os erros abaixo.');
+      }
+    } finally {
+      setBusyAction('');
+    }
+  };
+
   // --- Mode 2 Handlers ---
+  const handleRioturSync = async () => {
+    setBusyAction('riotur-sync');
+    setApiSyncNote('');
+    try {
+      const res = await syncRioturNightlifeEvents({
+        mes: rioturMonth,
+        ano: rioturYear,
+        syncMonths: rioturMonthsCount,
+      });
+
+      if (!res.ok) {
+        onShowError(res.error || 'Falha ao sincronizar agenda da Riotur.');
+        return;
+      }
+
+      if (res.drafts.length === 0) {
+        onShowToast('Nenhum evento retornado pela Riotur para o período selecionado.');
+        return;
+      }
+
+      const batch = await ingestNightlifeBatch({
+        drafts: res.drafts,
+        sourceCode: 'riotur_calendar',
+        sourcePlatform: 'RIOTUR',
+        triggerType: 'MANUAL',
+        permanentVenues,
+      });
+
+      await onNightlifeUpdated();
+      await refreshRuns();
+      setQueueFilter('PENDENTE');
+      onShowToast(
+        `Riotur oficial sincronizada: ${res.rawCount} evento(s) recebido(s), ${batch.insertedPending} novo(s) em PENDENTE e ${batch.dedupedUpdated} deduplicado(s)!`
+      );
+    } finally {
+      setBusyAction('');
+    }
+  };
   const handleSymplaSync = async () => {
     setBusyAction('sympla-sync');
     setApiSyncNote('');
@@ -544,10 +663,31 @@ export function NightlifeAdminTab({
       {/* Cabeçalho KPIs & Lifecycle */}
       <div className="flex flex-col justify-between gap-4 rounded-2xl border border-[#123B56]/25 bg-gradient-to-br from-[#0E2235] to-[#123B56] p-5 text-white lg:flex-row lg:items-center">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6B35]/20 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#FFB347]">
-            <MoonStar className="h-3.5 w-3.5" />
-            BoraRio Nightlife Radar · Agenda Curada
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6B35]/20 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#FFB347]">
+              <MoonStar className="h-3.5 w-3.5" />
+              BoraRio Nightlife Radar · Agenda Curada
+            </span>
+            {cloudStatus && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                  cloudStatus.storage === 'supabase'
+                    ? 'border border-emerald-400/30 bg-emerald-500/20 text-emerald-300'
+                    : 'border border-amber-400/30 bg-amber-500/20 text-amber-300'
+                }`}
+                title={cloudStatus.message}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    cloudStatus.storage === 'supabase' ? 'animate-pulse bg-emerald-400' : 'bg-amber-400'
+                  }`}
+                />
+                {cloudStatus.storage === 'supabase'
+                  ? 'Nuvem Supabase Global Conectada'
+                  : 'Armazenamento Local (Defina SERVICE_ROLE na Vercel)'}
+              </span>
+            )}
+          </div>
           <h2 className="mt-1.5 font-sans text-xl font-bold">
             Captura Multi-Fonte &amp; Curadoria Humana Obrigatória
           </h2>
@@ -624,7 +764,7 @@ export function NightlifeAdminTab({
         <div className="flex flex-wrap gap-2 border-b border-[var(--border-hairline)] pb-4">
           {[
             { id: 'url' as const, label: '1. Importar por URL Oficial', icon: Link2 },
-            { id: 'api' as const, label: '2. Sympla API & Ingresse API', icon: Globe2 },
+            { id: 'api' as const, label: '2. Riotur, Sympla & Ingresse', icon: Globe2 },
             { id: 'batch' as const, label: '3. Em Lote (CSV / JSON)', icon: Upload },
             { id: 'manual' as const, label: '4. Cadastro Manual Rápido', icon: Plus },
           ].map((tab) => {
@@ -648,87 +788,242 @@ export function NightlifeAdminTab({
           })}
         </div>
 
-        {/* MODO 1: POR URL */}
+        {/* MODO 1: POR URL (INDIVIDUAL OU LOTE) */}
         {captureMode === 'url' && (
           <div className="mt-4 space-y-4">
-            <form onSubmit={handleExtractUrl} className="flex flex-col gap-3 sm:flex-row">
-              <input
-                type="url"
-                required
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="https://www.sympla.com.br/evento/... ou Ingresse, Shotgun, Eventbrite, Circo Voador"
-                className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] focus:border-[#FF6B35] focus:outline-none"
-              />
+            <div className="flex items-center gap-2">
               <button
-                type="submit"
-                disabled={busyAction === 'url-extract'}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#123B56] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#102F46] disabled:opacity-50"
+                type="button"
+                onClick={() => setUrlSubTab('single')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  urlSubTab === 'single'
+                    ? 'bg-[#123B56] text-white'
+                    : 'border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)]'
+                }`}
               >
-                {busyAction === 'url-extract' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 text-[#F7931E]" />
-                )}
-                Extrair via Servidor (/api/nightlife)
+                Link Individual (1 URL)
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => setUrlSubTab('batch')}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  urlSubTab === 'batch'
+                    ? 'bg-[#123B56] text-white'
+                    : 'border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)]'
+                }`}
+              >
+                <ListPlus className="h-3.5 w-3.5" />
+                Lote de Múltiplos Links (Até 30 URLs)
+              </button>
+            </div>
 
-            <p className="text-xs text-[var(--text-secondary)]">
-              Suporta leitura estruturada JSON-LD e OpenGraph de links HTTPS em Sympla, Ingresse, Shotgun, Eventbrite, Eventim, Ticketmaster, Ticket360, Circo Voador, Rio Scenarium, Agenda Rio e Tá Sendo (SSR com allowlist estrita; proteções anti-bot nunca são burladas).
-            </p>
-
-            {urlWarning && (
-              <div className="flex items-start gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-200">
-                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                <div className="space-y-1.5">
-                  <p className="font-semibold">{urlWarning}</p>
+            {urlSubTab === 'single' ? (
+              <>
+                <form onSubmit={handleExtractUrl} className="flex flex-col gap-3 sm:flex-row">
+                  <input
+                    type="url"
+                    required
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    placeholder="https://www.sympla.com.br/evento/... ou Ingresse, Shotgun, Eventbrite, Circo Voador"
+                    className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm text-[var(--text-primary)] focus:border-[#FF6B35] focus:outline-none"
+                  />
                   <button
-                    type="button"
-                    onClick={() => {
-                      setManTicketUrl(urlInput);
-                      setCaptureMode('manual');
-                    }}
-                    className="font-bold text-[#FF6B35] underline"
+                    type="submit"
+                    disabled={busyAction === 'url-extract'}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#123B56] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#102F46] disabled:opacity-50"
                   >
-                    Abrir Cadastro Manual com link preenchido →
+                    {busyAction === 'url-extract' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 text-[#F7931E]" />
+                    )}
+                    Extrair via Servidor (/api/nightlife)
+                  </button>
+                </form>
+
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Suporta leitura estruturada JSON-LD e OpenGraph de links HTTPS em Sympla, Ingresse, Shotgun, Eventbrite, Eventim, Ticketmaster, Ticket360, Circo Voador, Rio Scenarium, Riotur, Agenda Rio e Tá Sendo (SSR com allowlist estrita; proteções anti-bot nunca são burladas).
+                </p>
+
+                {urlWarning && (
+                  <div className="flex items-start gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-200">
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="space-y-1.5">
+                      <p className="font-semibold">{urlWarning}</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManTicketUrl(urlInput);
+                          setCaptureMode('manual');
+                        }}
+                        className="font-bold text-[#FF6B35] underline"
+                      >
+                        Abrir Cadastro Manual com link preenchido →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {urlExtractedDraft && (
+                  <div className="flex flex-col justify-between gap-4 rounded-2xl border border-[#397B68]/35 bg-[#397B68]/8 p-4 sm:flex-row sm:items-center">
+                    <div className="space-y-1 text-xs">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#397B68] px-2.5 py-0.5 text-[10px] font-bold text-white">
+                        Extraído · {NIGHTLIFE_SOURCE_LABELS[urlExtractedDraft.source_platform]}
+                      </span>
+                      <h4 className="text-sm font-bold text-[var(--text-primary)]">
+                        {urlExtractedDraft.title}
+                      </h4>
+                      <p className="text-[var(--text-secondary)]">
+                        {urlExtractedDraft.event_date} · {urlExtractedDraft.start_time} ·{' '}
+                        {urlExtractedDraft.venue_name} ({urlExtractedDraft.neighborhood}) ·{' '}
+                        {urlExtractedDraft.price_display_label}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={busyAction === 'url-queue'}
+                      onClick={() => void handleQueueUrlDraft()}
+                      className="shrink-0 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-sm"
+                    >
+                      Enviar para Fila PENDENTE
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <form onSubmit={handleBatchUrlsExtract} className="space-y-3">
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Cole múltiplos links de páginas de eventos (um por linha, até 30 links). O servidor processará em lote concorrente e colocará todos os eventos válidos na fila <strong>PENDENTE</strong>.
+                </p>
+                <textarea
+                  rows={5}
+                  required
+                  value={batchUrlsInput}
+                  onChange={(e) => setBatchUrlsInput(e.target.value)}
+                  placeholder="https://www.sympla.com.br/evento/exemplo-1&#10;https://www.ingresse.com/evento-exemplo-2&#10;https://shotgun.live/events/exemplo-3"
+                  className="w-full font-mono rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3 text-xs text-[var(--text-primary)] focus:border-[#FF6B35] focus:outline-none"
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11px] text-[var(--text-secondary)]">
+                    {batchUrlsInput.split('\n').filter((l) => l.trim().startsWith('http')).length} link(s) detectado(s)
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={busyAction === 'batch-urls-extract'}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#123B56] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#102F46] disabled:opacity-50"
+                  >
+                    {busyAction === 'batch-urls-extract' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 text-[#F7931E]" />
+                    )}
+                    Extrair Lote Concorrente &amp; Enviar a PENDENTE
                   </button>
                 </div>
-              </div>
-            )}
 
-            {urlExtractedDraft && (
-              <div className="flex flex-col justify-between gap-4 rounded-2xl border border-[#397B68]/35 bg-[#397B68]/8 p-4 sm:flex-row sm:items-center">
-                <div className="space-y-1 text-xs">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#397B68] px-2.5 py-0.5 text-[10px] font-bold text-white">
-                    Extraído · {NIGHTLIFE_SOURCE_LABELS[urlExtractedDraft.source_platform]}
-                  </span>
-                  <h4 className="text-sm font-bold text-[var(--text-primary)]">
-                    {urlExtractedDraft.title}
-                  </h4>
-                  <p className="text-[var(--text-secondary)]">
-                    {urlExtractedDraft.event_date} · {urlExtractedDraft.start_time} ·{' '}
-                    {urlExtractedDraft.venue_name} ({urlExtractedDraft.neighborhood}) ·{' '}
-                    {urlExtractedDraft.price_display_label}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={busyAction === 'url-queue'}
-                  onClick={() => void handleQueueUrlDraft()}
-                  className="shrink-0 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-sm"
-                >
-                  Enviar para Fila PENDENTE
-                </button>
-              </div>
+                {batchUrlsResults && (
+                  <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5 text-xs space-y-2">
+                    <p className="font-bold text-[var(--text-primary)]">
+                      Resultado do Lote: {batchUrlsResults.success} sucesso(s) de {batchUrlsResults.total} link(s).
+                    </p>
+                    {batchUrlsResults.errors.length > 0 && (
+                      <div className="space-y-1 text-red-600 dark:text-red-400">
+                        <p className="font-semibold">Links com falha ou proteção anti-bot:</p>
+                        {batchUrlsResults.errors.map((err, i) => (
+                          <p key={i} className="text-[11px] font-mono truncate">
+                            • {err.url}: {err.error}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </form>
             )}
           </div>
         )}
 
-        {/* MODO 2: APIs SYMPLA & INGRESSE + LOG DE EXECUÇÕES */}
+        {/* MODO 2: APIS OFICIAIS (RIOTUR, SYMPLA, INGRESSE) */}
         {captureMode === 'api' && (
           <div className="mt-4 space-y-5">
+            {/* CARD 1: RIOTUR OFICIAL (PREFEITURA DO RIO) */}
+            <div className="rounded-2xl border-2 border-[#123B56]/40 bg-gradient-to-br from-[#0E2235] via-[#123B56]/50 to-[#0A1A28] p-5 text-white">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/35 bg-emerald-500/20 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-300">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Fonte Oficial Aberta · Sem Token/Chave Necessário
+                  </span>
+                  <h3 className="mt-2 text-base font-bold text-white">
+                    Riotur Oficial — Calendário Cultural Rio o Ano Inteiro
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[#F1E8D8]/80 max-w-2xl">
+                    Coleta cultural e de entretenimento da Prefeitura da Cidade do Rio de Janeiro (shows, teatro, samba, festivais e vida noturna). Coleta fotos oficiais, endereços, horários e links originais de compra.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-black/25 p-3.5">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-white/80">Mês Inicial:</label>
+                  <select
+                    value={rioturMonth}
+                    onChange={(e) => setRioturMonth(parseInt(e.target.value, 10))}
+                    className="rounded-lg border border-white/20 bg-[#0E2235] px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none"
+                  >
+                    {[
+                      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+                    ].map((mName, idx) => (
+                      <option key={idx + 1} value={idx + 1}>
+                        {idx + 1} - {mName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-white/80">Ano:</label>
+                  <select
+                    value={rioturYear}
+                    onChange={(e) => setRioturYear(parseInt(e.target.value, 10))}
+                    className="rounded-lg border border-white/20 bg-[#0E2235] px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none"
+                  >
+                    <option value={2025}>2025</option>
+                    <option value={2026}>2026</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-white/80">Período:</label>
+                  <select
+                    value={rioturMonthsCount}
+                    onChange={(e) => setRioturMonthsCount(parseInt(e.target.value, 10))}
+                    className="rounded-lg border border-white/20 bg-[#0E2235] px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none"
+                  >
+                    <option value={1}>1 mês (~50 eventos)</option>
+                    <option value={2}>2 meses consecutivos (~100-150 eventos)</option>
+                    <option value={3}>3 meses consecutivos (~200+ eventos)</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={busyAction === 'riotur-sync'}
+                  onClick={() => void handleRioturSync()}
+                  className="ml-auto inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2 text-xs font-bold text-white shadow-md hover:brightness-105 disabled:opacity-50"
+                >
+                  {busyAction === 'riotur-sync' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 text-white" />
+                  )}
+                  Sincronizar Agenda Riotur Oficial
+                </button>
+              </div>
+            </div>
             <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-200">
               <p className="font-bold">
                 Segurança de Credenciais (Nunca grave tokens no código/Git):

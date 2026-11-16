@@ -172,6 +172,35 @@ export async function getAllNightlifeEvents(options: { runSweep?: boolean } = { 
 
   let items = readLocalNightlifeEvents();
 
+  // 1. Prioritize Server API (bypasses RLS with SUPABASE_SERVICE_ROLE_KEY)
+  try {
+    const res = await fetch('/api/nightlife?__action=admin-list', {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      const payload = (await res.json()) as {
+        ok?: boolean;
+        events?: NightlifeEvent[];
+        storage?: string;
+      };
+      if (payload?.ok && Array.isArray(payload.events) && payload.events.length > 0) {
+        const sweptRemote = sweepEventsArray(payload.events);
+        const remoteById = new Map(sweptRemote.events.map((e) => [e.id, e]));
+        const localOnly = items.filter((l) => !remoteById.has(l.id));
+        items = [...sweptRemote.events, ...localOnly];
+        writeLocalNightlifeEvents(items);
+        return [...items].sort((a, b) => {
+          if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
+          return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
+        });
+      }
+    }
+  } catch {
+    // fallback seamlessly to direct client Supabase or localStorage
+  }
+
+  // 2. Direct client Supabase fallback
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -201,6 +230,19 @@ export async function getAllNightlifeEvents(options: { runSweep?: boolean } = { 
 export async function clearAllNightlifeEvents(): Promise<void> {
   writeLocalNightlifeEvents([]);
   writeLocalIngestionRuns([]);
+
+  // 1. Delete on Serverless Supabase
+  try {
+    await fetch('/api/nightlife?__action=admin-mutate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear-all' }),
+    });
+  } catch {
+    // fallback
+  }
+
+  // 2. Client supabase delete fallback
   if (supabase) {
     try {
       await supabase
@@ -220,6 +262,24 @@ export async function getPublishedNightlifeEvents(): Promise<NightlifeEvent[]> {
 }
 
 export async function getIngestionRuns(): Promise<NightlifeIngestionRun[]> {
+  // 1. Try server runs
+  try {
+    const res = await fetch('/api/nightlife?__action=admin-mutate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get-runs' }),
+    });
+    if (res.ok) {
+      const payload = (await res.json()) as { ok?: boolean; runs?: NightlifeIngestionRun[] };
+      if (payload?.ok && Array.isArray(payload.runs) && payload.runs.length > 0) {
+        return payload.runs;
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  // 2. Client Supabase fallback
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -244,6 +304,18 @@ async function appendIngestionRun(runInput: Omit<NightlifeIngestionRun, 'id' | '
     created_at: new Date().toISOString(),
   };
 
+  // 1. Serverless service role insert
+  try {
+    await fetch('/api/nightlife?__action=admin-mutate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'append-run', run }),
+    });
+  } catch {
+    // fallback
+  }
+
+  // 2. Client supabase insert fallback
   if (supabase) {
     try {
       await supabase.from('nightlife_ingestion_runs').insert(run);
@@ -332,7 +404,27 @@ function hydrateDraftToEvent(
 }
 
 async function persistUpsertEvents(eventsToSave: NightlifeEvent[]): Promise<void> {
-  if (supabase && eventsToSave.length > 0) {
+  if (eventsToSave.length === 0) return;
+
+  // 1. Send to serverless API with SUPABASE_SERVICE_ROLE_KEY bypass
+  try {
+    const res = await fetch('/api/nightlife?__action=admin-mutate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'upsert-events',
+        events: eventsToSave,
+      }),
+    });
+    if (res.ok) {
+      return;
+    }
+  } catch {
+    // server endpoint unreachable, fallback to client-side supabase
+  }
+
+  // 2. Client supabase fallback
+  if (supabase) {
     try {
       await supabase
         .from('nightlife_events')
@@ -656,6 +748,19 @@ export async function toggleFeaturedNightlifeEvent(id: string): Promise<void> {
 export async function deleteNightlifeEvent(id: string): Promise<void> {
   const next = readLocalNightlifeEvents().filter((e) => e.id !== id);
   writeLocalNightlifeEvents(next);
+
+  // 1. Delete on Serverless Supabase
+  try {
+    await fetch('/api/nightlife?__action=admin-mutate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete-event', id }),
+    });
+  } catch {
+    // fallback
+  }
+
+  // 2. Client supabase delete fallback
   if (supabase) {
     try {
       await supabase.from('nightlife_events').delete().eq('id', id);
@@ -930,4 +1035,148 @@ export async function syncIngresseNightlifeEvents(
       error: `Erro ao sincronizar Ingresse: ${err instanceof Error ? err.message : 'rede'}`,
     };
   }
+}
+
+export async function syncRioturNightlifeEvents(params?: {
+  mes?: number;
+  ano?: number;
+  syncMonths?: number;
+}): Promise<{
+  ok: boolean;
+  rawCount: number;
+  drafts: NightlifeEventDraft[];
+  error?: string;
+}> {
+  try {
+    const query = new URLSearchParams();
+    if (params?.mes) query.set('mes', String(params.mes));
+    if (params?.ano) query.set('ano', String(params.ano));
+    if (params?.syncMonths) query.set('sync_months', String(params.syncMonths));
+
+    const res = await fetch(`/api/nightlife?__action=fetch-riotur&${query.toString()}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+
+    const payload = (await res.json()) as {
+      ok?: boolean;
+      raw_count?: number;
+      drafts?: NightlifeEventDraft[];
+      error?: string;
+    };
+
+    if (!res.ok || !payload?.ok) {
+      return {
+        ok: false,
+        rawCount: 0,
+        drafts: [],
+        error: payload?.error || `Falha ao sincronizar agenda da Riotur (HTTP ${res.status}).`,
+      };
+    }
+
+    return {
+      ok: true,
+      rawCount: payload.raw_count || 0,
+      drafts: Array.isArray(payload.drafts) ? payload.drafts : [],
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      rawCount: 0,
+      drafts: [],
+      error: `Erro de conexão ao sincronizar com Riotur: ${err instanceof Error ? err.message : 'falha de rede'}`,
+    };
+  }
+}
+
+export async function extractNightlifeFromUrls(urls: string[]): Promise<{
+  ok: boolean;
+  totalRequested: number;
+  successCount: number;
+  drafts: NightlifeEventDraft[];
+  errors: Array<{ url: string; error: string }>;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/nightlife?__action=parse-urls', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ urls }),
+    });
+
+    const payload = (await res.json()) as {
+      ok?: boolean;
+      total_requested?: number;
+      success_count?: number;
+      drafts?: NightlifeEventDraft[];
+      errors?: Array<{ url: string; error: string }>;
+      error?: string;
+    };
+
+    if (!res.ok || !payload?.ok) {
+      return {
+        ok: false,
+        totalRequested: urls.length,
+        successCount: 0,
+        drafts: [],
+        errors: [],
+        error: payload?.error || `Falha na extração do lote de URLs (HTTP ${res.status}).`,
+      };
+    }
+
+    return {
+      ok: true,
+      totalRequested: payload.total_requested || urls.length,
+      successCount: payload.success_count || 0,
+      drafts: Array.isArray(payload.drafts) ? payload.drafts : [],
+      errors: Array.isArray(payload.errors) ? payload.errors : [],
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      totalRequested: urls.length,
+      successCount: 0,
+      drafts: [],
+      errors: [],
+      error: `Erro de conexão ao processar lote: ${err instanceof Error ? err.message : 'falha de rede'}`,
+    };
+  }
+}
+
+export async function getNightlifeCloudStatus(): Promise<{
+  configured: boolean;
+  storage: 'supabase' | 'local_only' | 'error';
+  message: string;
+}> {
+  try {
+    const res = await fetch('/api/nightlife?__action=admin-list', {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { ok?: boolean; storage?: string; message?: string };
+      if (data.storage === 'supabase') {
+        return {
+          configured: true,
+          storage: 'supabase',
+          message: 'Conectado à nuvem Supabase (Sincronização Global ativa).',
+        };
+      }
+      return {
+        configured: false,
+        storage: 'local_only',
+        message: data.message || 'Armazenamento local ativo. Configure SUPABASE_SERVICE_ROLE_KEY na Vercel.',
+      };
+    }
+  } catch {
+    // network error
+  }
+  return {
+    configured: false,
+    storage: 'local_only',
+    message: 'Servidor inacessível no momento (operando em cache local).',
+  };
 }

@@ -33,7 +33,9 @@ export type NightlifeSourcePlatform =
   | 'AGENDA_RIO'
   | 'PARTNER_PORTAL'
   | 'CSV_JSON'
-  | 'MANUAL_ADMIN';
+  | 'MANUAL_ADMIN'
+  | 'RIOTUR'
+  | 'VISIT_RIO';
 
 export type NightlifeImageOrigin =
   | 'PARTNER_AUTHORIZED'
@@ -205,4 +207,6 @@ export const NIGHTLIFE_SOURCE_LABELS: Record<NightlifeSourcePlatform, string> = 
   PARTNER_PORTAL: 'Estabelecimento Parceiro',
   CSV_JSON: 'Lote CSV / JSON',
   MANUAL_ADMIN: 'Cadastro Curatorial Admin',
+  RIOTUR: 'Riotur Agenda Oficial',
+  VISIT_RIO: 'Visit Rio',
 };
