@@ -6,11 +6,9 @@ import {
   Compass,
   Heart,
   Info,
-  Landmark,
   MapPin,
   Moon,
   MoreHorizontal,
-  Palmtree,
   Plane,
   Plus,
   Search,
@@ -77,19 +75,42 @@ const EXTRA_MOMENTS: Array<{ id: MomentMode; label: string; icon: typeof CloudRa
   { id: 'budget', label: 'Econômico / Gratuito', icon: Sparkles },
 ];
 
-const MACRO_CATEGORIES: Array<{
+interface CorePillar {
+  id: 'comer' | 'noite' | 'passeios';
   label: string;
-  shortLabel: string;
-  value: MacroCategory | '';
-  icon: typeof Compass;
+  sub: string;
+  macro: MacroCategory;
+  icon: typeof UtensilsCrossed;
   gradient: string;
-}> = [
-  { label: 'Todas', shortLabel: 'Todas', value: '', icon: Compass, gradient: 'from-[#123B56] to-[#1D557A]' },
-  { label: 'Gastronomia', shortLabel: 'Comer', value: 'Gastronomia', icon: UtensilsCrossed, gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]' },
-  { label: 'Passeios & Praias', shortLabel: 'Passeios', value: 'Turismo & Praias', icon: Compass, gradient: 'from-[#1B4D3E] via-[#2A6F55] to-[#397B68]' },
-  { label: 'Cultura & Museus', shortLabel: 'Cultura', value: 'Cultura & Museus', icon: Landmark, gradient: 'from-[#123B56] to-[#236B99]' },
-  { label: 'Noite & Eventos', shortLabel: 'Noite & Shows', value: 'Vida Noturna', icon: Moon, gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]' },
-  { label: 'Atrações Infantis', shortLabel: 'Infantil', value: 'Atrações Infantis', icon: Palmtree, gradient: 'from-[#D49B27] to-[#F7931E]' },
+  scrollToId?: string;
+}
+
+const THREE_PILLARS: CorePillar[] = [
+  {
+    id: 'comer',
+    label: 'Comer',
+    sub: 'Gastronomia',
+    macro: 'Gastronomia',
+    icon: UtensilsCrossed,
+    gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]',
+  },
+  {
+    id: 'noite',
+    label: 'Noite & Eventos',
+    sub: 'Bares & Shows',
+    macro: 'Vida Noturna',
+    icon: Moon,
+    gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]',
+    scrollToId: 'home-block-nightlife',
+  },
+  {
+    id: 'passeios',
+    label: 'Passeios',
+    sub: 'Cultura & Lazer',
+    macro: 'Turismo & Praias',
+    icon: Compass,
+    gradient: 'from-[#1B4D3E] via-[#2A6F55] to-[#397B68]',
+  },
 ];
 
 const NEIGHBORHOOD_OPTIONS = [
@@ -163,11 +184,11 @@ export function HeroSection({
   onOpenPersonalize,
   onOpenProfile,
   personalizationActive,
-  locationConsent,
+  locationConsent: _locationConsent,
   userCoords = null,
   locationState = 'idle',
   onRequestLocation,
-  homeNeighborhood,
+  homeNeighborhood: _homeNeighborhood,
   vaultCount,
   onAskBoraIa,
   onOpenVault,
@@ -178,7 +199,6 @@ export function HeroSection({
   const [weather, setWeather] = useState<RioWeatherSnapshot | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [ackExternalSignal, setAckExternalSignal] = useState(0);
-  const [dismissedLocationBanner, setDismissedLocationBanner] = useState(false);
   const [activePillInfo, setActivePillInfo] = useState<'deboa' | 'mobility' | null>(null);
 
   useEffect(() => {
@@ -440,50 +460,16 @@ export function HeroSection({
             </div>
           )}
 
-          {/* 4 Core Quick Actions (Comer, Passeios, Cultura, Noite & Eventos) */}
-          <div className="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-[var(--border-hairline)] pt-2.5 sm:grid-cols-4">
-            {[
-              {
-                id: 'comer',
-                label: 'Comer',
-                sub: 'Gastronomia & Bares',
-                macro: 'Gastronomia' as const,
-                icon: UtensilsCrossed,
-                gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]',
-              },
-              {
-                id: 'passeios',
-                label: 'Passeios',
-                sub: 'Parques, Praias & Mirantes',
-                macro: 'Turismo & Praias' as const,
-                icon: Compass,
-                gradient: 'from-[#1B4D3E] via-[#2A6F55] to-[#397B68]',
-              },
-              {
-                id: 'cultura',
-                label: 'Cultura',
-                sub: 'Museus & Patrimônio',
-                macro: 'Cultura & Museus' as const,
-                icon: Landmark,
-                gradient: 'from-[#123B56] via-[#1B5276] to-[#2A6F55]',
-              },
-              {
-                id: 'noite',
-                label: 'Noite & Eventos',
-                sub: 'Festas, Shows & Samba',
-                macro: 'Vida Noturna' as const,
-                icon: Moon,
-                // Degradê azul da logo em Noite & Eventos
-                gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]',
-                scrollToId: 'home-block-nightlife',
-              },
-            ].map((act) => {
+          {/* 3 Pilares Principais em 1 Linha (Comer, Noite & Eventos, Passeios) */}
+          <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-[var(--border-hairline)] pt-2.5">
+            {THREE_PILLARS.map((act) => {
               const Icon = act.icon;
               const active = filters.macroCategory === act.macro;
               return (
                 <button
                   key={act.id}
                   type="button"
+                  data-testid={`pillar-btn-${act.id}`}
                   onClick={() => {
                     const nextMacro = active ? '' : act.macro;
                     onChange({
@@ -491,29 +477,32 @@ export function HeroSection({
                       macroCategory: nextMacro,
                     });
                     if (act.scrollToId && !active) {
+                      const targetId = act.scrollToId;
                       setTimeout(() => {
-                        document.getElementById(act.scrollToId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }, 70);
                     }
                   }}
-                  className={`flex items-center gap-2 rounded-xl p-2 text-left transition-all ${
+                  className={`group flex items-center gap-1.5 rounded-xl p-2 text-left transition-all sm:gap-2.5 sm:p-2.5 ${
                     active
-                      ? `bg-gradient-to-r ${act.gradient} text-white shadow-sm ring-1 ring-white/20`
-                      : 'border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]/40'
+                      ? `bg-gradient-to-r ${act.gradient} text-white shadow-md ring-1 ring-white/25`
+                      : 'border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]/50 hover:bg-[var(--bg-surface)]'
                   }`}
                 >
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                      active ? 'bg-white/20 text-white' : `bg-gradient-to-r ${act.gradient} text-white`
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105 sm:h-9 sm:w-9 ${
+                      active
+                        ? 'bg-white/20 text-white shadow-xs'
+                        : `bg-gradient-to-r ${act.gradient} text-white shadow-xs`
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
                   </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-bold leading-tight">{act.label}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold leading-tight sm:text-sm">{act.label}</p>
                     <p
-                      className={`truncate text-[10px] ${
-                        active ? 'text-white/80' : 'text-[var(--text-secondary)]'
+                      className={`truncate text-[10px] sm:text-[11px] ${
+                        active ? 'text-white/85' : 'text-[var(--text-secondary)]'
                       }`}
                     >
                       {act.sub}
@@ -641,41 +630,8 @@ export function HeroSection({
           )}
         </div>
 
-        {/* 3. CATEGORIAS DE EXPERIÊNCIA */}
-        <div className="flex w-full min-w-0 items-center gap-4 overflow-x-auto pb-1.5 pt-5 no-scrollbar sm:justify-start sm:gap-7">
-          {MACRO_CATEGORIES.map((mc) => {
-            const Icon = mc.icon;
-            const active = filters.macroCategory === mc.value;
-            return (
-              <button
-                key={mc.label}
-                type="button"
-                onClick={() => onChange({ ...filters, macroCategory: mc.value })}
-                className="group flex shrink-0 flex-col items-center gap-1.5"
-              >
-                <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${mc.gradient} text-white shadow-sm transition-all group-hover:scale-105 ${
-                    active
-                      ? 'scale-105 ring-2 ring-[#FF6B35] ring-offset-2 ring-offset-[var(--bg-canvas)] shadow-md'
-                      : 'opacity-90 hover:opacity-100'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-                <span
-                  className={`text-xs font-semibold ${
-                    active ? 'text-[#FF6B35]' : 'text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {mc.shortLabel}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Filtros rápidos de momento abaixo das categorias (sem poluir a foto do Hero) */}
-        <div className="mt-2.5 flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {/* Filtros rápidos de momento (sem poluir a foto do Hero) */}
+        <div className="mt-2.5 flex w-full min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar sm:gap-2">
           {PRIMARY_MOMENTS.map((m) => {
             const Icon = m.icon;
             const active = filters.momentMode === m.id;
@@ -711,107 +667,129 @@ export function HeroSection({
           </button>
         </div>
 
-        {/* 4. ATIVAÇÃO NATURAL DE LOCALIZAÇÃO (OPCIONAL) + ATALHO COFRE */}
-        <div className="mt-3 grid gap-2.5 lg:grid-cols-2">
-          {!locationConsent && !dismissedLocationBanner ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#397B68]/25 bg-[#397B68]/8 px-3.5 py-2.5 text-xs">
-              <div className="flex min-w-0 items-start gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#397B68] text-white">
-                  <MapPin className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-[var(--text-primary)]">Ative sua localização</p>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    Encontre experiências, ofertas e lugares perto de você.
-                  </p>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={locationState === 'requesting'}
-                  onClick={() => onRequestLocation?.()}
-                  className="rounded-xl bg-[#397B68] px-3 py-1.5 text-[11px] font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-60"
-                >
-                  {locationState === 'requesting' ? 'Obtendo...' : 'Usar localização'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDismissedLocationBanner(true)}
-                  aria-label="Continuar sem localização"
-                  className="rounded-lg px-2 py-1 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5"
-                >
-                  Agora não
-                </button>
-              </div>
+        {/* Faixa contextual dinâmica para o pilar de Passeios */}
+        {filters.macroCategory === 'Turismo & Praias' && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#397B68]/30 bg-[#397B68]/10 px-3.5 py-2 text-xs backdrop-blur-xs">
+            <div className="flex items-center gap-2">
+              {weather?.isRaining ? (
+                <CloudRain className="h-4 w-4 shrink-0 text-[#397B68]" />
+              ) : (
+                <Sun className="h-4 w-4 shrink-0 text-[#F7931E]" />
+              )}
+              <span className="font-semibold text-[var(--text-primary)]">
+                {weather?.isRaining
+                  ? 'Modo Chuva: Priorizando passeios cobertos, museus e cultura'
+                  : `Tempo aberto no Rio (${weather?.temperatureC || 27}°C) · Ideal para parques, mirantes e ar livre`}
+              </span>
             </div>
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 px-3.5 py-2.5 text-xs shadow-xs">
-              <div className="flex min-w-0 items-center gap-2">
-                <MapPin className={`h-4 w-4 shrink-0 ${userCoords ? 'text-[#397B68]' : 'text-[#FF6B35]'}`} />
-                <span className="truncate font-semibold text-[var(--text-primary)]">
-                  {userCoords
-                    ? 'Localização ativa · Ordenando experiências próximas a você'
-                    : locationState === 'denied'
-                      ? 'Explorando o Rio sem GPS (localização opcional)'
-                      : `Área: ${homeNeighborhood || 'Rio de Janeiro'}`}
-                </span>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {!userCoords && onRequestLocation && (
-                  <button
-                    type="button"
-                    onClick={onRequestLocation}
-                    className="rounded-lg bg-[#397B68]/12 px-2.5 py-1 text-[11px] font-bold text-[#397B68] hover:bg-[#397B68] hover:text-white dark:text-[#4CA188]"
-                  >
-                    Ativar localização
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onOpenProfile?.()}
-                  className="rounded-lg border border-[var(--border-hairline)] px-2.5 py-1 text-[11px] font-bold text-[var(--text-secondary)] hover:border-[#123B56] hover:text-[var(--text-primary)]"
-                >
-                  Preferências
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Direct Access Bar to Meus Desejos */}
-          <div className="flex flex-col gap-2.5 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 px-3.5 py-2.5 text-xs shadow-xs sm:flex-row sm:items-center sm:justify-between sm:gap-2">
             <button
               type="button"
-              onClick={onOpenVault}
-              className="flex min-w-0 flex-1 items-center gap-2 text-left hover:opacity-85"
+              onClick={() => onChange({ ...filters, macroCategory: 'Gastronomia' })}
+              className="inline-flex items-center gap-1 font-bold text-[#397B68] hover:underline dark:text-[#4CA188]"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-borario-ocean text-white shadow-xs">
-                <Bookmark className="h-3.5 w-3.5 text-[#FFB347]" />
-              </div>
-              <span className="truncate font-semibold text-[var(--text-primary)]">
-                {vaultCount > 0
-                  ? `${vaultCount} ${vaultCount === 1 ? 'desejo salvo' : 'desejos salvos'} em Meus Desejos`
-                  : 'Meus Desejos: guarde links e lugares'}
-              </span>
+              <UtensilsCrossed className="h-3.5 w-3.5" />
+              <span>Onde comer por perto deste passeio →</span>
             </button>
+          </div>
+        )}
 
-            <div className="flex shrink-0 items-center justify-end gap-1.5">
+        {/* Faixa contextual dinâmica para o pilar de Gastronomia */}
+        {filters.macroCategory === 'Gastronomia' && availableCategories.length > 0 && (
+          <div className="mt-2 flex w-full min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5 text-xs no-scrollbar">
+            <span className="shrink-0 text-[11px] font-bold text-[var(--text-secondary)]">Especialidades:</span>
+            {['Boteco Carioca', 'Brasileiro', 'Frutos do Mar', 'Italiano', 'Pizzaria', 'Cafeteria'].map((spec) => {
+              const active = filters.category === spec;
+              return (
+                <button
+                  key={spec}
+                  type="button"
+                  onClick={() => onChange({ ...filters, category: active ? '' : spec })}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                    active
+                      ? 'border-[#FF6B35] bg-[#FF6B35] text-white shadow-xs'
+                      : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[#FF6B35]/40 hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {spec}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Faixa contextual dinâmica para o pilar de Noite & Eventos */}
+        {filters.macroCategory === 'Vida Noturna' && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#0077B6]/30 bg-[#0077B6]/10 px-3.5 py-2 text-xs backdrop-blur-xs">
+            <div className="flex items-center gap-2">
+              <Moon className="h-4 w-4 shrink-0 text-[#0077B6]" />
+              <span className="font-semibold text-[var(--text-primary)]">
+                A Noite Carioca: festas, shows e samba dos próximos dias logo abaixo
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById('home-block-nightlife')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="font-bold text-[#0077B6] hover:underline"
+            >
+              Ver agenda noturna ↓
+            </button>
+          </div>
+        )}
+
+        {/* Barra horizontal compacta de 1 linha: GPS + Preferências + Desejos */}
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 px-3.5 py-2 text-xs shadow-xs backdrop-blur-sm">
+          {/* Esquerda: chip compacto 📍 Ativar GPS + Preferências */}
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+            {userCoords ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68]/15 px-2.5 py-1 text-[11px] font-bold text-[#397B68] dark:text-[#4CA188]">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span className="truncate">GPS Ativo · Perto de você</span>
+              </span>
+            ) : (
               <button
                 type="button"
-                onClick={onOpenVaultCapture}
-                className="inline-flex items-center gap-1 rounded-lg bg-[#FF6B35]/15 px-2.5 py-1.5 text-[11px] font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
+                onClick={onRequestLocation}
+                disabled={locationState === 'requesting'}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68]/15 px-2.5 py-1 text-[11px] font-bold text-[#397B68] hover:bg-[#397B68] hover:text-white transition disabled:opacity-50 dark:text-[#4CA188]"
               >
-                <Plus className="h-3 w-3" />
-                Salvar link/print
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span>{locationState === 'requesting' ? 'Obtendo...' : '📍 Ativar GPS'}</span>
               </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onOpenProfile?.()}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)] hover:border-[#123B56] hover:text-[var(--text-primary)] transition"
+            >
+              <SlidersHorizontal className="h-3 w-3 shrink-0" />
+              <span>Preferências</span>
+            </button>
+          </div>
+
+          {/* Direita: botão destacado + Salvar link/print nos Desejos */}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={onOpenVaultCapture}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-1.5 text-[11px] font-bold text-white shadow-xs hover:brightness-105 transition"
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span>+ Salvar link/print nos Desejos</span>
+            </button>
+            {vaultCount > 0 && (
               <button
                 type="button"
                 onClick={onOpenVault}
-                className="rounded-lg border border-[var(--border-hairline)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-primary)] hover:border-[#123B56]"
+                title="Ver Meus Desejos"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-1 text-[11px] font-bold text-[var(--text-primary)] hover:border-[#FF6B35] transition"
               >
-                Ver Desejos
+                <Bookmark className="h-3 w-3 shrink-0 text-[#FF6B35]" />
+                <span>{vaultCount}</span>
               </button>
-            </div>
+            )}
           </div>
         </div>
       </div>

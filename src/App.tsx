@@ -222,8 +222,21 @@ export function App() {
   const filteredRestaurants = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
     const list = restaurants.filter((r) => {
-      if (filters.macroCategory && (r.macro_category || 'Gastronomia') !== filters.macroCategory) {
-        return false;
+      if (filters.macroCategory) {
+        if (filters.macroCategory === 'Turismo & Praias') {
+          const isPasseio =
+            r.macro_category === 'Turismo & Praias' ||
+            r.macro_category === 'Cultura & Museus' ||
+            r.macro_category === 'Atrações Infantis';
+          if (!isPasseio) return false;
+        } else if (filters.macroCategory === 'Vida Noturna') {
+          const isNight =
+            r.macro_category === 'Vida Noturna' ||
+            r.macro_category === 'Eventos & Shows';
+          if (!isNight) return false;
+        } else if ((r.macro_category || 'Gastronomia') !== filters.macroCategory) {
+          return false;
+        }
       }
       if (filters.momentMode !== 'all') {
         const tags = r.moment_tags || [];
@@ -962,6 +975,7 @@ export function App() {
           }}
           onSelectExperience={setSelectedRestaurant}
           onSelectNightlifeEvent={setSelectedNightlifeEvent}
+          isHome={effectiveTab === 'discover'}
         />
       )}
 

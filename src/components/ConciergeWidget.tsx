@@ -16,6 +16,7 @@ interface ConciergeWidgetProps {
   onSendToPlanner?: (promptText: string) => void;
   onSelectExperience: (item: Restaurant) => void;
   onSelectNightlifeEvent?: (event: NightlifeEvent) => void;
+  isHome?: boolean;
 }
 
 interface ChatMessage {
@@ -42,6 +43,7 @@ export function ConciergeWidget({
   onSendToPlanner,
   onSelectExperience,
   onSelectNightlifeEvent,
+  isHome = false,
 }: ConciergeWidgetProps) {
   const [open, setOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -117,25 +119,29 @@ export function ConciergeWidget({
   );
 
   const compactCollapsed = isScrolled && !open;
+  // Na Home, oculta o FAB flutuante quando o usuário já está vendo a barra de busca no topo (evita poluição sobre os cards e dock)
+  const hideFloatingButton = isHome && !isScrolled && !open;
 
   return (
     <>
-      {/* Floating Button (Recolhe para ícone compacto ao rolar e respeita a barra inferior) */}
-      <button
-        type="button"
-        data-testid="bora-ia-floating-btn"
-        aria-label="Abrir Bora IA"
-        title="Bora IA Concierge"
-        onClick={() => setOpen((prev) => !prev)}
-        className={`fixed bottom-[5.5rem] right-3.5 z-40 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] font-bold text-white shadow-lg shadow-[#FF4B2B]/25 transition-all duration-300 hover:scale-105 lg:bottom-6 lg:right-6 ${
-          compactCollapsed
-            ? 'h-11 w-11 p-0'
-            : 'gap-1.5 px-3 py-2 text-[11px] sm:px-3.5 sm:py-2.5 sm:text-xs'
-        }`}
-      >
-        <Sparkles className="h-4 w-4 shrink-0" />
-        {!compactCollapsed && <span className="whitespace-nowrap">Bora IA</span>}
-      </button>
+      {/* Floating Button (Oculto no topo da Home para evitar duplicidade com a barra de busca) */}
+      {!hideFloatingButton && (
+        <button
+          type="button"
+          data-testid="bora-ia-floating-btn"
+          aria-label="Abrir Bora IA"
+          title="Bora IA Concierge"
+          onClick={() => setOpen((prev) => !prev)}
+          className={`fixed bottom-[5.5rem] right-3.5 z-40 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] font-bold text-white shadow-lg shadow-[#FF4B2B]/25 transition-all duration-300 hover:scale-105 lg:bottom-6 lg:right-6 ${
+            compactCollapsed
+              ? 'h-11 w-11 p-0'
+              : 'gap-1.5 px-3 py-2 text-[11px] sm:px-3.5 sm:py-2.5 sm:text-xs'
+          }`}
+        >
+          <Sparkles className="h-4 w-4 shrink-0" />
+          {!compactCollapsed && <span className="whitespace-nowrap">Bora IA</span>}
+        </button>
+      )}
 
       {/* Bora IA Chat Window */}
       {open && (
