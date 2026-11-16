@@ -16,7 +16,10 @@ import {
   buildOriginalEditorialSummary,
   buildStartEndIsoRio,
   checkNightlifeCompleteness,
+  cleanEventTitle,
   computeNightlifeDedupHash,
+  decodeHtmlEntities,
+  deduplicateEventsList,
   findDuplicateNightlifeEvent,
   getRioTodayIso,
   inferDraftFromUrlSlug,
@@ -45,7 +48,8 @@ export function readLocalNightlifeEvents(): NightlifeEvent[] {
     const raw = localStorage.getItem(NIGHTLIFE_EVENTS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as NightlifeEvent[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return deduplicateEventsList(parsed);
   } catch {
     return [];
   }
@@ -193,9 +197,7 @@ export async function getAllNightlifeEvents(options: { runSweep?: boolean } = { 
       };
       if (payload?.ok && Array.isArray(payload.events) && payload.events.length > 0) {
         const sweptRemote = sweepEventsArray(payload.events);
-        const remoteById = new Map(sweptRemote.events.map((e) => [e.id, e]));
-        const localOnly = items.filter((l) => !remoteById.has(l.id));
-        items = [...sweptRemote.events, ...localOnly];
+        items = deduplicateEventsList([...sweptRemote.events, ...items]);
         writeLocalNightlifeEvents(items);
         return [...items].sort((a, b) => {
           if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
@@ -218,9 +220,7 @@ export async function getAllNightlifeEvents(options: { runSweep?: boolean } = { 
 
       if (!error && Array.isArray(data) && data.length > 0) {
         const sweptRemote = sweepEventsArray(data as NightlifeEvent[]);
-        const remoteById = new Map(sweptRemote.events.map((e) => [e.id, e]));
-        const localOnly = items.filter((l) => !remoteById.has(l.id));
-        items = [...sweptRemote.events, ...localOnly];
+        items = deduplicateEventsList([...sweptRemote.events, ...items]);
         writeLocalNightlifeEvents(items);
       }
     } catch {
@@ -228,6 +228,8 @@ export async function getAllNightlifeEvents(options: { runSweep?: boolean } = { 
     }
   }
 
+  items = deduplicateEventsList(items);
+  writeLocalNightlifeEvents(items);
   return [...items].sort((a, b) => {
     if (a.is_featured !== b.is_featured) return a.is_featured ? -1 : 1;
     return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
@@ -468,6 +470,12 @@ export async function ingestNightlifeBatch(params: {
 
   for (const draft of params.drafts) {
     if (!draft.title?.trim()) continue;
+
+    draft.title = cleanEventTitle(draft.title);
+    draft.short_summary = decodeHtmlEntities(draft.short_summary);
+    draft.venue_name = decodeHtmlEntities(draft.venue_name);
+    draft.neighborhood = decodeHtmlEntities(draft.neighborhood);
+    draft.address = decodeHtmlEntities(draft.address);
 
     // Discard past events - strictly future/current only
     if (draft.event_date && draft.event_date < todayRio) {

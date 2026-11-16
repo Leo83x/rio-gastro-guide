@@ -40,6 +40,7 @@ import {
 import {
   buildStartEndIsoRio,
   checkNightlifeCompleteness,
+  cleanEventTitle,
   getRioTodayIso,
 } from '../services/nightlife/nightlifeDedup';
 import {
@@ -986,7 +987,7 @@ export function NightlifeAdminTab({
                         Extraído · {NIGHTLIFE_SOURCE_LABELS[urlExtractedDraft.source_platform]}
                       </span>
                       <h4 className="text-sm font-bold text-[var(--text-primary)]">
-                        {urlExtractedDraft.title}
+                        {cleanEventTitle(urlExtractedDraft.title)}
                       </h4>
                       <p className="text-[var(--text-secondary)]">
                         {urlExtractedDraft.event_date} · {urlExtractedDraft.start_time} ·{' '}
@@ -1335,7 +1336,9 @@ export function NightlifeAdminTab({
                       key={`${d.external_key}-${idx}`}
                       className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2"
                     >
-                      <span className="font-bold text-[var(--text-primary)]">{d.title}</span>
+                      <span className="font-bold text-[var(--text-primary)]">
+                        {cleanEventTitle(d.title)}
+                      </span>
                       <span className="text-[var(--text-secondary)]">
                         {d.event_date} {d.start_time} · {d.venue_name} ({d.neighborhood}) ·{' '}
                         {NIGHTLIFE_SOURCE_LABELS[d.source_platform]}
@@ -1701,7 +1704,7 @@ export function NightlifeAdminTab({
                         </div>
 
                         <h4 className="font-sans text-base font-bold text-[var(--text-primary)]">
-                          {ev.title}
+                          {cleanEventTitle(ev.title)}
                         </h4>
 
                         <p className="text-xs text-[var(--text-secondary)]">

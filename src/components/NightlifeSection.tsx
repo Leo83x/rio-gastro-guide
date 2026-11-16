@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  cleanEventTitle,
   formatEventDateBadgePt,
   isEventVisiblePublicly,
   matchesDateFilter,
@@ -328,7 +329,7 @@ export function NightlifeSection({
                   <div className="flex flex-1 flex-col justify-between p-4">
                     <div>
                       <h3 className="line-clamp-2 font-sans text-base font-bold leading-snug text-white group-hover:text-[#FFB347]">
-                        {ev.title}
+                        {cleanEventTitle(ev.title)}
                       </h3>
 
                       <p className="mt-1.5 flex items-center gap-1.5 text-xs text-[#F1E8D8]">

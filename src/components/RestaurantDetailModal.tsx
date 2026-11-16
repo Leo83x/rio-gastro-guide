@@ -110,7 +110,19 @@ export function RestaurantDetailModal({
           <div className="absolute bottom-5 left-5 right-5 flex flex-col gap-2 sm:bottom-6 sm:left-8 sm:right-8">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#E05A47] px-3 py-1 text-xs font-semibold text-white">
-                {restaurant.category}
+                {(restaurant as { macro_category?: string }).macro_category &&
+                (restaurant as { macro_category?: string }).macro_category !== 'Gastronomia'
+                  ? (restaurant as { macro_category?: string }).macro_category === 'Turismo & Praias'
+                    ? 'Passeios'
+                    : (restaurant as { macro_category?: string }).macro_category === 'Cultura & Museus'
+                      ? 'Cultura'
+                      : (restaurant as { macro_category?: string }).macro_category === 'Vida Noturna' ||
+                          (restaurant as { macro_category?: string }).macro_category === 'Eventos & Shows'
+                        ? 'Noite & Shows'
+                        : (restaurant as { macro_category?: string }).macro_category === 'Atrações Infantis'
+                          ? 'Infantil'
+                          : (restaurant as { macro_category?: string }).macro_category
+                  : restaurant.category}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
                 <MapPin className="h-3.5 w-3.5 text-[#E05A47]" />

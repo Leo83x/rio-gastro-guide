@@ -703,8 +703,10 @@ async function handleParseUrlCore(targetRaw: string): Promise<ParseUrlResult> {
       external_key: `url:${platform.toLowerCase()}:${Buffer.from(safeUrl.pathname).toString('base64').slice(0, 24)}`,
       source_platform: platform,
       source_url: safeUrl.toString(),
-      title: rawTitle.replace(/\s*[-|]\s*(Sympla|Ingresse|Shotgun|Eventbrite).*$/i, '').trim(),
-      short_summary: summarizeCleanly(rawDesc, venueName, neighborhood),
+      title: decodeHtmlEntities(
+        rawTitle.replace(/\s*[-|]\s*(Sympla|Ingresse|Shotgun|Eventbrite).*$/i, '').trim()
+      ),
+      short_summary: decodeHtmlEntities(summarizeCleanly(rawDesc, venueName, neighborhood)),
       sub_area: subArea,
       music_genres: genres,
       moment_tags: ['friends', 'couple'],
@@ -815,6 +817,48 @@ async function handleParseUrls(request: Request): Promise<Response> {
   }
 }
 
+function decodeHtmlEntities(raw?: string): string {
+  if (!raw) return '';
+  let s = String(raw);
+  // Numeric decimal entities: &#8220; &#8221; &#8211; etc.
+  s = s.replace(/&#(\d+);/g, (_, dec) => {
+    try {
+      const code = parseInt(dec, 10);
+      return String.fromCharCode(code);
+    } catch {
+      return '';
+    }
+  });
+  // Numeric hex entities: &#x201C; etc.
+  s = s.replace(/&#x([0-9a-fA-F]+);/gi, (_, hex) => {
+    try {
+      const code = parseInt(hex, 16);
+      return String.fromCharCode(code);
+    } catch {
+      return '';
+    }
+  });
+  // Common named HTML entities
+  s = s
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&#39;/gi, "'")
+    .replace(/&#039;/gi, "'")
+    .replace(/&#038;/gi, '&')
+    .replace(/&ldquo;/gi, '“')
+    .replace(/&rdquo;/gi, '”')
+    .replace(/&lsquo;/gi, '‘')
+    .replace(/&rsquo;/gi, '’')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&hellip;/gi, '…')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ');
+  return s.trim();
+}
+
 function parseRioturContent(conteudoHtml: string): {
   venue: string;
   address: string;
@@ -824,13 +868,7 @@ function parseRioturContent(conteudoHtml: string): {
   isFree: boolean;
   plainText: string;
 } {
-  const decoded = (conteudoHtml || '')
-    .replace(/&#8211;/g, '-')
-    .replace(/&#8217;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&#038;/g, '&');
+  const decoded = decodeHtmlEntities(conteudoHtml || '');
 
   let ticketUrl = '';
   const linkMatch = decoded.match(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>/i);
@@ -1057,7 +1095,7 @@ async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Respons
         }
       }
 
-      const title = String(it.titulo || '').trim();
+      const title = decodeHtmlEntities(String(it.titulo || '')).replace(/\s+/g, ' ').trim();
       const content = String(it.conteudo || '');
       const parsed = parseRioturContent(content);
 

@@ -118,7 +118,15 @@ export function RestaurantCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="rounded-lg bg-white/95 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#102F46] shadow-xs">
               {restaurant.macro_category && restaurant.macro_category !== 'Gastronomia'
-                ? restaurant.macro_category
+                ? restaurant.macro_category === 'Turismo & Praias'
+                  ? 'Passeios'
+                  : restaurant.macro_category === 'Cultura & Museus'
+                    ? 'Cultura'
+                    : restaurant.macro_category === 'Vida Noturna' || restaurant.macro_category === 'Eventos & Shows'
+                      ? 'Noite & Shows'
+                      : restaurant.macro_category === 'Atrações Infantis'
+                        ? 'Infantil'
+                        : restaurant.macro_category
                 : restaurant.category}
             </span>
             {confiaCount > 0 && (

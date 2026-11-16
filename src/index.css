@@ -67,6 +67,28 @@
     color: var(--text-primary);
     transition: background-color 0.25s ease, color 0.25s ease;
   }
+
+  /* Universal pointer cursor on interactive elements */
+  button,
+  a,
+  select,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="link"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
 }
 
 /* Official BoraRio Sunset Gradient */

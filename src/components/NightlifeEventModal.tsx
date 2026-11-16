@@ -14,7 +14,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { formatEventDateBadgePt } from '../services/nightlife/nightlifeDedup';
+import { cleanEventTitle, formatEventDateBadgePt } from '../services/nightlife/nightlifeDedup';
 import {
   NIGHTLIFE_SOURCE_LABELS,
   NIGHTLIFE_SUBAREA_META,
@@ -146,7 +146,7 @@ export function NightlifeEventModal({
               id="nightlife-modal-title"
               className="font-sans text-2xl font-extrabold tracking-tight text-white sm:text-3xl"
             >
-              {event.title}
+              {cleanEventTitle(event.title)}
             </h2>
           </div>
         </div>

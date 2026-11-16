@@ -10,7 +10,6 @@ import {
   MapPin,
   Moon,
   MoreHorizontal,
-  Music,
   Palmtree,
   Plane,
   Plus,
@@ -19,7 +18,6 @@ import {
   Sparkles,
   Star,
   Sun,
-  Umbrella,
   Users,
   UtensilsCrossed,
   Wand2,
@@ -87,12 +85,11 @@ const MACRO_CATEGORIES: Array<{
   gradient: string;
 }> = [
   { label: 'Todas', shortLabel: 'Todas', value: '', icon: Compass, gradient: 'from-[#123B56] to-[#1D557A]' },
-  { label: 'Gastronomia', shortLabel: 'Gastronomia', value: 'Gastronomia', icon: UtensilsCrossed, gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]' },
-  { label: 'Eventos & Shows', shortLabel: 'Eventos', value: 'Eventos & Shows', icon: Music, gradient: 'from-[#7B4CE2] to-[#562BB8]' },
-  { label: 'Vida Noturna', shortLabel: 'Noite', value: 'Vida Noturna', icon: Moon, gradient: 'from-[#0D1E30] to-[#123B56]' },
+  { label: 'Gastronomia', shortLabel: 'Comer', value: 'Gastronomia', icon: UtensilsCrossed, gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]' },
+  { label: 'Passeios & Praias', shortLabel: 'Passeios', value: 'Turismo & Praias', icon: Compass, gradient: 'from-[#1B4D3E] via-[#2A6F55] to-[#397B68]' },
   { label: 'Cultura & Museus', shortLabel: 'Cultura', value: 'Cultura & Museus', icon: Landmark, gradient: 'from-[#123B56] to-[#236B99]' },
-  { label: 'Turismo & Praias', shortLabel: 'Praias', value: 'Turismo & Praias', icon: Umbrella, gradient: 'from-[#D49B27] to-[#F7931E]' },
-  { label: 'Atrações Infantis', shortLabel: 'Infantil', value: 'Atrações Infantis', icon: Palmtree, gradient: 'from-[#397B68] to-[#275C4D]' },
+  { label: 'Noite & Eventos', shortLabel: 'Noite & Shows', value: 'Vida Noturna', icon: Moon, gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]' },
+  { label: 'Atrações Infantis', shortLabel: 'Infantil', value: 'Atrações Infantis', icon: Palmtree, gradient: 'from-[#D49B27] to-[#F7931E]' },
 ];
 
 const NEIGHBORHOOD_OPTIONS = [
@@ -443,41 +440,42 @@ export function HeroSection({
             </div>
           )}
 
-          {/* 4 Core Quick Actions (Comer, Sair, Explorar, Eventos) */}
+          {/* 4 Core Quick Actions (Comer, Passeios, Cultura, Noite & Eventos) */}
           <div className="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-[var(--border-hairline)] pt-2.5 sm:grid-cols-4">
             {[
               {
                 id: 'comer',
                 label: 'Comer',
-                sub: 'Gastronomia',
+                sub: 'Gastronomia & Bares',
                 macro: 'Gastronomia' as const,
                 icon: UtensilsCrossed,
                 gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]',
               },
               {
-                id: 'sair',
-                label: 'Sair',
-                sub: 'Noite & Bares',
-                macro: 'Vida Noturna' as const,
-                icon: Moon,
-                // Degradê azul da logo em Sair
-                gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]',
-              },
-              {
-                id: 'explorar',
-                label: 'Explorar',
-                sub: 'Passeios & Cultura',
+                id: 'passeios',
+                label: 'Passeios',
+                sub: 'Parques, Praias & Mirantes',
                 macro: 'Turismo & Praias' as const,
                 icon: Compass,
                 gradient: 'from-[#1B4D3E] via-[#2A6F55] to-[#397B68]',
               },
               {
-                id: 'eventos',
-                label: 'Eventos',
-                sub: 'Shows & Festas',
-                macro: 'Eventos & Shows' as const,
-                icon: Music,
-                gradient: 'from-[#4A154B] via-[#6B2D5C] to-[#C84B31]',
+                id: 'cultura',
+                label: 'Cultura',
+                sub: 'Museus & Patrimônio',
+                macro: 'Cultura & Museus' as const,
+                icon: Landmark,
+                gradient: 'from-[#123B56] via-[#1B5276] to-[#2A6F55]',
+              },
+              {
+                id: 'noite',
+                label: 'Noite & Eventos',
+                sub: 'Festas, Shows & Samba',
+                macro: 'Vida Noturna' as const,
+                icon: Moon,
+                // Degradê azul da logo em Noite & Eventos
+                gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]',
+                scrollToId: 'home-block-nightlife',
               },
             ].map((act) => {
               const Icon = act.icon;
@@ -486,12 +484,18 @@ export function HeroSection({
                 <button
                   key={act.id}
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    const nextMacro = active ? '' : act.macro;
                     onChange({
                       ...filters,
-                      macroCategory: active ? '' : act.macro,
-                    })
-                  }
+                      macroCategory: nextMacro,
+                    });
+                    if (act.scrollToId && !active) {
+                      setTimeout(() => {
+                        document.getElementById(act.scrollToId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 70);
+                    }
+                  }}
                   className={`flex items-center gap-2 rounded-xl p-2 text-left transition-all ${
                     active
                       ? `bg-gradient-to-r ${act.gradient} text-white shadow-sm ring-1 ring-white/20`

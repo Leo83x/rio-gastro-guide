@@ -122,8 +122,55 @@ export function buildStartEndIsoRio(
   };
 }
 
+export function decodeHtmlEntities(raw?: string): string {
+  if (!raw) return '';
+  let s = String(raw);
+  // Numeric decimal entities: &#8220; &#8221; &#8211; etc.
+  s = s.replace(/&#(\d+);/g, (_, dec) => {
+    try {
+      const code = parseInt(dec, 10);
+      return String.fromCharCode(code);
+    } catch {
+      return '';
+    }
+  });
+  // Numeric hex entities: &#x201C; etc.
+  s = s.replace(/&#x([0-9a-fA-F]+);/gi, (_, hex) => {
+    try {
+      const code = parseInt(hex, 16);
+      return String.fromCharCode(code);
+    } catch {
+      return '';
+    }
+  });
+  // Common named HTML entities
+  s = s
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&#39;/gi, "'")
+    .replace(/&#039;/gi, "'")
+    .replace(/&ldquo;/gi, '“')
+    .replace(/&rdquo;/gi, '”')
+    .replace(/&lsquo;/gi, '‘')
+    .replace(/&rsquo;/gi, '’')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&hellip;/gi, '…')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, ' ');
+  return s.trim();
+}
+
+export function cleanEventTitle(raw?: string): string {
+  if (!raw) return '';
+  return decodeHtmlEntities(raw).replace(/\s+/g, ' ').trim();
+}
+
 export function normalizeTextForDedup(raw: string): string {
-  return raw
+  const decoded = decodeHtmlEntities(raw);
+  return decoded
     .toString()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -161,27 +208,46 @@ function tokenJaccardSimilarity(a: string, b: string): number {
   return union === 0 ? 0 : intersection / union;
 }
 
+function cleanUrlForDedup(u?: string): string {
+  if (!u) return '';
+  try {
+    const parsed = new URL(u);
+    // remove search params and hash
+    return `${parsed.origin}${parsed.pathname}`.toLowerCase().replace(/\/+$/, '');
+  } catch {
+    return u.split('?')[0].toLowerCase().replace(/\/+$/, '').trim();
+  }
+}
+
 export interface DuplicateMatchResult {
   existing: NightlifeEvent;
-  matchReason: 'external_key' | 'source_id' | 'dedup_hash' | 'fuzzy_venue_date';
+  matchReason: 'external_key' | 'source_id' | 'source_url' | 'dedup_hash' | 'same_date_title' | 'fuzzy_venue_date';
 }
 
 export function findDuplicateNightlifeEvent(
   candidate: Pick<
     NightlifeEventDraft,
     'external_key' | 'source_platform' | 'source_external_id' | 'title' | 'venue_name' | 'event_date'
-  >,
+  > & { source_url?: string; ticket_url?: string },
   existingList: NightlifeEvent[]
 ): DuplicateMatchResult | null {
-  const candidateHash = computeNightlifeDedupHash(candidate);
-  const candTitleNorm = normalizeEventTitleForDedup(candidate.title);
+  const candTitleClean = cleanEventTitle(candidate.title);
+  const candTitleNorm = normalizeEventTitleForDedup(candTitleClean);
   const candVenueNorm = normalizeTextForDedup(candidate.venue_name);
+  const candUrl = cleanUrlForDedup(candidate.ticket_url || candidate.source_url);
+  const candidateHash = computeNightlifeDedupHash({
+    title: candTitleClean,
+    venue_name: candidate.venue_name,
+    event_date: candidate.event_date,
+  });
 
   for (const item of existingList) {
+    // 1. Exact external key match
     if (candidate.external_key && item.external_key === candidate.external_key) {
       return { existing: item, matchReason: 'external_key' };
     }
 
+    // 2. Exact source external ID match
     if (
       candidate.source_external_id &&
       item.source_external_id &&
@@ -191,12 +257,41 @@ export function findDuplicateNightlifeEvent(
       return { existing: item, matchReason: 'source_id' };
     }
 
-    const itemHash = item.dedup_hash || computeNightlifeDedupHash(item);
+    // 3. Exact Ticket or Source URL match (e.g. same Sympla/Ingresse/Riotur link)
+    if (candUrl) {
+      const itemUrl = cleanUrlForDedup(item.ticket_url || item.source_url);
+      if (itemUrl && (itemUrl === candUrl || (item.alternate_ticket_urls && item.alternate_ticket_urls.some((a) => cleanUrlForDedup(a.ticket_url) === candUrl)))) {
+        return { existing: item, matchReason: 'source_url' };
+      }
+    }
+
+    // 4. Exact Dedup Hash match
+    const itemTitleClean = cleanEventTitle(item.title);
+    const itemHash = item.dedup_hash || computeNightlifeDedupHash({
+      title: itemTitleClean,
+      venue_name: item.venue_name,
+      event_date: item.event_date,
+    });
     if (itemHash === candidateHash) {
       return { existing: item, matchReason: 'dedup_hash' };
     }
 
-    if (item.event_date === candidate.event_date) {
+    // 5. Date-based match: on the same date in Rio, identical or highly similar event titles
+    if (item.event_date && candidate.event_date && item.event_date === candidate.event_date) {
+      const itemTitleNorm = normalizeEventTitleForDedup(itemTitleClean);
+
+      // Exact title match on the same date is always the same event
+      if (candTitleNorm && itemTitleNorm && candTitleNorm === itemTitleNorm) {
+        return { existing: item, matchReason: 'same_date_title' };
+      }
+
+      // High token similarity (>= 0.70) on the same date
+      const similarity = tokenJaccardSimilarity(candTitleNorm, itemTitleNorm);
+      if (similarity >= 0.70) {
+        return { existing: item, matchReason: 'same_date_title' };
+      }
+
+      // Medium similarity (>= 0.55) when venue is confirmed to match
       const itemVenueNorm = normalizeTextForDedup(item.venue_name);
       const sameVenue =
         candVenueNorm === itemVenueNorm ||
@@ -204,16 +299,62 @@ export function findDuplicateNightlifeEvent(
           itemVenueNorm.length >= 4 &&
           (candVenueNorm.includes(itemVenueNorm) || itemVenueNorm.includes(candVenueNorm)));
 
-      if (sameVenue) {
-        const itemTitleNorm = normalizeEventTitleForDedup(item.title);
-        if (tokenJaccardSimilarity(candTitleNorm, itemTitleNorm) >= 0.72) {
-          return { existing: item, matchReason: 'fuzzy_venue_date' };
-        }
+      if (sameVenue && similarity >= 0.55) {
+        return { existing: item, matchReason: 'fuzzy_venue_date' };
       }
     }
   }
 
   return null;
+}
+
+export function deduplicateEventsList(list: NightlifeEvent[]): NightlifeEvent[] {
+  const deduped: NightlifeEvent[] = [];
+  for (const item of list) {
+    const cleanedItem: NightlifeEvent = {
+      ...item,
+      title: cleanEventTitle(item.title),
+      short_summary: decodeHtmlEntities(item.short_summary),
+      venue_name: decodeHtmlEntities(item.venue_name),
+      neighborhood: decodeHtmlEntities(item.neighborhood),
+      address: decodeHtmlEntities(item.address),
+    };
+
+    const match = findDuplicateNightlifeEvent(cleanedItem, deduped);
+    if (!match) {
+      deduped.push(cleanedItem);
+    } else {
+      // Merge best fields into existing
+      const existingIdx = deduped.findIndex((e) => e.id === match.existing.id);
+      if (existingIdx !== -1) {
+        const existing = deduped[existingIdx];
+        const mergedAlt = [...(existing.alternate_ticket_urls || [])];
+        if (
+          cleanedItem.ticket_url &&
+          cleanedItem.ticket_url !== existing.ticket_url &&
+          !mergedAlt.some((a) => a.ticket_url === cleanedItem.ticket_url)
+        ) {
+          mergedAlt.push({
+            source_platform: cleanedItem.source_platform,
+            ticket_url: cleanedItem.ticket_url,
+            price_label: cleanedItem.price_display_label,
+            last_seen_at: cleanedItem.last_verified_at || new Date().toISOString(),
+          });
+        }
+        // If the duplicate has a better photo or is published, prefer it
+        deduped[existingIdx] = {
+          ...existing,
+          curation_status: existing.curation_status === 'PUBLICADO' || cleanedItem.curation_status === 'PUBLICADO'
+            ? 'PUBLICADO'
+            : existing.curation_status,
+          cover_image: existing.cover_image || cleanedItem.cover_image,
+          ticket_url: existing.ticket_url || cleanedItem.ticket_url,
+          alternate_ticket_urls: mergedAlt,
+        };
+      }
+    }
+  }
+  return deduped;
 }
 
 export function buildOriginalEditorialSummary(
