@@ -1,22 +1,20 @@
 import {
   ArrowRight,
-  Award,
-  Building2,
-  CalendarCheck,
-  CheckCircle2,
-  Clock3,
+  BadgeCheck,
+  CalendarCheck2,
+  ChevronRight,
   Gift,
   Moon,
   QrCode,
   ShieldCheck,
   Sparkles,
-  Store,
   Sun,
-  Users,
+  TrendingUp,
+  Users2,
+  Wallet,
 } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import type { AppRoute } from '../services/router';
-import { REWARDS_ZERO_COMMISSION_PARTNER_COPY } from '../types/verification';
 
 interface PartnersLandingPageProps {
   isDark: boolean;
@@ -24,257 +22,263 @@ interface PartnersLandingPageProps {
   onNavigate: (route: AppRoute) => void;
 }
 
-const MODALITIES = [
-  {
-    icon: CalendarCheck,
-    title: 'A. Reserva Tradicional',
-    badge: 'Sem desconto obrigatório',
-    text: 'Disponibilize horários, capacidade e turnos do seu salão para reservas individuais ou de grupos com autonomia total do cardápio.',
-  },
-  {
-    icon: Gift,
-    title: 'B. Oferta Individual',
-    badge: 'Uso imediato',
-    text: 'Crie um benefício, cortesia, menu especial ou preço fechado utilizável por 1 cliente ou mesa sem depender de outros participantes.',
-  },
-  {
-    icon: Users,
-    title: 'C. Reserva Inteligente por Demanda',
-    badge: 'Demanda agregada',
-    text: 'Agregue manifestações de interesse individuais em uma mesma janela de data e horário. Participantes não dividem mesa e você só confirma após atingir a meta.',
-  },
-  {
-    icon: Clock3,
-    title: 'D. Oportunidade de Última Hora',
-    badge: 'Baixa ocupação e vagas extras',
-    text: 'Divulgue mesas remanescentes, cancelamentos recentes ou horários ociosos com limite de vagas, prazo e condição definidos por você.',
-  },
-];
-
 export function PartnersLandingPage({
   isDark,
   onToggleTheme,
   onNavigate,
 }: PartnersLandingPageProps) {
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] selection:bg-[#FF6B35] selection:text-white">
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-40 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => onNavigate('/')} className="text-left">
-              <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
+              <BrandLogo variant="horizontal" size="md" onDark={isDark} />
             </button>
-            <span className="hidden rounded-full bg-[#397B68]/15 px-2.5 py-0.5 text-[11px] font-bold text-[#397B68] sm:inline-block">
-              Plataforma para Estabelecimentos
+            <span className="hidden rounded-full bg-[#123B56]/10 px-3 py-1 text-xs font-bold text-[#0077B6] dark:bg-[#0077B6]/15 dark:text-[#90E0EF] sm:inline-block">
+              BoraRio Partners
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onToggleTheme}
               aria-label="Alternar tema"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)]"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] transition hover:border-[#FF6B35]"
             >
-              {isDark ? <Sun className="h-4 w-4 text-[#FF765E]" /> : <Moon className="h-4 w-4 text-[#123B56]" />}
+              {isDark ? <Sun className="h-4 w-4 text-[#F7931E]" /> : <Moon className="h-4 w-4 text-[#123B56]" />}
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/app')}
-              className="rounded-full border border-[var(--border-hairline)] px-3.5 py-1.5 text-xs font-semibold hover:border-[#FF765E]"
+              className="rounded-full border border-[var(--border-hairline)] px-4 py-2 text-xs font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
             >
-              Ver App
+              Ver Aplicativo
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/parceiros/painel')}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#123B56] px-4 py-2 text-xs font-bold text-white hover:bg-[#102F46]"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[#FF4B2B]/20 transition hover:brightness-105"
             >
               Painel do Parceiro
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Hero B2B Oficial */}
-      <section className="bg-borario-day py-16 text-white sm:py-20">
-        <div className="mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3.5 py-1 text-xs font-semibold text-[#F1E8D8]">
-            <Building2 className="h-3.5 w-3.5 text-[#FF765E]" />
-            BoraRio — Plataforma inteligente de reservas, experiências e geração de demanda
-          </span>
-          <h1 className="font-sans tracking-tight mt-4 text-4xl font-bold leading-tight sm:text-5xl">
-            Mais reservas. Mais previsibilidade. Mais clientes.
+      {/* Hero Premium */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#07111C] via-[#0A1828] to-[#0E2235] py-20 text-white sm:py-28">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-[#FF6B35]/15 blur-3xl" />
+          <div className="absolute right-10 top-1/2 h-80 w-80 rounded-full bg-[#0077B6]/20 blur-3xl" />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-5xl px-4 text-center sm:px-6 lg:px-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFB347] backdrop-blur-md">
+            <Sparkles className="h-3.5 w-3.5" />
+            Parceiros Comerciais · Rio de Janeiro
+          </div>
+
+          <h1 className="mt-6 font-sans text-4xl font-extrabold tracking-tight text-white sm:text-6xl sm:leading-tight">
+            Mais clientes qualificados na sua casa.{' '}
+            <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent">
+              Sem comissão sobre a conta.
+            </span>
           </h1>
-          <p className="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-[#F1E8D8]/95 sm:text-base">
-            <strong>Você define as condições comerciais e escolhe como quer participar.</strong> Não é obrigatório oferecer descontos nem aderir a campanhas promocionais para estar no BoraRio.
+
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[#F1E8D8]/90 sm:text-lg">
+            Preencha seus salões nos dias certos, atraia clientes que consomem e receba 100% do faturamento diretamente no seu caixa.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <button
               type="button"
               onClick={() => onNavigate('/parceiros/painel')}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[#FF765E] px-6 py-3.5 text-sm font-bold text-white shadow-lg hover:bg-[#e8634c]"
+              className="inline-flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-8 py-4 text-base font-bold text-white shadow-xl shadow-[#FF4B2B]/30 transition hover:scale-[1.02] hover:brightness-105"
             >
-              Entrar no Painel do Parceiro
-              <ArrowRight className="h-4 w-4" />
+              <span>Acessar Painel B2B</span>
+              <ArrowRight className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => onNavigate('/app')}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-bold text-white hover:bg-white/20"
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-6 py-4 text-base font-bold text-white backdrop-blur-md transition hover:bg-white/20"
             >
-              Explorar Experiência do Cliente
+              Conhecer a Experiência
             </button>
+          </div>
+
+          {/* 3 Pillars Highlight Bar */}
+          <div className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/15 bg-white/5 p-6 backdrop-blur-md">
+              <div className="font-sans text-3xl font-extrabold text-[#FF6B35]">0%</div>
+              <div className="mt-1 text-sm font-bold text-white">Comissão sobre a Conta</div>
+              <p className="mt-1.5 text-xs text-white/70">100% do consumo pago direto no seu balcão.</p>
+            </div>
+
+            <div className="rounded-2xl border border-white/15 bg-white/5 p-6 backdrop-blur-md">
+              <div className="font-sans text-3xl font-extrabold text-[#4CA188]">100%</div>
+              <div className="mt-1 text-sm font-bold text-white">Autonomia de Regras</div>
+              <p className="mt-1.5 text-xs text-white/70">Você define capacidade, horários e dias.</p>
+            </div>
+
+            <div className="rounded-2xl border border-white/15 bg-white/5 p-6 backdrop-blur-md">
+              <div className="font-sans text-3xl font-extrabold text-[#90E0EF]">Zero</div>
+              <div className="mt-1 text-sm font-bold text-white">Desconto Obrigatório</div>
+              <p className="mt-1.5 text-xs text-white/70">Participe com reservas normais do cardápio.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Autonomia Comercial & 4 Modalidades Independentes */}
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="max-w-3xl">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#397B68]">
-            4 Modalidades Independentes
+      {/* 4 Modalidades de Ocupação */}
+      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#FF6B35]">
+            Flexibilidade Total
           </span>
-          <h2 className="font-sans tracking-tight mt-2 text-3xl font-bold">
-            Autonomia total de preço, capacidade, datas e regras
+          <h2 className="mt-2 font-sans text-3xl font-extrabold tracking-tight sm:text-4xl">
+            Escolha como a sua casa quer participar
           </h2>
-          <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            Utilize apenas reservas tradicionais e presença verificada, ou combine ofertas individuais, oportunidades de última hora e reserva inteligente por demanda conforme a estratégia da sua casa.
+          <p className="mx-auto mt-3 max-w-2xl text-base text-[var(--text-secondary)]">
+            Diferentes estratégias para dias de pico, almoço executivo ou noites de baixa ocupação.
           </p>
         </div>
 
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {MODALITIES.map((item) => {
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              icon: CalendarCheck2,
+              title: 'Reserva Tradicional',
+              badge: 'Preço cheio',
+              desc: 'Disponibilize mesas e turnos com seu cardápio regular, sem qualquer desconto obrigatório.',
+            },
+            {
+              icon: Gift,
+              title: 'Ofertas & Cortesias',
+              badge: 'Atração imediata',
+              desc: 'Crie uma cortesia ou menu degustação exclusivo para atrair clientes em horários estratégicos.',
+            },
+            {
+              icon: Users2,
+              title: 'Demanda por Meta',
+              badge: 'Ocupação garantida',
+              desc: 'Abra janelas especiais que só se confirmam se atingirem o número mínimo de reservas definido por você.',
+            },
+            {
+              icon: TrendingUp,
+              title: 'Última Hora',
+              badge: 'Anti-ociosidade',
+              desc: 'Preencha cancelamentos de última hora com condições pontuais para o mesmo dia.',
+            },
+          ].map((item) => {
             const Icon = item.icon;
             return (
               <div
                 key={item.title}
-                className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs"
+                className="group flex flex-col justify-between rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-7 shadow-xs transition hover:-translate-y-1 hover:border-[#FF6B35]/50 hover:shadow-lg"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <Icon className="h-6 w-6 text-[#FF6B35]" />
-                  <span className="rounded-full bg-[var(--bg-canvas)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-secondary)]">
-                    {item.badge}
-                  </span>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FF6B35]/10 text-[#FF6B35]">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <span className="rounded-full bg-[var(--bg-canvas)] px-3 py-1 text-xs font-bold text-[var(--text-secondary)]">
+                      {item.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-5 font-sans text-lg font-bold text-[var(--text-primary)]">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2.5 text-sm leading-relaxed text-[var(--text-secondary)]">
+                    {item.desc}
+                  </p>
                 </div>
-                <h3 className="font-sans tracking-tight mt-4 text-base font-bold text-[var(--text-primary)]">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-                  {item.text}
-                </p>
               </div>
             );
           })}
         </div>
+      </section>
 
-        {/* Duas Condições Comerciais + Regra Econômica Comissão Zero sobre Rio Points */}
-        <div className="mt-10 rounded-3xl border border-[#397B68]/35 bg-gradient-to-br from-[#397B68]/10 via-[var(--bg-surface)] to-[#123B56]/10 p-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#397B68]">
-                <Award className="h-4 w-4" />
-                Duas Condições Comerciais Complementares
-              </span>
-              <h2 className="font-sans tracking-tight mt-1 text-2xl font-bold text-[var(--text-primary)]">
-                Aquisição de Clientes + Economia de Recompensas sem Comissão
-              </h2>
-            </div>
-            <span className="rounded-full bg-emerald-500/15 px-3.5 py-1.5 text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
-              Comissão sobre resgates: 0% · R$ 0,00
+      {/* Garantias Operacionais (Clean & Direto) */}
+      <section className="border-t border-[var(--border-hairline)] bg-[var(--bg-surface)]/60 py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#397B68]">
+              Segurança & Transparência
             </span>
+            <h2 className="mt-2 font-sans text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Como funciona o dia a dia na sua operação
+            </h2>
           </div>
 
-          <div className="mt-6 grid gap-5 md:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
-                <Gift className="h-4 w-4" />
-                Condição 1 — Oferta para Atrair
+          <div className="mt-12 grid gap-8 md:grid-cols-3">
+            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#397B68]/15 text-[#397B68]">
+                <Wallet className="h-6 w-6" />
               </div>
-              <h3 className="mt-2 text-base font-bold text-[var(--text-primary)]">
-                Aquisição, reservas e ocupação estratégica
+              <h3 className="mt-5 font-sans text-xl font-bold text-[var(--text-primary)]">
+                Pagamento direto no seu caixa
               </h3>
-              <p className="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)]">
-                Crie descontos em itens selecionados, cortesias, menus especiais, preços fechados ou janelas limitadas (individuais ou por demanda agregada) — sem obrigatoriedade de desconto para participar.
+              <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                O BoraRio não intermedeia o pagamento da conta. O cliente consome e paga normalmente no seu estabelecimento pela sua maquininha.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[#397B68]/40 bg-[var(--bg-surface)] p-5">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#397B68]">
-                <Sparkles className="h-4 w-4" />
-                Condição 2 — Recompensa BoraRio
+            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FF6B35]/15 text-[#FF6B35]">
+                <QrCode className="h-6 w-6" />
               </div>
-              <h3 className="mt-2 text-base font-bold text-[var(--text-primary)]">
-                Fidelidade e retorno de toda a rede com comissão zero
+              <h3 className="mt-5 font-sans text-xl font-bold text-[var(--text-primary)]">
+                Check-in antifraude
               </h3>
-              <p className="mt-1.5 text-xs leading-relaxed text-[var(--text-secondary)]">
-                Disponibilize produtos, sobremesas, passeios, upgrades ou ingressos do seu catálogo para troca via Rio Points com controle total de estoque, validade e limites por usuário.
+              <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                Validação simples por QR Code temporário ou PIN de 4 dígitos no balcão. Sem cupons impressos nem códigos reaproveitáveis.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0077B6]/15 text-[#0077B6]">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h3 className="mt-5 font-sans text-xl font-bold text-[var(--text-primary)]">
+                Fidelidade sem comissão
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                Clientes acumulam Rio Points na rede BoraRio e trocam por benefícios na sua casa com comissão zero sobre os resgates.
               </p>
             </div>
           </div>
-
-          <div className="mt-5 rounded-2xl border border-[#123B56]/25 bg-[var(--bg-surface)] p-5 text-sm leading-relaxed text-[var(--text-primary)]">
-            <p className="font-semibold">{REWARDS_ZERO_COMMISSION_PARTNER_COPY}</p>
-          </div>
         </div>
+      </section>
 
-        {/* Garantias Operacionais & Remuneracao Auditavel */}
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
-            <Store className="h-6 w-6 text-[#397B68]" />
-            <h3 className="font-sans mt-3 text-lg font-bold">Receba 100% direto no seu caixa</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-              O BoraRio não processa pagamentos dos clientes no aplicativo e não retém seu faturamento. O acerto do consumo acontece diretamente no estabelecimento pelos seus próprios meios de pagamento.
+      {/* CTA Final de Alto Impacto */}
+      <section className="bg-gradient-to-r from-[#0E2235] via-[#123B56] to-[#0A1828] py-16 text-white">
+        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-8 px-4 text-center sm:px-6 md:flex-row md:text-left lg:px-8">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold text-[#FFB347]">
+              <BadgeCheck className="h-4 w-4" />
+              Acesso Imediato
+            </span>
+            <h2 className="mt-3 font-sans text-3xl font-extrabold tracking-tight sm:text-4xl">
+              Comece a receber reservas do BoraRio
+            </h2>
+            <p className="mt-2 text-base text-[#F1E8D8]/80">
+              Acesse o painel para gerenciar suas modalidades ou cadastrar sua casa.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
-            <QrCode className="h-6 w-6 text-[#FF6B35]" />
-            <h3 className="font-sans mt-3 text-lg font-bold">Check-in dinâmico antifraude</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-              Tokens QR temporários e PIN operacional de balcão vinculados à reserva impedem uso duplicado, expiração ou autovalidação. Também conta com conciliação para casos offline ou sem câmera.
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
-            <ShieldCheck className="h-6 w-6 text-[#123B56] dark:text-[#F7931E]" />
-            <h3 className="font-sans mt-3 text-lg font-bold">Remuneração fixa configurável</h3>
-            <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-              Taxa fixa configurável por plano/contrato vinculada apenas a reservas e check-ins válidos de clientes atendidos. <strong>0% sobre o valor da conta consumida</strong>, <strong>0% sobre resgates de Rio Points</strong> e zero cobrança por cliques ou cancelamentos.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-10 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-8">
-          <h2 className="font-sans tracking-tight text-2xl font-bold">Compromissos de transparência com o parceiro</h2>
-          <div className="mt-6 grid gap-5 md:grid-cols-3">
-            {[
-              {
-                title: 'Sem desconto obrigatório',
-                text: 'Você nunca precisa reduzir preços para entrar na plataforma ou receber reservas tradicionais.',
-              },
-              {
-                title: 'Controle para ativar e pausar',
-                text: 'Ative, pause ou crie novas condições a qualquer momento, respeitando apenas reservas já confirmadas com clientes.',
-              },
-              {
-                title: 'Auditoria e contestação clara',
-                text: 'Cada check-in e apuração de taxa fixa exibe origem, horário, hóspedes e botão para contestação direta no painel.',
-              },
-            ].map((item) => (
-              <div key={item.title} className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#397B68]" />
-                <div>
-                  <h3 className="text-sm font-bold text-[var(--text-primary)]">{item.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    {item.text}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate('/parceiros/painel')}
+            className="inline-flex shrink-0 items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-8 py-4 text-base font-bold text-white shadow-xl shadow-[#FF4B2B]/30 transition hover:scale-105"
+          >
+            <span>Entrar no Painel B2B</span>
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       </section>
     </div>

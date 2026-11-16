@@ -14,7 +14,6 @@ import {
   Sun,
   User,
   WifiOff,
-  Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { AppRoute } from '../services/router';
@@ -327,19 +326,6 @@ export function Navbar({
                     >
                       <Building2 className="h-4 w-4 text-[#397B68]" />
                       Área de Parceiros
-                    </button>
-
-                    <button
-                      id="btn-open-admin"
-                      type="button"
-                      onClick={() => {
-                        setShowMoreMenu(false);
-                        onNavigateRoute('/admin');
-                      }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
-                    >
-                      <Zap className="h-4 w-4 text-[#FF6B35]" />
-                      Administração
                     </button>
                   </div>
                 )}

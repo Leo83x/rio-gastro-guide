@@ -11,6 +11,7 @@ import {
   Globe2,
   KeyRound,
   Loader2,
+  LogOut,
   MapPin,
   MoonStar,
   RefreshCw,
@@ -78,6 +79,7 @@ interface AdminPanelProps {
   initialTab?: AdminTab;
   onDatabaseUpdated: () => Promise<void>;
   onNightlifeUpdated: () => Promise<void>;
+  onLogout?: () => void;
 }
 
 export type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b' | 'nightlife';
@@ -119,6 +121,7 @@ export function AdminPanel({
   initialTab = 'overpass',
   onDatabaseUpdated,
   onNightlifeUpdated,
+  onLogout,
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
   const storageMode = getStorageMode();
@@ -686,6 +689,17 @@ export function AdminPanel({
             <Trash2 className="h-3.5 w-3.5" />
             Limpar Banco
           </button>
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/50 bg-red-500/20 px-3.5 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-500/30 dark:text-red-300"
+              title="Encerrar sessão de administrador"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sair do Admin
+            </button>
+          )}
         </div>
       </div>
 

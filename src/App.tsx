@@ -1,6 +1,7 @@
 import { Bookmark, CheckCircle2, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminPanel, type AdminTab } from './components/AdminPanel';
+import { AdminGatekeeper } from './components/admin/AdminGatekeeper';
 import { BrandLogo } from './components/BrandLogo';
 import { ClubView } from './components/ClubView';
 import { ConciergeWidget } from './components/ConciergeWidget';
@@ -13,6 +14,7 @@ import { NightlifeEventModal } from './components/NightlifeEventModal';
 import { NightlifeSection } from './components/NightlifeSection';
 import { PersonalizeModal } from './components/PersonalizeModal';
 import { PlannerView } from './components/PlannerView';
+import { PwaInstallModal } from './components/PwaInstallModal';
 import {
   ProfileWalletView,
   type ProfileFocusTarget,
@@ -81,6 +83,13 @@ export function App() {
   const [filterDrawerSignal, setFilterDrawerSignal] = useState(0);
   const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('overpass');
   const [adminDeepLinkNonce, setAdminDeepLinkNonce] = useState(0);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('borario_admin_authenticated') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [clubDeepLink, setClubDeepLink] = useState<{
     section: 'offerings' | 'rewards';
     modality: CommercialModality | 'ALL';
@@ -104,6 +113,39 @@ export function App() {
   const [pendingBoraIaPrompt, setPendingBoraIaPrompt] = useState<string | null>(null);
   const [pendingPlannerPrompt, setPendingPlannerPrompt] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; showVaultAction?: boolean } | null>(null);
+  const [showPwaInstallModal, setShowPwaInstallModal] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      Boolean((navigator as unknown as { standalone?: boolean }).standalone);
+    if (isStandalone) return;
+
+    try {
+      const dismissedUntil = localStorage.getItem('borario_pwa_install_dismissed_until');
+      if (dismissedUntil && Number(dismissedUntil) > Date.now()) return;
+    } catch {
+      // ignore
+    }
+
+    const timer = setTimeout(() => {
+      setShowPwaInstallModal(true);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleClosePwaModal = useCallback(() => {
+    setShowPwaInstallModal(false);
+    try {
+      localStorage.setItem(
+        'borario_pwa_install_dismissed_until',
+        String(Date.now() + 48 * 60 * 60 * 1000)
+      );
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
@@ -464,14 +506,22 @@ export function App() {
   // 1. Public Landing Page (/)
   if (route === '/') {
     return (
-      <LandingPage
-        isDark={isDark}
-        onToggleTheme={() => setIsDark((prev) => !prev)}
-        onNavigate={navigate}
-        totalExperiences={restaurants.length}
-        canInstallPwa={canInstall}
-        onInstallPwa={() => void promptInstall()}
-      />
+      <>
+        <LandingPage
+          isDark={isDark}
+          onToggleTheme={() => setIsDark((prev) => !prev)}
+          onNavigate={navigate}
+          totalExperiences={restaurants.length}
+          canInstallPwa={canInstall}
+          onInstallPwa={() => setShowPwaInstallModal(true)}
+        />
+        <PwaInstallModal
+          isOpen={showPwaInstallModal}
+          canInstall={canInstall}
+          onInstall={promptInstall}
+          onClose={handleClosePwaModal}
+        />
+      </>
     );
   }
 
@@ -574,18 +624,34 @@ export function App() {
         overlayHero={effectiveTab === 'discover'}
       />
 
-      {effectiveTab === 'admin' && (
-        <AdminPanel
-          key={`admin-${adminInitialTab}-${adminDeepLinkNonce}`}
-          restaurants={restaurants}
-          claims={claims}
-          reservations={reservations}
-          nightlifeEvents={nightlifeEvents}
-          initialTab={adminInitialTab}
-          onDatabaseUpdated={loadData}
-          onNightlifeUpdated={reloadNightlife}
-        />
-      )}
+      {effectiveTab === 'admin' &&
+        (!isAdminAuthenticated ? (
+          <AdminGatekeeper
+            onAuthenticated={() => setIsAdminAuthenticated(true)}
+            onExit={() => navigate('/app')}
+            isDark={isDark}
+          />
+        ) : (
+          <AdminPanel
+            key={`admin-${adminInitialTab}-${adminDeepLinkNonce}`}
+            restaurants={restaurants}
+            claims={claims}
+            reservations={reservations}
+            nightlifeEvents={nightlifeEvents}
+            initialTab={adminInitialTab}
+            onDatabaseUpdated={loadData}
+            onNightlifeUpdated={reloadNightlife}
+            onLogout={() => {
+              try {
+                sessionStorage.removeItem('borario_admin_authenticated');
+              } catch {
+                // ignore
+              }
+              setIsAdminAuthenticated(false);
+              navigate('/app');
+            }}
+          />
+        ))}
 
       {effectiveTab === 'discover' && (
         <>
@@ -631,7 +697,7 @@ export function App() {
                 onFilterPermanentNightlife={handleFilterPermanentNightlife}
                 onSaveNightlifeToVault={handleSaveNightlifeToVault}
                 onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
-                onGoToAdminNightlife={navigateToAdminNightlife}
+                onGoToAdminNightlife={isAdminAuthenticated ? navigateToAdminNightlife : undefined}
                 onRequestLocation={handleRequestLocation}
                 onScrollToCatalog={() =>
                   document
@@ -658,7 +724,7 @@ export function App() {
                   onSelectPermanentVenue={setSelectedRestaurant}
                   onSaveEventToVault={handleSaveNightlifeToVault}
                   onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
-                  onGoToAdminNightlife={navigateToAdminNightlife}
+                  onGoToAdminNightlife={isAdminAuthenticated ? navigateToAdminNightlife : undefined}
                 />
               </div>
             )}
@@ -682,17 +748,17 @@ export function App() {
                 </h2>
                 <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-secondary)]">
                   {restaurants.length === 0
-                    ? 'O banco de dados está vazio. Use o Painel de Importação em Lote para carregar o Seed RJ ou extrair dados.'
+                    ? 'Nenhum resultado carregado no momento. Recarregue a página para atualizar o catálogo.'
                     : 'Tente ajustar sua busca ou remover alguns filtros de momento, categoria ou bairro.'}
                 </p>
                 <div className="mt-6 flex justify-center gap-3">
                   {restaurants.length === 0 ? (
                     <button
                       type="button"
-                      onClick={() => navigate('/admin')}
+                      onClick={() => window.location.reload()}
                       className="rounded-xl bg-[#FF765E] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#e8634c]"
                     >
-                      Abrir Painel Admin
+                      Recarregar Catálogo
                     </button>
                   ) : (
                     <button
@@ -916,17 +982,6 @@ export function App() {
             <button type="button" onClick={() => navigate('/parceiros')} className="hover:text-[#FF765E]">
               Área de Parceiros
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdminInitialTab('overpass');
-                setAdminDeepLinkNonce((n) => n + 1);
-                navigate('/admin');
-              }}
-              className="hover:text-[#FF765E]"
-            >
-              Administração
-            </button>
           </div>
         </div>
       </footer>
@@ -1047,6 +1102,13 @@ export function App() {
           }}
         />
       )}
+
+      <PwaInstallModal
+        isOpen={showPwaInstallModal}
+        canInstall={canInstall}
+        onInstall={promptInstall}
+        onClose={handleClosePwaModal}
+      />
     </div>
   );
 }
