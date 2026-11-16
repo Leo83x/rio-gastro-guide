@@ -136,6 +136,10 @@ export interface NightlifeCompletenessCheck {
   complete: boolean;
   missing_fields: string[];
   warnings: string[];
+  inferred_venue?: {
+    venue_name: string;
+    neighborhood: string;
+  };
 }
 
 export interface NightlifeIngestionRun {

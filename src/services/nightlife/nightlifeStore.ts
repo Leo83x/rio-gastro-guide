@@ -18,6 +18,9 @@ import {
   checkNightlifeCompleteness,
   computeNightlifeDedupHash,
   findDuplicateNightlifeEvent,
+  getRioTodayIso,
+  inferDraftFromUrlSlug,
+  inferVenueAndNeighborhood,
   isEventVisiblePublicly,
   matchPermanentVenueId,
   normalizeTimeHHmm,
@@ -108,12 +111,16 @@ function sweepEventsArray(
   const nowIso = new Date(nowMs).toISOString();
 
   const next = events.map((ev) => {
+    const todayRio = getRioTodayIso(new Date(nowMs));
+    const isPastDate = Boolean(ev.event_date && ev.event_date < todayRio);
     const endsMs = new Date(ev.ends_at).getTime();
-    const isPastEnd = !Number.isNaN(endsMs) && endsMs < nowMs;
+    const isPastEnd = (!Number.isNaN(endsMs) && endsMs < nowMs) || isPastDate;
 
     if (
       isPastEnd &&
-      (ev.curation_status === 'PUBLICADO' || ev.curation_status === 'PROGRAMADO')
+      (ev.curation_status === 'PUBLICADO' ||
+        ev.curation_status === 'PROGRAMADO' ||
+        ev.curation_status === 'PENDENTE')
     ) {
       expiredCount++;
       changed = true;
@@ -457,8 +464,35 @@ export async function ingestNightlifeBatch(params: {
   let dedupedUpdated = 0;
   const nowIso = new Date().toISOString();
 
+  const todayRio = getRioTodayIso();
+
   for (const draft of params.drafts) {
     if (!draft.title?.trim()) continue;
+
+    // Discard past events - strictly future/current only
+    if (draft.event_date && draft.event_date < todayRio) {
+      continue;
+    }
+
+    // Auto-infer venue and neighborhood if missing or unconfirmed
+    if (
+      !draft.venue_name ||
+      draft.venue_name.trim().length < 2 ||
+      draft.venue_name.trim().toLowerCase() === 'local a confirmar'
+    ) {
+      const inf = inferVenueAndNeighborhood(
+        draft.title,
+        draft.short_summary,
+        draft.source_url
+      );
+      if (inf) {
+        draft.venue_name = inf.venue_name;
+        if (!draft.neighborhood || draft.neighborhood === 'Rio de Janeiro') {
+          draft.neighborhood = inf.neighborhood;
+        }
+      }
+    }
+
     const dupMatch = findDuplicateNightlifeEvent(draft, working);
 
     if (dupMatch) {
@@ -591,7 +625,47 @@ export async function approveAndPublishNightlifeEvent(
       candidate.image_license_note || 'Identidade visual editorial da subárea no BoraRio.';
   }
 
-  const completeness = checkNightlifeCompleteness(candidate);
+  const todayRio = getRioTodayIso();
+  if (candidate.event_date && candidate.event_date < todayRio) {
+    return {
+      ok: false,
+      error: 'Não é possível publicar eventos com data passada. O BoraRio apresenta apenas eventos futuros ou de hoje.',
+      completeness: { complete: false, missing_fields: ['Data do evento já expirada'], warnings: [] },
+    };
+  }
+
+  // Auto-infer venue and neighborhood if missing or 'Local a confirmar'
+  if (
+    !candidate.venue_name ||
+    candidate.venue_name.trim().length < 2 ||
+    candidate.venue_name.trim().toLowerCase() === 'local a confirmar'
+  ) {
+    const inf = inferVenueAndNeighborhood(
+      candidate.title,
+      candidate.short_summary,
+      candidate.source_url
+    );
+    if (inf) {
+      candidate.venue_name = inf.venue_name;
+      if (!candidate.neighborhood || candidate.neighborhood === 'Rio de Janeiro') {
+        candidate.neighborhood = inf.neighborhood;
+      }
+      candidate.address =
+        candidate.address && !candidate.address.includes('Local a confirmar')
+          ? candidate.address
+          : `${inf.venue_name}, ${inf.neighborhood}, Rio de Janeiro - RJ`;
+    }
+  }
+
+  let completeness = checkNightlifeCompleteness(candidate);
+  if (!completeness.complete && completeness.inferred_venue) {
+    candidate.venue_name = completeness.inferred_venue.venue_name;
+    if (!candidate.neighborhood || candidate.neighborhood === 'Rio de Janeiro') {
+      candidate.neighborhood = completeness.inferred_venue.neighborhood;
+    }
+    completeness = checkNightlifeCompleteness(candidate);
+  }
+
   if (!completeness.complete) {
     return {
       ok: false,
@@ -913,6 +987,45 @@ export async function extractNightlifeFromUrl(url: string): Promise<{
     };
 
     if (!res.ok || !data.draft) {
+      const slugFallback = inferDraftFromUrlSlug(url);
+      if (slugFallback && slugFallback.title) {
+        const recoveredDraft: NightlifeEventDraft = {
+          external_key: `url:recovered:${Buffer.from(url).toString('base64').slice(0, 24)}`,
+          source_platform: data.platform || 'SYMPLA',
+          source_url: url,
+          title: slugFallback.title,
+          short_summary:
+            slugFallback.short_summary ||
+            `Ingressos e programação oficial para ${slugFallback.title}.`,
+          sub_area: 'SHOWS',
+          music_genres: ['Ao Vivo'],
+          moment_tags: ['friends', 'couple'],
+          age_rating: '18+',
+          venue_name: slugFallback.venue_name || 'Local a confirmar',
+          neighborhood: slugFallback.neighborhood || 'Rio de Janeiro',
+          address: `${slugFallback.venue_name || 'Local'}, ${slugFallback.neighborhood || 'Rio de Janeiro'}, Rio de Janeiro - RJ`,
+          event_date: slugFallback.event_date || getRioTodayIso(),
+          start_time: slugFallback.start_time || '20:00',
+          starts_at: `${slugFallback.event_date || getRioTodayIso()}T20:00:00-03:00`,
+          ends_at: `${slugFallback.event_date || getRioTodayIso()}T23:59:00-03:00`,
+          is_free: false,
+          price_display_label: 'Consultar lotes na fonte oficial',
+          ticket_url: url,
+          availability_status: 'DISPONIVEL',
+          lineup: [],
+          cover_image: '',
+          image_origin: 'ILLUSTRATIVE_CATEGORY_FALLBACK',
+          image_license_note: 'Visual editorial da subárea (extraído por metadados de URL).',
+          is_featured: false,
+          is_demonstrative: false,
+        };
+        return {
+          ok: true,
+          platform: data.platform || 'SYMPLA',
+          draft: recoveredDraft,
+        };
+      }
+
       return {
         ok: false,
         blockedByProtection: Boolean(data.blocked_by_protection),
@@ -927,6 +1040,45 @@ export async function extractNightlifeFromUrl(url: string): Promise<{
       draft: data.draft,
     };
   } catch (err) {
+    const slugFallback = inferDraftFromUrlSlug(url);
+    if (slugFallback && slugFallback.title) {
+      const recoveredDraft: NightlifeEventDraft = {
+        external_key: `url:recovered:${Buffer.from(url).toString('base64').slice(0, 24)}`,
+        source_platform: 'SYMPLA',
+        source_url: url,
+        title: slugFallback.title,
+        short_summary:
+          slugFallback.short_summary ||
+          `Ingressos e programação oficial para ${slugFallback.title}.`,
+        sub_area: 'SHOWS',
+        music_genres: ['Ao Vivo'],
+        moment_tags: ['friends', 'couple'],
+        age_rating: '18+',
+        venue_name: slugFallback.venue_name || 'Local a confirmar',
+        neighborhood: slugFallback.neighborhood || 'Rio de Janeiro',
+        address: `${slugFallback.venue_name || 'Local'}, ${slugFallback.neighborhood || 'Rio de Janeiro'}, Rio de Janeiro - RJ`,
+        event_date: slugFallback.event_date || getRioTodayIso(),
+        start_time: slugFallback.start_time || '20:00',
+        starts_at: `${slugFallback.event_date || getRioTodayIso()}T20:00:00-03:00`,
+        ends_at: `${slugFallback.event_date || getRioTodayIso()}T23:59:00-03:00`,
+        is_free: false,
+        price_display_label: 'Consultar lotes na fonte oficial',
+        ticket_url: url,
+        availability_status: 'DISPONIVEL',
+        lineup: [],
+        cover_image: '',
+        image_origin: 'ILLUSTRATIVE_CATEGORY_FALLBACK',
+        image_license_note: 'Visual editorial da subárea (extraído por metadados de URL).',
+        is_featured: false,
+        is_demonstrative: false,
+      };
+      return {
+        ok: true,
+        platform: 'SYMPLA',
+        draft: recoveredDraft,
+      };
+    }
+
     return {
       ok: false,
       error: `Falha ao chamar /api/nightlife (parse-url): ${
@@ -1041,6 +1193,7 @@ export async function syncRioturNightlifeEvents(params?: {
   mes?: number;
   ano?: number;
   syncMonths?: number;
+  weekendOnly?: boolean;
 }): Promise<{
   ok: boolean;
   rawCount: number;
@@ -1052,6 +1205,7 @@ export async function syncRioturNightlifeEvents(params?: {
     if (params?.mes) query.set('mes', String(params.mes));
     if (params?.ano) query.set('ano', String(params.ano));
     if (params?.syncMonths) query.set('sync_months', String(params.syncMonths));
+    if (params?.weekendOnly) query.set('weekend_only', 'true');
 
     const res = await fetch(`/api/nightlife?__action=fetch-riotur&${query.toString()}`, {
       method: 'GET',

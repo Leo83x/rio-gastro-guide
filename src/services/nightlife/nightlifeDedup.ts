@@ -7,25 +7,16 @@ import type {
   NightlifeSubArea,
 } from '../../types/nightlife';
 import type { Restaurant } from '../../types/restaurant';
+import { getRioTodayIso, inferVenueAndNeighborhood } from './nightlifeVenues';
 
-export function getRioTodayIso(baseDate: Date = new Date()): string {
-  try {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Sao_Paulo',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(baseDate);
-    const map = new Map(parts.map((p) => [p.type, p.value]));
-    const y = map.get('year');
-    const m = map.get('month');
-    const d = map.get('day');
-    if (y && m && d) return `${y}-${m}-${d}`;
-  } catch {
-    // fallback below
-  }
-  return baseDate.toISOString().slice(0, 10);
-}
+export {
+  getRioTodayIso,
+  inferDraftFromUrlSlug,
+  inferVenueAndNeighborhood,
+  KNOWN_RIO_VENUES,
+  type InferredVenueResult,
+  type KnownRioVenue,
+} from './nightlifeVenues';
 
 export function addDaysToIsoDate(isoDate: string, days: number): string {
   const [y, m, d] = isoDate.split('-').map(Number);
@@ -256,6 +247,8 @@ export function buildOriginalEditorialSummary(
   return first.length > 185 ? `${first.slice(0, 182).trim()}...` : first;
 }
 
+
+
 export function checkNightlifeCompleteness(
   item: Pick<
     NightlifeEventDraft,
@@ -273,6 +266,7 @@ export function checkNightlifeCompleteness(
 ): NightlifeCompletenessCheck {
   const missing: string[] = [];
   const warnings: string[] = [];
+  let inferredVenue: { venue_name: string; neighborhood: string } | undefined;
 
   if (!item.title || item.title.trim().length < 3) {
     missing.push('Título do evento (mínimo 3 caracteres)');
@@ -288,10 +282,23 @@ export function checkNightlifeCompleteness(
     item.venue_name.trim().length < 2 ||
     item.venue_name.trim().toLowerCase() === 'local a confirmar'
   ) {
-    missing.push('Local / Casa do evento');
+    const inf = inferVenueAndNeighborhood(item.title);
+    if (inf) {
+      inferredVenue = {
+        venue_name: inf.venue_name,
+        neighborhood: inf.neighborhood,
+      };
+      warnings.push(`Local sugerido do título: ${inf.venue_name} (${inf.neighborhood}).`);
+    } else {
+      missing.push('Local / Casa do evento');
+    }
   }
   if (!item.neighborhood || item.neighborhood.trim().length < 2) {
-    missing.push('Bairro no Rio');
+    if (inferredVenue?.neighborhood) {
+      // Handled by inferred venue
+    } else {
+      missing.push('Bairro no Rio');
+    }
   }
 
   const hasEntryChannel =
@@ -317,6 +324,7 @@ export function checkNightlifeCompleteness(
     complete: missing.length === 0,
     missing_fields: missing,
     warnings,
+    inferred_venue: inferredVenue,
   };
 }
 
@@ -345,10 +353,12 @@ export function matchPermanentVenueId(
 }
 
 export function isEventVisiblePublicly(
-  ev: Pick<NightlifeEvent, 'curation_status' | 'ends_at'>,
+  ev: Pick<NightlifeEvent, 'curation_status' | 'ends_at' | 'event_date'>,
   nowDate: Date = new Date()
 ): boolean {
   if (ev.curation_status !== 'PUBLICADO') return false;
+  const todayRio = getRioTodayIso(nowDate);
+  if (ev.event_date && ev.event_date < todayRio) return false;
   const endsMs = new Date(ev.ends_at).getTime();
   if (Number.isNaN(endsMs)) return false;
   return endsMs >= nowDate.getTime();

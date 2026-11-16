@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   AlertTriangle,
+  Calendar,
   CalendarClock,
   CheckCircle2,
   Clock,
@@ -15,6 +16,7 @@ import {
   Link2,
   ListPlus,
   Loader2,
+  MapPin,
   MoonStar,
   Plus,
   RefreshCw,
@@ -137,7 +139,7 @@ export function NightlifeAdminTab({
   const [urlExtractedDraft, setUrlExtractedDraft] = useState<NightlifeEventDraft | null>(null);
   const [urlWarning, setUrlWarning] = useState('');
 
-  // Mode 2: Riotur Official Calendar Sync + API Keys
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
   const [rioturMonth, setRioturMonth] = useState(() => new Date().getMonth() + 1);
   const [rioturYear, setRioturYear] = useState(() => new Date().getFullYear());
   const [rioturMonthsCount, setRioturMonthsCount] = useState(2);
@@ -376,6 +378,47 @@ export function NightlifeAdminTab({
       setBusyAction('');
     }
   };
+
+  const handleWeekendRadar = async () => {
+    setBusyAction('weekend-radar');
+    setApiSyncNote('');
+    try {
+      const now = new Date();
+      const res = await syncRioturNightlifeEvents({
+        mes: now.getMonth() + 1,
+        ano: now.getFullYear(),
+        syncMonths: 1,
+        weekendOnly: true,
+      });
+
+      if (!res.ok) {
+        onShowError(res.error || 'Falha ao capturar agenda de fim de semana.');
+        return;
+      }
+
+      if (res.drafts.length === 0) {
+        onShowToast('Nenhum evento adicional de fim de semana retornado para as próximas datas.');
+        return;
+      }
+
+      const batch = await ingestNightlifeBatch({
+        drafts: res.drafts,
+        sourceCode: 'riotur_weekend_radar',
+        sourcePlatform: 'RIOTUR',
+        triggerType: 'MANUAL',
+        permanentVenues,
+      });
+
+      await onNightlifeUpdated();
+      await refreshRuns();
+      setQueueFilter('PENDENTE');
+      onShowToast(
+        `Radar Fim de Semana no Rio: ${res.drafts.length} evento(s) capturado(s)! ${batch.insertedPending} novo(s) em PENDENTE e ${batch.dedupedUpdated} deduplicado(s).`
+      );
+    } finally {
+      setBusyAction('');
+    }
+  };
   const handleSymplaSync = async () => {
     setBusyAction('sympla-sync');
     setApiSyncNote('');
@@ -592,6 +635,31 @@ export function NightlifeAdminTab({
   const handleApprove = async (ev: NightlifeEvent) => {
     const res = await approveAndPublishNightlifeEvent(ev.id);
     if (!res.ok) {
+      if (res.completeness?.missing_fields.some((f) => f.includes('Local'))) {
+        setEditingId(ev.id);
+        setEditDraft({
+          title: ev.title,
+          sub_area: ev.sub_area,
+          venue_id: ev.venue_id,
+          venue_name:
+            res.completeness.inferred_venue?.venue_name ||
+            (ev.venue_name !== 'Local a confirmar' ? ev.venue_name : ''),
+          neighborhood: res.completeness.inferred_venue?.neighborhood || ev.neighborhood,
+          address: ev.address,
+          event_date: ev.event_date,
+          start_time: ev.start_time,
+          end_time: ev.end_time,
+          is_free: ev.is_free,
+          price_min_brl: ev.price_min_brl,
+          price_display_label: ev.price_display_label,
+          ticket_url: ev.ticket_url,
+          availability_status: ev.availability_status,
+          short_summary: ev.short_summary,
+          cover_image: ev.cover_image,
+        });
+        onShowToast('Informe ou confirme o Local / Casa do evento para concluir a publicação.');
+        return;
+      }
       onShowError(res.error);
       return;
     }
@@ -991,8 +1059,8 @@ export function NightlifeAdminTab({
                     onChange={(e) => setRioturYear(parseInt(e.target.value, 10))}
                     className="rounded-lg border border-white/20 bg-[#0E2235] px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none"
                   >
-                    <option value={2025}>2025</option>
-                    <option value={2026}>2026</option>
+                    <option value={currentYear}>{currentYear}</option>
+                    <option value={currentYear + 1}>{currentYear + 1}</option>
                   </select>
                 </div>
 
@@ -1008,6 +1076,20 @@ export function NightlifeAdminTab({
                     <option value={3}>3 meses consecutivos (~200+ eventos)</option>
                   </select>
                 </div>
+
+                <button
+                  type="button"
+                  disabled={busyAction === 'weekend-radar'}
+                  onClick={() => void handleWeekendRadar()}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/40 bg-sky-500/20 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-500/30 disabled:opacity-50"
+                >
+                  {busyAction === 'weekend-radar' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Calendar className="h-4 w-4 text-sky-300" />
+                  )}
+                  Radar Fim de Semana (Lote Automático)
+                </button>
 
                 <button
                   type="button"
@@ -1586,10 +1668,35 @@ export function NightlifeAdminTab({
                         </p>
 
                         {!comp.complete ? (
-                          <p className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-600 dark:text-red-300">
-                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                            Incompleto p/ publicar: {comp.missing_fields.join('; ')}
-                          </p>
+                          <div className="space-y-1">
+                            <p className="inline-flex items-center gap-1 rounded-lg bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-600 dark:text-red-300">
+                              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                              Incompleto p/ publicar: {comp.missing_fields.join('; ')}
+                            </p>
+                            {comp.inferred_venue && (!ev.venue_name || ev.venue_name.toLowerCase() === 'local a confirmar') && (
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                                  Local sugerido:
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await updateNightlifeEvent(ev.id, {
+                                      venue_name: comp.inferred_venue!.venue_name,
+                                      neighborhood: comp.inferred_venue!.neighborhood,
+                                      address: `${comp.inferred_venue!.venue_name}, ${comp.inferred_venue!.neighborhood}, Rio de Janeiro - RJ`,
+                                    });
+                                    await onNightlifeUpdated();
+                                    onShowToast(`Local definido como "${comp.inferred_venue!.venue_name}"!`);
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+                                >
+                                  <MapPin className="h-3 w-3" />
+                                  Definir {comp.inferred_venue.venue_name} ({comp.inferred_venue.neighborhood})
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <p className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
                             <ShieldCheck className="h-3.5 w-3.5 shrink-0" />

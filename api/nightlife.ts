@@ -7,6 +7,10 @@ import type {
   NightlifeSourcePlatform,
   NightlifeSubArea,
 } from '../src/types/nightlife.ts';
+import {
+  inferDraftFromUrlSlug,
+  inferVenueAndNeighborhood,
+} from '../src/services/nightlife/nightlifeVenues.ts';
 
 const ALLOWED_TICKETING_HOSTS = [
   'sympla.com.br',
@@ -557,6 +561,46 @@ async function handleParseUrlCore(targetRaw: string): Promise<ParseUrlResult> {
       lowerHtml.includes('verify you are human') ||
       lowerHtml.includes('attention required! | cloudflare')
     ) {
+      const fallbackDraft = inferDraftFromUrlSlug(safeUrl.toString());
+      if (fallbackDraft && fallbackDraft.title) {
+        return {
+          ok: true,
+          status: 200,
+          platform,
+          has_structured_jsonld: false,
+          draft: {
+            external_key: `url:${platform.toLowerCase()}:${Buffer.from(safeUrl.pathname).toString('base64').slice(0, 24)}`,
+            source_platform: platform,
+            source_url: safeUrl.toString(),
+            title: fallbackDraft.title,
+            short_summary:
+              fallbackDraft.short_summary ||
+              `Ingressos e programação oficial para ${fallbackDraft.title}.`,
+            sub_area: inferSubAreaAndGenres(fallbackDraft.title).subArea,
+            music_genres: inferSubAreaAndGenres(fallbackDraft.title).genres,
+            moment_tags: ['friends', 'couple'],
+            age_rating: '18+',
+            venue_name: fallbackDraft.venue_name || 'Local a confirmar',
+            neighborhood: fallbackDraft.neighborhood || 'Rio de Janeiro',
+            address: `${fallbackDraft.venue_name || 'Local'}, ${fallbackDraft.neighborhood || 'Rio de Janeiro'}, Rio de Janeiro - RJ`,
+            event_date: fallbackDraft.event_date || new Date().toISOString().slice(0, 10),
+            start_time: fallbackDraft.start_time || '20:00',
+            starts_at: `${fallbackDraft.event_date || new Date().toISOString().slice(0, 10)}T20:00:00-03:00`,
+            ends_at: `${fallbackDraft.event_date || new Date().toISOString().slice(0, 10)}T23:59:00-03:00`,
+            is_free: false,
+            price_display_label: 'Consultar lotes na fonte oficial',
+            ticket_url: safeUrl.toString(),
+            availability_status: 'DISPONIVEL',
+            lineup: [],
+            cover_image: '',
+            image_origin: 'ILLUSTRATIVE_CATEGORY_FALLBACK',
+            image_license_note: 'Visual editorial da subárea (extraído por metadados de URL).',
+            is_featured: false,
+            is_demonstrative: false,
+          },
+        };
+      }
+
       return {
         ok: false,
         status: 422,
@@ -603,7 +647,18 @@ async function handleParseUrlCore(targetRaw: string): Promise<ParseUrlResult> {
       ? locationObj.address
       : {}) as Record<string, unknown>;
 
-    const venueName = String(locationObj.name || 'Local a confirmar').trim();
+    let venueName = String(locationObj.name || '').trim();
+    if (!venueName || venueName.toLowerCase() === 'local a confirmar') {
+      const inf = inferVenueAndNeighborhood(
+        `${rawTitle} ${rawDesc} ${htmlText.slice(0, 8000)} ${safeUrl.pathname}`
+      );
+      if (inf) {
+        venueName = inf.venue_name;
+      } else {
+        venueName = 'Local a confirmar';
+      }
+    }
+
     const rawAddress = [
       addrObj.streetAddress,
       addrObj.addressLocality,
@@ -611,7 +666,14 @@ async function handleParseUrlCore(targetRaw: string): Promise<ParseUrlResult> {
     ]
       .filter(Boolean)
       .join(', ');
-    const neighborhood = extractNeighborhood(`${rawAddress} ${rawTitle} ${venueName} ${rawDesc}`);
+
+    const infVen = inferVenueAndNeighborhood(
+      `${rawTitle} ${venueName} ${rawDesc} ${safeUrl.pathname}`
+    );
+    const neighborhood =
+      infVen?.neighborhood && infVen.neighborhood !== 'Rio de Janeiro'
+        ? infVen.neighborhood
+        : extractNeighborhood(`${rawAddress} ${rawTitle} ${venueName} ${rawDesc}`);
 
     const startDateRaw = String(
       ev?.startDate || extractMetaContent(htmlText, 'event:start_time') || ''
@@ -873,8 +935,9 @@ async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Respons
   }
 
   const now = new Date();
+  const currentYear = now.getFullYear();
   const baseMonth = mesParam ? parseInt(mesParam, 10) : now.getMonth() + 1;
-  const baseYear = anoParam ? parseInt(anoParam, 10) : now.getFullYear();
+  const baseYear = anoParam ? Math.max(currentYear, parseInt(anoParam, 10)) : currentYear;
 
   try {
     // 1. Fetch agenda page to obtain fresh session nonce
@@ -964,19 +1027,58 @@ async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Respons
 
     const uniqueRaw = Array.from(rawEventsMap.values());
 
-    // 3. Map into NightlifeEventDraft
-    const drafts: NightlifeEventDraft[] = uniqueRaw.map((it) => {
+    const todayRio = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+
+    const weekendOnly = reqUrl.searchParams.get('weekend_only') === 'true';
+
+    // 3. Map into NightlifeEventDraft (Strictly future/current events only)
+    const drafts: NightlifeEventDraft[] = [];
+    for (const it of uniqueRaw) {
+      const rawDate = String(it.data_inicio || '').trim();
+      const eventDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
+        ? rawDate
+        : todayRio;
+
+      // Discard past events
+      if (eventDate < todayRio) {
+        continue;
+      }
+
+      if (weekendOnly) {
+        try {
+          const dt = new Date(`${eventDate}T12:00:00-03:00`);
+          const dow = dt.getUTCDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
+          const isWeekend = dow === 0 || dow === 5 || dow === 6;
+          if (!isWeekend) continue;
+        } catch {
+          // ignore date parse issues
+        }
+      }
+
       const title = String(it.titulo || '').trim();
       const content = String(it.conteudo || '');
       const parsed = parseRioturContent(content);
 
-      const venueName = (parsed.venue || 'Local no Rio de Janeiro').trim();
-      const address = (parsed.address || `${venueName}, Rio de Janeiro - RJ`).trim();
-      const neighborhood = extractNeighborhood(`${address} ${venueName} ${title}`);
-      const rawDate = String(it.data_inicio || '').trim();
-      const eventDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate)
-        ? rawDate
-        : new Date().toISOString().slice(0, 10);
+      let venueName = (parsed.venue || '').trim();
+      const inf = inferVenueAndNeighborhood(`${title} ${parsed.plainText} ${venueName}`);
+      if (inf) {
+        if (!venueName || venueName.toLowerCase().includes('local')) {
+          venueName = inf.venue_name;
+        }
+      }
+      if (!venueName) venueName = 'Local no Rio de Janeiro';
+
+      const neighborhood =
+        inf?.neighborhood && inf.neighborhood !== 'Rio de Janeiro'
+          ? inf.neighborhood
+          : extractNeighborhood(`${parsed.address || ''} ${venueName} ${title}`);
+
+      const address = (parsed.address || `${venueName}, ${neighborhood}, Rio de Janeiro - RJ`).trim();
 
       const startTime = parsed.startTime || '20:00';
       const { startsAtIso, endsAtIso } = buildStartEndIsoRioLocal(eventDate, startTime);
@@ -990,7 +1092,7 @@ async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Respons
           ? 'Consultar ingressos'
           : 'Consultar no local';
 
-      return {
+      drafts.push({
         external_key: `riotur:${it.id || title}`,
         source_platform: 'RIOTUR' as const,
         source_external_id: it.id ? String(it.id) : undefined,
@@ -1020,8 +1122,8 @@ async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Respons
           : 'Sem arte oficial retornada.',
         is_featured: false,
         is_demonstrative: false,
-      };
-    });
+      });
+    }
 
     return jsonResponse(200, {
       ok: true,
