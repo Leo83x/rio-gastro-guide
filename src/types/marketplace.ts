@@ -49,6 +49,7 @@ export interface PartnerOffering {
   views_count?: number;
   partner_managed_active: boolean;
   is_demonstrative: boolean;
+  image_url?: string;
   created_at: string;
   updated_at: string;
 }

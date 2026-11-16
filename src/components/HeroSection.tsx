@@ -1,11 +1,8 @@
 import {
-  Activity,
   Bookmark,
-  Car,
   CloudRain,
   Compass,
   Heart,
-  Info,
   MapPin,
   Moon,
   MoreHorizontal,
@@ -144,36 +141,11 @@ function getRioGreeting(): { greeting: string; hour: number } {
   }
 }
 
-function estimateDeBoaIndex(hour: number, isRaining?: boolean): {
-  label: string;
-  detail: string;
-} {
-  if (isRaining) {
-    return {
-      label: 'De Boa: Locais cobertos',
-      detail:
-        'Estimativa BoraRio baseada em chuva atual no Rio + horário: priorize espaços cobertos e museus.',
-    };
-  }
-  if (hour >= 19 && hour <= 22) {
-    return {
-      label: 'De Boa: Pico noturno',
-      detail:
-        'Estimativa BoraRio para esta faixa horária (19h–22h). Bares e restaurantes populares costumam ter maior procura; não mede fila oficial.',
-    };
-  }
-  if (hour >= 12 && hour <= 14) {
-    return {
-      label: 'De Boa: Almoço ativo',
-      detail:
-        'Estimativa BoraRio para o horário do almoço no Rio. Use o termômetro dentro de cada local como referência.',
-    };
-  }
-  return {
-    label: 'De Boa: Fluxo tranquilo',
-    detail:
-      'Estimativa BoraRio baseada em horário e clima aberto: janela favorável para circular com tranquilidade.',
-  };
+function getRioMomentTag(hour: number, isRaining?: boolean): string {
+  if (isRaining) return 'Modo Chuva · Espaços Cobertos';
+  if (hour >= 18 || hour < 5) return 'A Noite Carioca & Shows';
+  if (hour >= 12 && hour < 18) return 'Pôr do Sol & Rooftops';
+  return 'Cafés, Parques & Praias';
 }
 
 export function HeroSection({
@@ -199,7 +171,6 @@ export function HeroSection({
   const [weather, setWeather] = useState<RioWeatherSnapshot | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [ackExternalSignal, setAckExternalSignal] = useState(0);
-  const [activePillInfo, setActivePillInfo] = useState<'deboa' | 'mobility' | null>(null);
 
   useEffect(() => {
     void fetchRioWeatherLive().then(setWeather).catch(() => undefined);
@@ -217,7 +188,6 @@ export function HeroSection({
 
   const hasLiveWeather = weather?.source === 'open-meteo-live';
   const { greeting, hour } = getRioGreeting();
-  const deBoa = estimateDeBoaIndex(hour, hasLiveWeather ? weather.isRaining : undefined);
 
   const activeFilterCount = [
     filters.neighborhood,
@@ -252,7 +222,6 @@ export function HeroSection({
 
   const heroGlassClass =
     'border-white/30 bg-white/15 text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]';
-  const heroGlassInteractiveClass = `${heroGlassClass} hover:border-white/50 hover:bg-white/25`;
 
   return (
     <section className="relative w-full overflow-x-clip">
@@ -309,7 +278,7 @@ export function HeroSection({
               </p>
             </div>
 
-            {/* Clima & Mobilidade compactos e limpos (clima apenas quando disponível) */}
+            {/* Contexto ao vivo relevante do Rio (Clima, Momento e Localização) */}
             <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
               {hasLiveWeather && weather && (
                 <div
@@ -321,56 +290,32 @@ export function HeroSection({
                     <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
                   )}
                   <span>
-                    {weather.temperatureC}°C · {weather.isRaining ? 'Chuva' : 'Tempo aberto'}
+                    {weather.temperatureC}°C · {weather.isRaining ? 'Chuva no Rio' : 'Tempo aberto'}
                   </span>
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() =>
-                  setActivePillInfo((prev) => (prev === 'deboa' ? null : 'deboa'))
-                }
-                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${heroGlassInteractiveClass}`}
+              <div
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}
               >
-                <Activity className="h-3 w-3 text-[#4CA188]" />
-                <span>{deBoa.label}</span>
-                <Info className="h-3 w-3 opacity-80" />
-              </button>
+                {hasLiveWeather && weather?.isRaining ? (
+                  <CloudRain className="h-3.5 w-3.5 text-[#4CA188]" />
+                ) : hour >= 18 || hour < 5 ? (
+                  <Moon className="h-3.5 w-3.5 text-[#FFB347]" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 text-[#FFB347]" />
+                )}
+                <span>{getRioMomentTag(hour, hasLiveWeather ? weather?.isRaining : undefined)}</span>
+              </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  setActivePillInfo((prev) => (prev === 'mobility' ? null : 'mobility'))
-                }
-                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${heroGlassInteractiveClass}`}
+              <div
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}
               >
-                <Car className="h-3 w-3 text-[#FF6B35]" />
-                <span>{userCoords ? 'Rotas via GPS' : 'Rotas sob demanda'}</span>
-                <Info className="h-3 w-3 opacity-80" />
-              </button>
+                <MapPin className="h-3 w-3 text-[#FF6B35]" />
+                <span>{userCoords ? 'GPS Ativo' : 'Rio de Janeiro'}</span>
+              </div>
             </div>
           </div>
-
-          {activePillInfo && (
-            <div
-              className={`mt-3 flex items-start justify-between gap-2 rounded-2xl border px-3.5 py-2.5 text-[11px] font-medium ${heroGlassClass}`}
-            >
-              <p>
-                {activePillInfo === 'deboa'
-                  ? deBoa.detail
-                  : 'O custo de Uber/99 varia conforme origem, destino e tarifa dinâmica. Ao abrir qualquer experiência, você acessa distância e atalhos reais de rota.'}
-              </p>
-              <button
-                type="button"
-                onClick={() => setActivePillInfo(null)}
-                aria-label="Fechar explicação"
-                className="shrink-0 text-white/80 hover:text-white"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 

@@ -9,7 +9,6 @@ import {
   Mic2,
   MoonStar,
   Music,
-  ShieldCheck,
   Sparkles,
   Ticket,
   Wine,
@@ -72,7 +71,6 @@ export function NightlifeSection({
   onFilterPermanentNightlife,
   onSaveEventToVault,
   onAskBoraIa,
-  onGoToAdminNightlife,
 }: NightlifeSectionProps) {
   const [subAreaFilter, setSubAreaFilter] = useState<NightlifeSubArea | 'ALL'>('ALL');
   const [dateFilter, setDateFilter] = useState<NightlifeDateFilter>('ALL');
@@ -121,7 +119,7 @@ export function NightlifeSection({
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F7931E]/35 bg-[#F7931E]/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#FFB347]">
             <MoonStar className="h-3.5 w-3.5" />
-            Agenda Noturna Curada · Nightlife Radar
+            Programação da Noite · Sambas, Shows &amp; Festas
           </span>
           <h2
             id="home-block-nightlife"
@@ -191,22 +189,22 @@ export function NightlifeSection({
         })}
       </div>
 
-      {/* Conteúdo principal: Estado Limpo vs Agenda Publicada */}
+      {/* Conteúdo principal: Estado Convidativo vs Agenda Publicada */}
       {activePublished.length === 0 ? (
         <div
           data-testid="nightlife-clean-empty-state"
           className="mt-5 flex flex-col justify-between gap-4 rounded-2xl border border-dashed border-white/25 bg-white/6 p-5 backdrop-blur-md sm:flex-row sm:items-center"
         >
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68]/30 px-2.5 py-0.5 text-[11px] font-bold text-[#95E4CA]">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Agenda noturna em curadoria · Em breve
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6B35]/20 px-2.5 py-0.5 text-[11px] font-bold text-[#FFB347]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Programação da Noite
             </div>
-            <p className="text-sm font-bold text-white">
-              Estado limpo ativo: apenas programações aprovadas entram nesta agenda.
+            <p className="text-sm font-bold text-white sm:text-base">
+              Fique por dentro das melhores festas, sambas e shows do Rio!
             </p>
-            <p className="max-w-2xl text-xs leading-relaxed text-[#F1E8D8]/80">
-              Rodas de samba, festas, shows e rooftops são capturados por APIs oficiais, links ou envios das casas parceiras e passam por curadoria com expiração automática após o horário do evento — sem eventos fictícios nem programação desatualizada.
+            <p className="max-w-2xl text-xs leading-relaxed text-[#F1E8D8]/85">
+              Reunimos os eventos mais disputados da cidade com horários confirmados e ingressos oficiais para você curtir sem erro. Enquanto os próximos agitos entram em cartaz, aproveite para descobrir os bares, rooftops e botecos incríveis abertos hoje!
             </p>
           </div>
 
@@ -215,18 +213,10 @@ export function NightlifeSection({
               <button
                 type="button"
                 onClick={onFilterPermanentNightlife}
-                className="rounded-xl border border-white/25 bg-white/12 px-3.5 py-2 text-xs font-bold text-white hover:bg-white/20"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95"
               >
-                Explorar casas noturnas
-              </button>
-            )}
-            {onGoToAdminNightlife && (
-              <button
-                type="button"
-                onClick={onGoToAdminNightlife}
-                className="rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95"
-              >
-                Curadoria Radar Admin
+                <span>Explorar Bares &amp; Casas Noturnas</span>
+                <ArrowRight className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -235,10 +225,10 @@ export function NightlifeSection({
         <div className="mt-5 flex flex-col items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/6 p-5 text-center sm:flex-row sm:text-left">
           <div>
             <p className="text-sm font-bold text-white">
-              Nenhum evento publicado para esta combinação de subárea e data.
+              Nenhum evento encontrado para este filtro.
             </p>
             <p className="text-xs text-[#F1E8D8]/80">
-              Há {activePublished.length} evento(s) publicado(s) na programação geral de A noite carioca.
+              Há {activePublished.length} evento(s) na programação completa de A noite carioca.
             </p>
           </div>
           <button
@@ -249,7 +239,7 @@ export function NightlifeSection({
             }}
             className="shrink-0 rounded-xl bg-white px-4 py-2 text-xs font-bold text-[#0D1E30]"
           >
-            Mostrar todos ({activePublished.length})
+            Ver toda a programação ({activePublished.length})
           </button>
         </div>
       ) : (

@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
+  Camera,
   Check,
   CheckCircle2,
   Clock,
@@ -13,12 +14,15 @@ import {
   Eye,
   Gift,
   History,
+  ImagePlus,
   Lock,
   LogOut,
+  Maximize2,
   Moon,
   MoonStar,
   PauseCircle,
   PlayCircle,
+  Printer,
   QrCode,
   ReceiptText,
   RefreshCw,
@@ -28,10 +32,14 @@ import {
   Sparkles,
   Sun,
   Ticket,
+  Trash2,
+  Upload,
   Users,
+  X,
   XCircle,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import QRCode from 'qrcode';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { BrandLogo } from '../components/BrandLogo';
 import { upsertRestaurants } from '../services/database';
 import { checkNightlifeCompleteness, getRioTodayIso } from '../services/nightlife/nightlifeDedup';
@@ -227,11 +235,21 @@ export function PartnerDashboard({
     [restaurants, selectedTenantId]
   );
 
-  // Tab 6: Official profile form state
+  // Tab 6: Official profile form state & Establishment Photos
   const [phone, setPhone] = useState(activeTenant?.phone || '');
   const [website, setWebsite] = useState(activeTenant?.website || '');
   const [openingHours, setOpeningHours] = useState(activeTenant?.opening_hours || '');
   const [description, setDescription] = useState(activeTenant?.description || '');
+  const [coverImage, setCoverImage] = useState(activeTenant?.cover_image || '');
+  const [gallery, setGallery] = useState<string[]>(activeTenant?.gallery || []);
+  const [newGalleryUrl, setNewGalleryUrl] = useState('');
+
+  // Tab 2: Offer photo
+  const [offImage, setOffImage] = useState('');
+
+  // Tab 5: Dynamic QR Data URL and Totem view
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [showQrTotemModal, setShowQrTotemModal] = useState<boolean>(false);
 
   // Tab 1: Traditional Booking Slot creation
   const [tradTitle, setTradTitle] = useState('Mesa Salão Principal (Sem Desconto Obrigatório)');
@@ -405,6 +423,20 @@ export function PartnerDashboard({
     ? Math.max(0, Math.floor((new Date(activeQr.expires_at).getTime() - nowMs) / 1000))
     : 0;
 
+  useEffect(() => {
+    if (activeQr && !activeQr.revoked && qrRemainingSec > 0) {
+      QRCode.toDataURL(activeQr.token_code, {
+        width: 380,
+        margin: 2,
+        color: { dark: '#0A1828', light: '#FFFFFF' },
+      })
+        .then(setQrDataUrl)
+        .catch(() => setQrDataUrl(null));
+    } else {
+      setQrDataUrl(null);
+    }
+  }, [activeQr, qrRemainingSec]);
+
   const tenantContingencies =
     activeTenant && storeVersion >= 0
       ? getOfflineContingencyCheckins(activeTenant.id).filter(
@@ -473,6 +505,60 @@ export function PartnerDashboard({
     }
   };
 
+  const handleOfferPhotoFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setOffImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverPhotoFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCoverImage(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGalleryPhotosFiles = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          const res = reader.result;
+          setGallery((prev) => [...prev, res]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAddGalleryUrl = () => {
+    if (!newGalleryUrl.trim()) return;
+    setGallery((prev) => [...prev, newGalleryUrl.trim()]);
+    setNewGalleryUrl('');
+  };
+
+  const handleRemoveGalleryPhoto = (index: number) => {
+    setGallery((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSetCoverPhoto = (url: string) => {
+    setCoverImage(url);
+    setOpFeedback({ ok: true, msg: 'Foto selecionada como capa principal!' });
+  };
+
   const handleSaveProfile = async (e: FormEvent) => {
     e.preventDefault();
     if (!activeTenant) return;
@@ -483,6 +569,9 @@ export function PartnerDashboard({
         website,
         opening_hours: openingHours,
         description,
+        cover_image: coverImage.trim() || activeTenant.cover_image,
+        gallery: gallery,
+        image_origin: 'owner_authorized',
         data_source: 'owner_submitted',
         validation_status: 'CONFIRMADO',
         confidence_level: 'ALTA',
@@ -492,7 +581,7 @@ export function PartnerDashboard({
     await onDatabaseUpdated();
     setOpFeedback({
       ok: true,
-      msg: 'Dados oficiais salvos com procedência "Fornecido pelo estabelecimento".',
+      msg: 'Dados oficiais e fotos do estabelecimento salvos com sucesso!',
     });
   };
 
@@ -565,12 +654,14 @@ export function PartnerDashboard({
       ends_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
       capacity_total: Math.max(1, offCapacity),
       partner_managed_active: true,
+      image_url: offImage.trim() || undefined,
     });
     setOpFeedback({ ok: res.ok, msg: res.message });
     if (res.ok) {
       setOffTitle('');
       setOffBenefit('');
       setOffEligibleItem('');
+      setOffImage('');
     }
     bumpStore();
   };
@@ -1487,6 +1578,67 @@ export function PartnerDashboard({
                     />
                   </div>
 
+                  {/* Foto da Oferta */}
+                  <div className="space-y-1.5 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <Camera className="h-3.5 w-3.5 text-[#FF6B35]" />
+                        Foto da Oferta (Opcional)
+                      </span>
+                      {offImage && (
+                        <button
+                          type="button"
+                          onClick={() => setOffImage('')}
+                          className="text-[10px] text-red-500 hover:underline"
+                        >
+                          Remover
+                        </button>
+                      )}
+                    </div>
+
+                    {offImage ? (
+                      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-[var(--border-hairline)]">
+                        <img
+                          src={offImage}
+                          alt="Pré-visualização da Oferta"
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setOffImage('')}
+                          className="absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white hover:bg-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--border-hairline)] p-3 transition hover:border-[#FF6B35]/60 hover:bg-[var(--bg-surface)]">
+                          <ImagePlus className="h-6 w-6 text-[#FF6B35]" />
+                          <span className="mt-1 text-xs font-semibold text-[var(--text-primary)]">
+                            Clique para enviar foto do prato/espaço
+                          </span>
+                          <span className="text-[10px] text-[var(--text-secondary)]">
+                            PNG, JPG ou WEBP (até 5MB)
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleOfferPhotoFile}
+                            className="hidden"
+                          />
+                        </label>
+                        <input
+                          type="url"
+                          value={offImage}
+                          onChange={(e) => setOffImage(e.target.value)}
+                          placeholder="Ou cole a URL direta da imagem..."
+                          className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[11px]"
+                        />
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="submit"
                     className="w-full rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white"
@@ -1556,6 +1708,15 @@ export function PartnerDashboard({
                                         : 'Pausada'}
                                   </span>
                                 </div>
+                                {off.image_url && (
+                                  <div className="mt-2.5 aspect-video w-full max-h-36 overflow-hidden rounded-xl border border-[var(--border-hairline)]">
+                                    <img
+                                      src={off.image_url}
+                                      alt={off.title}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  </div>
+                                )}
                                 <h3 className="mt-1.5 text-sm font-bold">{off.title}</h3>
                                 <p className="text-[11px] text-[var(--text-secondary)]">
                                   {off.benefit_summary} · {off.service_date} às {off.time_slot_label} ({off.reserved_count}/{off.capacity_total} vagas)
@@ -2675,10 +2836,65 @@ export function PartnerDashboard({
                             </button>
                           </div>
 
+                          {/* Visual QR Code Display */}
+                          {qrDataUrl && (
+                            <div className="flex flex-col items-center gap-4 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 sm:flex-row">
+                              <div className="flex flex-col items-center">
+                                <img
+                                  src={qrDataUrl}
+                                  alt={`QR Code Dinâmico ${activeQr.token_code}`}
+                                  className="h-44 w-44 rounded-xl border border-white/20 bg-white p-2 shadow-md"
+                                />
+                                <span className="mt-1.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                                  Aponte a câmera no app BoraRio
+                                </span>
+                              </div>
+
+                              <div className="flex-1 space-y-3 text-xs">
+                                <div>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                                    Token QR Dinâmico
+                                  </span>
+                                  <p className="mt-0.5 font-mono text-base font-extrabold text-[#FF6B35]">
+                                    {activeQr.token_code}
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                                    PIN de Validação Alternativo
+                                  </span>
+                                  <p className="mt-0.5 font-mono text-2xl font-black tracking-widest text-[var(--text-primary)]">
+                                    {activeQr.contingency_pin}
+                                  </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowQrTotemModal(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95"
+                                  >
+                                    <Maximize2 className="h-3.5 w-3.5" />
+                                    <span>Modo Balcão (Tela Cheia)</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => window.print()}
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                                  >
+                                    <Printer className="h-3.5 w-3.5" />
+                                    <span>Imprimir Display</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3">
                               <p className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
-                                Token QR Dinâmico
+                                Token QR
                               </p>
                               <p className="mt-1 font-mono text-sm font-extrabold text-[#FF6B35]">
                                 {activeQr.token_code}
@@ -2693,7 +2909,7 @@ export function PartnerDashboard({
                                 ) : (
                                   <Copy className="h-3.5 w-3.5" />
                                 )}
-                                {copiedCode === activeQr.token_code ? 'Copiado!' : 'Copiar Token QR'}
+                                {copiedCode === activeQr.token_code ? 'Copiado!' : 'Copiar Token'}
                               </button>
                             </div>
 
@@ -3243,75 +3459,314 @@ export function PartnerDashboard({
               </div>
             )}
 
-            {/* TAB 6: DADOS OFICIAIS DO ESTABELECIMENTO */}
+            {/* TAB 6: DADOS OFICIAIS E GALERIA DO ESTABELECIMENTO */}
             {activeTab === 'profile' && (
               <form
                 onSubmit={handleSaveProfile}
-                className="max-w-3xl space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
+                className="max-w-4xl space-y-6 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
               >
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-[#FF765E]" />
-                  <h2 className="font-sans tracking-tight text-xl font-bold">
-                    Dados Oficiais do Estabelecimento
-                  </h2>
+                <div className="flex items-center justify-between border-b border-[var(--border-hairline)] pb-4">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-[#FF765E]" />
+                    <div>
+                      <h2 className="font-sans tracking-tight text-xl font-bold">
+                        Perfil &amp; Galeria de Fotos
+                      </h2>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Gerencie a foto de capa, galeria do salão e dados de contato de <strong>{activeTenant.name}</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95"
+                  >
+                    <Save className="h-4 w-4" />
+                    Salvar Tudo
+                  </button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="text-xs font-bold">Telefone / WhatsApp</label>
+                {/* 1. Foto de Capa Principal */}
+                <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                        Foto de Capa Principal
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        A imagem de destaque exibida nos cards de busca e topo do perfil.
+                      </p>
+                    </div>
+                    {coverImage && (
+                      <span className="rounded-full bg-[#4CA188]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#4CA188]">
+                        Capa Ativa
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                    <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] sm:col-span-1">
+                      {coverImage ? (
+                        <img
+                          src={coverImage}
+                          alt="Capa do Estabelecimento"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-xs text-[var(--text-secondary)]">
+                          Sem foto de capa
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col justify-center space-y-2 sm:col-span-2">
+                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3 text-xs font-bold transition hover:border-[#FF6B35] hover:text-[#FF6B35]">
+                        <Upload className="h-4 w-4 text-[#FF6B35]" />
+                        <span>Enviar nova foto de capa do dispositivo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCoverPhotoFile}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="url"
+                        value={coverImage}
+                        onChange={(e) => setCoverImage(e.target.value)}
+                        placeholder="Ou cole a URL direta da imagem de capa..."
+                        className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Galeria de Fotos do Estabelecimento */}
+                <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                        Galeria de Fotos ({gallery.length})
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Fotos dos pratos, salão, fachada e ambiente que os clientes podem ver ao abrir o perfil.
+                      </p>
+                    </div>
+
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#123B56] px-4 py-2 text-xs font-bold text-white hover:bg-[#102F46]">
+                      <ImagePlus className="h-4 w-4" />
+                      <span>+ Adicionar Fotos</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleGalleryPhotosFiles}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Add by link */}
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="url"
+                      value={newGalleryUrl}
+                      onChange={(e) => setNewGalleryUrl(e.target.value)}
+                      placeholder="Ou cole o link de uma foto para incluir na galeria..."
+                      className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddGalleryUrl}
+                      className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs font-bold hover:border-[#FF6B35]"
+                    >
+                      Adicionar Link
+                    </button>
+                  </div>
+
+                  {/* Photos Grid */}
+                  {gallery.length === 0 ? (
+                    <div className="mt-4 rounded-xl border border-dashed border-[var(--border-hairline)] p-6 text-center text-xs text-[var(--text-secondary)]">
+                      Nenhuma foto adicionada à galeria ainda. Clique em "+ Adicionar Fotos" para subir fotos do seu restaurante.
+                    </div>
+                  ) : (
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      {gallery.map((photoUrl, idx) => {
+                        const isCurrentCover = photoUrl === coverImage;
+                        return (
+                          <div
+                            key={`${photoUrl}-${idx}`}
+                            className="group relative aspect-square overflow-hidden rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-xs"
+                          >
+                            <img
+                              src={photoUrl}
+                              alt={`Foto ${idx + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                            {isCurrentCover && (
+                              <span className="absolute left-1.5 top-1.5 rounded-md bg-[#4CA188] px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                                Capa
+                              </span>
+                            )}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/60 opacity-0 transition group-hover:opacity-100">
+                              {!isCurrentCover && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetCoverPhoto(photoUrl)}
+                                  className="rounded-lg bg-white/90 px-2.5 py-1 text-[10px] font-bold text-[#123B56] hover:bg-white"
+                                >
+                                  Tornar Capa
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveGalleryPhoto(idx)}
+                                className="inline-flex items-center gap-1 rounded-lg bg-red-600/90 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" /> Excluir
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Contatos e Horários */}
+                <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                  <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                    Contatos &amp; Informações
+                  </h3>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-bold">Telefone / WhatsApp</label>
+                      <input
+                        type="text"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="(21) 99999-0000"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold">Site oficial</label>
+                      <input
+                        type="text"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        placeholder="https://..."
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <label className="text-xs font-bold">Horário de funcionamento</label>
                     <input
                       type="text"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="(21) 99999-0000"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-sm"
+                      value={openingHours}
+                      onChange={(e) => setOpeningHours(e.target.value)}
+                      placeholder="Terça a Domingo, 12h às 23h"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
                     />
                   </div>
-                  <div>
-                    <label className="text-xs font-bold">Site oficial</label>
-                    <input
-                      type="text"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      placeholder="https://..."
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-sm"
+
+                  <div className="mt-3">
+                    <label className="text-xs font-bold">Descrição oficial no BoraRio</label>
+                    <textarea
+                      rows={3}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold">Horário de funcionamento</label>
-                  <input
-                    type="text"
-                    value={openingHours}
-                    onChange={(e) => setOpeningHours(e.target.value)}
-                    placeholder="Terça a Domingo, 12h às 23h"
-                    className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-sm"
-                  />
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-6 py-3 text-xs font-bold text-white shadow-md hover:opacity-95"
+                  >
+                    <Save className="h-4 w-4" />
+                    Salvar Alterações &amp; Galeria
+                  </button>
                 </div>
-
-                <div>
-                  <label className="text-xs font-bold">Descrição oficial no BoraRio</label>
-                  <textarea
-                    rows={4}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#123B56] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#102F46]"
-                >
-                  <Save className="h-4 w-4" />
-                  Salvar Alterações
-                </button>
               </form>
             )}
           </div>
         )}
       </main>
+
+      {/* Modal Totem / Balcão em Tela Cheia */}
+      {showQrTotemModal && activeQr && qrDataUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+          <div className="relative w-full max-w-md rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 text-center shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setShowQrTotemModal(false)}
+              className="absolute right-4 top-4 rounded-full p-2 text-[var(--text-secondary)] hover:bg-[var(--bg-canvas)] hover:text-[var(--text-primary)]"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF4B2B] to-[#F7931E] text-white shadow-lg">
+              <QrCode className="h-6 w-6" />
+            </div>
+
+            <p className="mt-3 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+              Totem de Validação · Balcão
+            </p>
+            <h3 className="mt-1 text-xl font-black text-[var(--text-primary)]">
+              {activeTenant?.name || 'Seu Estabelecimento'}
+            </h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Aponte a câmera do celular no BoraRio para validar sua reserva e pontuar no programa de fidelidade.
+            </p>
+
+            {/* QR Code Container */}
+            <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FF6B35]/40 bg-white p-5 shadow-inner">
+              <img
+                src={qrDataUrl}
+                alt={`QR Code ${activeQr.token_code}`}
+                className="h-64 w-64 object-contain"
+              />
+              <div className="mt-3 flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                <Clock className="h-3.5 w-3.5 text-[#FF6B35]" />
+                <span>Atualiza em {qrRemainingSec}s</span>
+              </div>
+            </div>
+
+            {/* PIN de Contingência */}
+            <div className="mt-4 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3">
+              <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                Sem câmera? Diga ao atendente o PIN:
+              </span>
+              <p className="mt-1 font-mono text-2xl font-black tracking-widest text-[#FF6B35]">
+                {activeQr.contingency_pin}
+              </p>
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-2.5 text-xs font-bold text-[var(--text-primary)] hover:border-[#FF6B35]"
+              >
+                <Printer className="h-4 w-4" />
+                Imprimir Display
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowQrTotemModal(false)}
+                className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
