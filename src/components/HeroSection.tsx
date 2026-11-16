@@ -1,5 +1,4 @@
 import {
-  Bookmark,
   CloudRain,
   Compass,
   Heart,
@@ -7,7 +6,6 @@ import {
   Moon,
   MoreHorizontal,
   Plane,
-  Plus,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -51,10 +49,10 @@ interface HeroSectionProps {
   locationState?: 'idle' | 'requesting' | 'granted' | 'denied';
   onRequestLocation?: () => void;
   homeNeighborhood?: string;
-  vaultCount: number;
+  vaultCount?: number;
   onAskBoraIa: (intentText: string) => void;
-  onOpenVault: () => void;
-  onOpenVaultCapture: () => void;
+  onOpenVault?: () => void;
+  onOpenVaultCapture?: () => void;
   externalOpenFiltersSignal?: number;
   isDark: boolean;
 }
@@ -141,13 +139,6 @@ function getRioGreeting(): { greeting: string; hour: number } {
   }
 }
 
-function getRioMomentTag(hour: number, isRaining?: boolean): string {
-  if (isRaining) return 'Modo Chuva · Espaços Cobertos';
-  if (hour >= 18 || hour < 5) return 'A Noite Carioca & Shows';
-  if (hour >= 12 && hour < 18) return 'Pôr do Sol & Rooftops';
-  return 'Cafés, Parques & Praias';
-}
-
 export function HeroSection({
   filters,
   onChange,
@@ -161,9 +152,9 @@ export function HeroSection({
   locationState = 'idle',
   onRequestLocation,
   homeNeighborhood: _homeNeighborhood,
-  vaultCount,
+  vaultCount: _vaultCount,
   onAskBoraIa,
-  onOpenVault,
+  onOpenVault: _onOpenVault,
   onOpenVaultCapture,
   externalOpenFiltersSignal = 0,
   isDark,
@@ -186,8 +177,7 @@ export function HeroSection({
     }
   };
 
-  const hasLiveWeather = weather?.source === 'open-meteo-live';
-  const { greeting, hour } = getRioGreeting();
+  const { greeting } = getRioGreeting();
 
   const activeFilterCount = [
     filters.neighborhood,
@@ -272,50 +262,28 @@ export function HeroSection({
               </p>
 
               <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.85),0_1px_3px_rgba(5,14,24,0.95)] sm:text-4xl">
-                A cidade acontece.
-                <br />
-                <span className="text-[#F1E8D8]">Você aproveita.</span>
+                O Rio tem mais para você.
               </h1>
               <p className="mt-1.5 text-xs font-semibold text-[#F1E8D8]/95 [text-shadow:0_1px_6px_rgba(5,14,24,0.9)] sm:text-sm">
-                Encontre gastronomia, noites e passeios com vantagens reais no Rio.
+                Descubra experiências, aproveite vantagens exclusivas e acumule benefícios a cada rolê.
               </p>
             </div>
 
-            {/* Contexto ao vivo relevante do Rio (Clima, Momento e Localização) */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-              {hasLiveWeather && weather && (
-                <div
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}
-                >
-                  {weather.isRaining ? (
-                    <CloudRain className="h-3.5 w-3.5 text-[#FF6B35]" />
-                  ) : (
-                    <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
-                  )}
-                  <span>
-                    {weather.temperatureC}°C · {weather.isRaining ? 'Chuva no Rio' : 'Tempo aberto'}
-                  </span>
-                </div>
-              )}
-
+            {/* Contexto ao vivo do Rio (temperatura única e limpa) */}
+            <div className="flex items-center sm:justify-end">
               <div
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}
               >
-                {hasLiveWeather && weather?.isRaining ? (
-                  <CloudRain className="h-3.5 w-3.5 text-[#4CA188]" />
-                ) : hour >= 18 || hour < 5 ? (
-                  <Moon className="h-3.5 w-3.5 text-[#FFB347]" />
+                {weather?.isRaining ? (
+                  <CloudRain className="h-3.5 w-3.5 text-[#FF6B35]" />
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5 text-[#FFB347]" />
+                  <Sun className="h-3.5 w-3.5 text-[#F7931E]" />
                 )}
-                <span>{getRioMomentTag(hour, hasLiveWeather ? weather?.isRaining : undefined)}</span>
-              </div>
-
-              <div
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${heroGlassClass}`}
-              >
-                <MapPin className="h-3 w-3 text-[#FF6B35]" />
-                <span>{userCoords ? 'GPS Ativo' : 'Rio de Janeiro'}</span>
+                <span>
+                  {weather
+                    ? `${weather.temperatureC}°C · ${weather.isRaining ? 'Chuva no Rio' : 'Tempo aberto'}`
+                    : 'Rio de Janeiro · 26°C'}
+                </span>
               </div>
             </div>
           </div>
@@ -339,7 +307,7 @@ export function HeroSection({
                   onAskBoraIa(filters.search.trim());
                 }
               }}
-              placeholder="Busque um lugar, evento ou cole um link..."
+              placeholder="O que você quer fazer hoje? Gastronomia, festas, passeios..."
               className="min-w-0 flex-1 bg-transparent py-2.5 text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/85 focus:outline-none"
             />
 
@@ -400,7 +368,7 @@ export function HeroSection({
               </div>
               <button
                 type="button"
-                onClick={() => onOpenVaultCapture()}
+                onClick={() => onOpenVaultCapture?.()}
                 className="shrink-0 rounded-lg bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:brightness-105"
               >
                 Salvar em Desejos
@@ -574,6 +542,35 @@ export function HeroSection({
                   </button>
                 )}
               </div>
+
+              {/* Localização GPS e Preferências integradas aos filtros */}
+              <div className="flex flex-wrap items-center gap-2 border-t border-[var(--border-hairline)] pt-2.5">
+                {userCoords ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#397B68]/15 px-3 py-1.5 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
+                    <MapPin className="h-3.5 w-3.5" />
+                    GPS Ativo · Ordenando por proximidade
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onRequestLocation}
+                    disabled={locationState === 'requesting'}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition disabled:opacity-50"
+                  >
+                    <MapPin className="h-3.5 w-3.5 text-[#397B68]" />
+                    <span>{locationState === 'requesting' ? 'Obtendo GPS...' : '📍 Ativar GPS'}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => onOpenProfile?.()}
+                  className="inline-flex items-center gap-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Gerenciar Preferências</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -685,61 +682,6 @@ export function HeroSection({
             </button>
           </div>
         )}
-
-        {/* Barra horizontal compacta de 1 linha: GPS + Preferências + Desejos */}
-        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/90 px-3.5 py-2 text-xs shadow-xs backdrop-blur-sm">
-          {/* Esquerda: chip compacto 📍 Ativar GPS + Preferências */}
-          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-            {userCoords ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68]/15 px-2.5 py-1 text-[11px] font-bold text-[#397B68] dark:text-[#4CA188]">
-                <MapPin className="h-3 w-3 shrink-0" />
-                <span className="truncate">GPS Ativo · Perto de você</span>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={onRequestLocation}
-                disabled={locationState === 'requesting'}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68]/15 px-2.5 py-1 text-[11px] font-bold text-[#397B68] hover:bg-[#397B68] hover:text-white transition disabled:opacity-50 dark:text-[#4CA188]"
-              >
-                <MapPin className="h-3 w-3 shrink-0" />
-                <span>{locationState === 'requesting' ? 'Obtendo...' : '📍 Ativar GPS'}</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => onOpenProfile?.()}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)] hover:border-[#123B56] hover:text-[var(--text-primary)] transition"
-            >
-              <SlidersHorizontal className="h-3 w-3 shrink-0" />
-              <span>Preferências</span>
-            </button>
-          </div>
-
-          {/* Direita: botão destacado + Salvar link/print nos Desejos */}
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={onOpenVaultCapture}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-1.5 text-[11px] font-bold text-white shadow-xs hover:brightness-105 transition"
-            >
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span>+ Salvar link/print nos Desejos</span>
-            </button>
-            {vaultCount > 0 && (
-              <button
-                type="button"
-                onClick={onOpenVault}
-                title="Ver Meus Desejos"
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-1 text-[11px] font-bold text-[var(--text-primary)] hover:border-[#FF6B35] transition"
-              >
-                <Bookmark className="h-3 w-3 shrink-0 text-[#FF6B35]" />
-                <span>{vaultCount}</span>
-              </button>
-            )}
-          </div>
-        </div>
       </div>
     </section>
   );

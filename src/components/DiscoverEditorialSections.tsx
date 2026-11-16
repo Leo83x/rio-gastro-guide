@@ -195,6 +195,16 @@ export function DiscoverEditorialSections({
     [experiences, confiaCountsByVenue, vaultVenueIds, preferences]
   );
 
+  const livePartnerOfferings = useMemo(() => {
+    return getPartnerOfferings()
+      .filter(
+        (off) =>
+          off.partner_managed_active &&
+          !['ENDED_WITHOUT_GOAL', 'CANCELLED', 'COMPLETED', 'DRAFT', 'SOLD_OUT'].includes(off.status)
+      )
+      .slice(0, 4);
+  }, []);
+
   if (experiences.length === 0 || !spotlight) return null;
 
   const spotlightMatch = calculateMatchScore(spotlight, preferences);
@@ -244,71 +254,159 @@ export function DiscoverEditorialSections({
 
   return (
     <div className="mb-12 space-y-11">
-      {/* SEÇÃO 02 · CONVERSÃO: OPORTUNIDADES PARA APROVEITAR HOJE */}
+      {/* SEÇÃO 01 · VANTAGENS REAIS DISPONÍVEIS AGORA */}
       <section aria-labelledby="home-block-opportunities">
         <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
           <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF6B35]/12 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#FF6B35]">
+              <Gift className="h-3.5 w-3.5" />
+              Vantagens &amp; Ofertas de Hoje
+            </span>
             <h2
               id="home-block-opportunities"
-              className="font-sans text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl"
+              className="mt-1 font-sans text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl"
             >
-              Oportunidades para aproveitar hoje
+              Vantagens reais para aproveitar agora
             </h2>
             <p className="text-xs text-[var(--text-secondary)]">
-              Reserve, descubra ofertas especiais ou aproveite horários disponíveis nos estabelecimentos.
+              Cortesias, menus especiais e vagas de última hora com condições exclusivas nos estabelecimentos.
             </p>
           </div>
           <button
             type="button"
             onClick={() => onGoToClub({ section: 'offerings', modality: 'ALL' })}
-            className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/12 px-3.5 py-1.5 text-xs font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
+            className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/12 px-3.5 py-1.5 text-xs font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white transition"
           >
-            Abrir Bora Club <ArrowRight className="h-3.5 w-3.5" />
+            Ver todas no Bora Club <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {MODALITIES_TODAY.map((mod) => {
-            const Icon = mod.icon;
-            const liveCount = activeOfferingsByModality.get(mod.id) || 0;
+          {livePartnerOfferings.map((off) => {
+            const linkedVenue = experiences.find((e) => e.id === off.restaurant_id);
             return (
-              <button
-                key={mod.id}
-                type="button"
-                onClick={() => onGoToClub({ section: 'offerings', modality: mod.id })}
-                className="flex flex-col justify-between rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-[#FF6B35]/55"
+              <div
+                key={off.id}
+                onClick={() => {
+                  if (linkedVenue) {
+                    onSelectExperience(linkedVenue);
+                  } else {
+                    onGoToClub({ section: 'offerings', modality: off.modality });
+                  }
+                }}
+                className="group flex flex-col justify-between rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-[#FF6B35]/55 cursor-pointer"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${mod.tone}`}
-                    >
-                      <Icon className="h-4.5 w-4.5" />
+                    <span className="truncate text-xs font-semibold text-[var(--text-secondary)]">
+                      {off.restaurant_name} · {off.neighborhood}
                     </span>
-                    <span className="rounded-full bg-[var(--bg-canvas)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-secondary)]">
-                      {liveCount > 0 ? `${liveCount} ativa${liveCount > 1 ? 's' : ''}` : mod.badge}
+                    <span className="shrink-0 rounded-full bg-[#FF6B35]/12 px-2 py-0.5 text-[10px] font-bold text-[#FF6B35]">
+                      {off.condition_badge || 'Hoje'}
                     </span>
                   </div>
-                  <h3 className="mt-3 text-sm font-bold text-[var(--text-primary)]">{mod.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    {mod.description}
-                  </p>
+                  <h3 className="mt-2.5 font-sans text-sm font-bold leading-snug text-[var(--text-primary)] group-hover:text-[#FF6B35]">
+                    {off.benefit_summary || off.title}
+                  </h3>
+                  {off.estimated_savings_brl > 0 && (
+                    <p className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Economia: R$ {off.estimated_savings_brl}
+                    </p>
+                  )}
+                  {off.time_slot_label && (
+                    <p className="mt-1.5 text-[11px] text-[var(--text-secondary)]">
+                      Janela: {off.time_slot_label} · {off.category}
+                    </p>
+                  )}
                 </div>
-                <span className="mt-3 text-[11px] font-bold text-[#FF6B35]">
-                  Explorar modalidade →
-                </span>
-              </button>
+
+                <div className="mt-4 flex items-center justify-between border-t border-[var(--border-hairline)] pt-2.5 text-xs">
+                  <span className="font-bold text-[#FF6B35] group-hover:underline">
+                    Garantir vantagem →
+                  </span>
+                  {off.capacity_total > 0 && (
+                    <span className="text-[10px] text-[var(--text-secondary)]">
+                      {off.capacity_total - off.reserved_count} vagas
+                    </span>
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
 
-        <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
-          <Store className="h-3.5 w-3.5 shrink-0 text-[#397B68]" />
-          <span>{DIRECT_PAYMENT_NOTICE}</span>
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+              Modalidades ativas:
+            </span>
+            {MODALITIES_TODAY.map((mod) => (
+              <button
+                key={mod.id}
+                type="button"
+                onClick={() => onGoToClub({ section: 'offerings', modality: mod.id })}
+                className="rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:border-[#FF6B35]/40 hover:text-[var(--text-primary)] transition"
+              >
+                {mod.title}
+              </button>
+            ))}
+          </div>
+
+          <p className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+            <Store className="h-3.5 w-3.5 shrink-0 text-[#397B68]" />
+            <span>{DIRECT_PAYMENT_NOTICE}</span>
+          </p>
+        </div>
       </section>
 
-      {/* DESTAQUE DO DIA: O QUE VALE A PENA VIVER HOJE? */}
+      {/* SEÇÃO 02 · A NOITE CARIOCA (Frequência, Radar & Agenda Noturna no Topo) */}
+      <NightlifeSection
+        events={nightlifeEvents}
+        permanentVenues={experiences}
+        savedEventTitlesOrUrls={savedNightlifeKeys}
+        onSelectPermanentVenue={onSelectExperience}
+        onFilterPermanentNightlife={onFilterPermanentNightlife}
+        onSaveEventToVault={onSaveNightlifeToVault}
+        onAskBoraIa={onAskBoraIa}
+        onGoToAdminNightlife={onGoToAdminNightlife}
+      />
+
+      {/* SEÇÃO 03 · SUA PRIMEIRA MISSÃO NO BORARIO (Progressão Imediata de Benefícios) */}
+      <section
+        aria-labelledby="home-block-first-mission"
+        className="rounded-3xl border border-[#397B68]/30 bg-gradient-to-br from-[#1B4D3E] via-[#2A6F55] to-[#397B68] p-5 text-white shadow-md sm:p-6"
+      >
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#FFB347]">
+              <Award className="h-3.5 w-3.5" />
+              Sua Primeira Missão
+            </span>
+            <h3
+              id="home-block-first-mission"
+              className="mt-2 font-sans text-lg font-bold text-white sm:text-xl"
+            >
+              Seu primeiro rolê vale +100 Rio Points
+            </h3>
+            <p className="mt-1 max-w-xl text-xs text-[#F1E8D8]/90 leading-relaxed">
+              Faça sua 1ª reserva ou check-in presencial em qualquer restaurante ou evento do BoraRio e acumule pontos no Passaporte Carioca para resgatar cortesias e experiências exclusivas.
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onGoToProfile({ section: 'passport' })}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:brightness-105"
+            >
+              <Award className="h-3.5 w-3.5" />
+              Ver Passaporte &amp; Missões
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* SEÇÃO 04 · DESTAQUE DO DIA: O QUE VALE A PENA VIVER HOJE? */}
       <section aria-labelledby="home-block-spotlight">
         <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -393,18 +491,6 @@ export function DiscoverEditorialSections({
           </div>
         </div>
       </section>
-
-      {/* SEÇÃO 03 · FREQUÊNCIA: A NOITE CARIOCA */}
-      <NightlifeSection
-        events={nightlifeEvents}
-        permanentVenues={experiences}
-        savedEventTitlesOrUrls={savedNightlifeKeys}
-        onSelectPermanentVenue={onSelectExperience}
-        onFilterPermanentNightlife={onFilterPermanentNightlife}
-        onSaveEventToVault={onSaveNightlifeToVault}
-        onAskBoraIa={onAskBoraIa}
-        onGoToAdminNightlife={onGoToAdminNightlife}
-      />
 
       {/* SEÇÃO 04 · PLANEJAMENTO: MONTE SEU PRÓXIMO PROGRAMA (com degradê azul da logo) */}
       <section
