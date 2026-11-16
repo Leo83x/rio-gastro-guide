@@ -10,6 +10,7 @@ import { DiscoverEditorialSections } from './components/DiscoverEditorialSection
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
 import { NightlifeEventModal } from './components/NightlifeEventModal';
+import { NightlifeSection } from './components/NightlifeSection';
 import { PersonalizeModal } from './components/PersonalizeModal';
 import { PlannerView } from './components/PlannerView';
 import {
@@ -640,6 +641,20 @@ export function App() {
                 onGoToProfile={navigateToProfile}
                 onOpenPersonalize={() => setShowPersonalize(true)}
               />
+            )}
+
+            {!showEditorialDiscover && !loading && filters.macroCategory === 'Vida Noturna' && (
+              <div className="mb-10">
+                <NightlifeSection
+                  events={nightlifeEvents}
+                  permanentVenues={restaurants}
+                  savedEventTitlesOrUrls={savedNightlifeKeys}
+                  onSelectPermanentVenue={setSelectedRestaurant}
+                  onSaveEventToVault={handleSaveNightlifeToVault}
+                  onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
+                  onGoToAdminNightlife={navigateToAdminNightlife}
+                />
+              </div>
             )}
 
             {loading ? (
