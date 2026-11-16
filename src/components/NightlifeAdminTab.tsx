@@ -708,12 +708,57 @@ export function NightlifeAdminTab({
   const handleManualSweep = async () => {
     setBusyAction('sweep');
     try {
-      const res = await runManualRadarSweepAndLog();
+      // 1. Ciclo temporal interno: promove programados e expira encerrados
+      const sweepRes = await runManualRadarSweepAndLog();
+
+      // 2. Varredura da cidade: busca eventos culturais e noturnos atuais na Riotur
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      const rioturRes = await syncRioturNightlifeEvents({
+        mes: currentMonth,
+        ano: currentYear,
+        syncMonths: 2,
+      });
+
+      let newInserted = 0;
+      let dedupedUpdated = 0;
+
+      if (rioturRes.ok && rioturRes.drafts.length > 0) {
+        const batch = await ingestNightlifeBatch({
+          drafts: rioturRes.drafts,
+          sourceCode: 'radar_sweep_master',
+          sourcePlatform: 'RIOTUR',
+          triggerType: 'MANUAL',
+          permanentVenues,
+        });
+        newInserted = batch.insertedPending;
+        dedupedUpdated = batch.dedupedUpdated;
+      }
+
       await onNightlifeUpdated();
       await refreshRuns();
-      onShowToast(
-        `Radar varrido: ${res.promotedCount} programado(s) publicado(s), ${res.expiredCount} encerrado(s) expirado(s).`
-      );
+
+      if (newInserted > 0) {
+        setQueueFilter('PENDENTE');
+        onShowToast(
+          `Radar varrido com sucesso! ${newInserted} novo(s) evento(s) do Rio capturado(s) em PENDENTE (${dedupedUpdated} atualizados/deduplicados). ${sweepRes.expiredCount} encerrado(s) expirado(s).`
+        );
+      } else if (rioturRes.ok && rioturRes.drafts.length > 0) {
+        onShowToast(
+          `Radar varrido: Os ${rioturRes.drafts.length} eventos do Rio no período já estão catalogados no BoraRio. ${sweepRes.expiredCount} encerrado(s) expirado(s).`
+        );
+      } else {
+        onShowToast(
+          `Varredura concluída: ${sweepRes.promotedCount} publicado(s), ${sweepRes.expiredCount} expirado(s). ${
+            rioturRes.error ? `(Aviso coletor: ${rioturRes.error})` : ''
+          }`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      onShowError('Erro ao executar varredura do radar.');
     } finally {
       setBusyAction('');
     }
@@ -770,14 +815,15 @@ export function NightlifeAdminTab({
             type="button"
             disabled={busyAction === 'sweep'}
             onClick={() => void handleManualSweep()}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-xs font-bold text-white hover:bg-white/20 disabled:opacity-50"
+            title="Varre a agenda oficial do Rio de Janeiro trazendo novos eventos para a fila PENDENTE e expira automaticamente eventos já ocorridos"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#F7931E]/40 bg-white/10 px-3.5 py-2 text-xs font-bold text-white hover:bg-white/20 disabled:opacity-50 transition"
           >
             {busyAction === 'sweep' ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#F7931E]" />
             ) : (
               <RefreshCw className="h-3.5 w-3.5 text-[#F7931E]" />
             )}
-            Varrer Radar &amp; Expirar Encerrados
+            Varrer Radar da Cidade &amp; Expirar Encerrados
           </button>
 
           <button

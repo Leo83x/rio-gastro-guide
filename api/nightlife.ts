@@ -940,7 +940,9 @@ async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Respons
   const baseYear = anoParam ? Math.max(currentYear, parseInt(anoParam, 10)) : currentYear;
 
   try {
-    // 1. Fetch agenda page to obtain fresh session nonce
+    let nonce = 'bfa0629e5c';
+    try {
+    // 1. Fetch agenda page to obtain fresh session nonce if available
     const pageRes = await fetch('https://riotur.rio/agenda/', {
       method: 'GET',
       headers: {
@@ -949,26 +951,21 @@ async function handleFetchRiotur(request: Request, reqUrl: URL): Promise<Respons
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8',
       },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(10000),
     });
 
-    if (!pageRes.ok) {
-      return jsonResponse(502, {
-        error: `Falha ao acessar https://riotur.rio/agenda/ (HTTP ${pageRes.status}).`,
-      });
+    if (pageRes.ok) {
+      const pageHtml = await pageRes.text();
+      const nonceMatch =
+        pageHtml.match(/action:\s*['"]buscar_eventos['"],[\s\S]*?nonce:\s*['"]([a-zA-Z0-9]+)['"]/i) ||
+        pageHtml.match(/nonce:\s*['"]([a-zA-Z0-9]+)['"]/i);
+      if (nonceMatch?.[1]) {
+        nonce = nonceMatch[1];
+      }
     }
-
-    const pageHtml = await pageRes.text();
-    const nonceMatch =
-      pageHtml.match(/action:\s*['"]buscar_eventos['"],[\s\S]*?nonce:\s*['"]([a-zA-Z0-9]+)['"]/i) ||
-      pageHtml.match(/nonce:\s*['"]([a-zA-Z0-9]+)['"]/i);
-
-    const nonce = nonceMatch ? nonceMatch[1] : '';
-    if (!nonce) {
-      return jsonResponse(502, {
-        error: 'Não foi possível extrair o token de sessão (nonce) da agenda da Riotur.',
-      });
-    }
+  } catch {
+    // Continue with standard fallback nonce if agenda page had timeout
+  }
 
     // 2. Fetch events across requested months
     const rawEventsMap = new Map<string, RioturRawItem>();
