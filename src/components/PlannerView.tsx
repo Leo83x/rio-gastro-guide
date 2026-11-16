@@ -93,8 +93,8 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 const ORIGIN_BADGE: Record<ItinerarySourceOrigin, { label: string; cls: string }> = {
   catalog: { label: 'Catálogo', cls: 'bg-[var(--bg-subtle)] text-[var(--text-secondary)]' },
-  cofre: { label: 'Seu Cofre', cls: 'bg-[#FF6B35]/15 text-[#FF6B35]' },
-  confia: { label: 'Rede Confia', cls: 'bg-[#397B68]/15 text-[#397B68]' },
+  cofre: { label: 'Meus Desejos', cls: 'bg-[#FF6B35]/15 text-[#FF6B35]' },
+  confia: { label: 'Indicação Amigos', cls: 'bg-[#397B68]/15 text-[#397B68]' },
   club: { label: 'Bora Club', cls: 'bg-[#D49B27]/15 text-[#B78114] dark:text-[#E5B342]' },
 };
 
@@ -581,7 +581,7 @@ export function PlannerView({
               onChange={(e) => setUseVault(e.target.checked)}
               className="accent-[#FF6B35]"
             />
-            Cofre de Intenções ({vaultItems.filter((i) => i.status !== 'ARCHIVED').length})
+            Meus Desejos ({vaultItems.filter((i) => i.status !== 'ARCHIVED').length})
           </label>
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1 font-semibold">
             <input
@@ -591,7 +591,7 @@ export function PlannerView({
               onChange={(e) => setUseConfia(e.target.checked)}
               className="accent-[#397B68]"
             />
-            Rede Confia ({confiaPosts.length})
+            Indicações de Amigos ({confiaPosts.length})
           </label>
           <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1 font-semibold">
             <input

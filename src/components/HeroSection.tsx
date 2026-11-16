@@ -285,12 +285,10 @@ export function HeroSection({
               </p>
 
               <h1 className="mt-2.5 text-2xl font-extrabold leading-tight tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.75),0_1px_3px_rgba(5,14,24,0.85)] sm:text-4xl">
-                A cidade acontece.
-                <br />
-                Você aproveita.
+                O que você está a fim de fazer?
               </h1>
               <p className="mt-1.5 text-xs font-semibold text-[#F1E8D8] [text-shadow:0_1px_6px_rgba(5,14,24,0.8)] sm:text-sm">
-                Viva mais. Gaste melhor. Ganhe por isso.
+                Encontre experiências, oportunidades e programas no Rio.
               </p>
             </div>
 
@@ -376,7 +374,7 @@ export function HeroSection({
                   onAskBoraIa(filters.search.trim());
                 }
               }}
-              placeholder="O que você quer viver hoje?"
+              placeholder="Busque um lugar, evento ou cole um link..."
               className="min-w-0 flex-1 bg-transparent py-2.5 text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-secondary)]/85 focus:outline-none"
             />
 
@@ -424,6 +422,102 @@ export function HeroSection({
                 </span>
               )}
             </button>
+          </div>
+
+          {/* Quick link paste detection banner */}
+          {(filters.search.trim().startsWith('http') ||
+            filters.search.trim().includes('instagram.com') ||
+            filters.search.trim().includes('tiktok.com')) && (
+            <div className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-[#0E2235] via-[#123B56] to-[#0077B6] p-2.5 text-white">
+              <div className="flex items-center gap-2 text-xs">
+                <Sparkles className="h-4 w-4 shrink-0 text-[#FFB347]" />
+                <span className="truncate">Link detectado! Identificar local com IA e salvar em Meus Desejos?</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onOpenVaultCapture()}
+                className="shrink-0 rounded-lg bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:brightness-105"
+              >
+                Salvar em Desejos
+              </button>
+            </div>
+          )}
+
+          {/* 4 Core Quick Actions (Comer, Sair, Explorar, Eventos) */}
+          <div className="mt-2.5 grid grid-cols-2 gap-1.5 border-t border-[var(--border-hairline)] pt-2.5 sm:grid-cols-4">
+            {[
+              {
+                id: 'comer',
+                label: 'Comer',
+                sub: 'Gastronomia',
+                macro: 'Gastronomia' as const,
+                icon: UtensilsCrossed,
+                gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]',
+              },
+              {
+                id: 'sair',
+                label: 'Sair',
+                sub: 'Noite & Bares',
+                macro: 'Vida Noturna' as const,
+                icon: Moon,
+                // Degradê azul da logo em Sair
+                gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]',
+              },
+              {
+                id: 'explorar',
+                label: 'Explorar',
+                sub: 'Passeios & Cultura',
+                macro: 'Turismo & Praias' as const,
+                icon: Compass,
+                gradient: 'from-[#1B4D3E] via-[#2A6F55] to-[#397B68]',
+              },
+              {
+                id: 'eventos',
+                label: 'Eventos',
+                sub: 'Shows & Festas',
+                macro: 'Eventos & Shows' as const,
+                icon: Music,
+                gradient: 'from-[#4A154B] via-[#6B2D5C] to-[#C84B31]',
+              },
+            ].map((act) => {
+              const Icon = act.icon;
+              const active = filters.macroCategory === act.macro;
+              return (
+                <button
+                  key={act.id}
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      ...filters,
+                      macroCategory: active ? '' : act.macro,
+                    })
+                  }
+                  className={`flex items-center gap-2 rounded-xl p-2 text-left transition-all ${
+                    active
+                      ? `bg-gradient-to-r ${act.gradient} text-white shadow-sm ring-1 ring-white/20`
+                      : 'border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]/40'
+                  }`}
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                      active ? 'bg-white/20 text-white' : `bg-gradient-to-r ${act.gradient} text-white`
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold leading-tight">{act.label}</p>
+                    <p
+                      className={`truncate text-[10px] ${
+                        active ? 'text-white/80' : 'text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      {act.sub}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Expandable Clean Filter Drawer */}
@@ -680,20 +774,20 @@ export function HeroSection({
             </div>
           )}
 
-          {/* Direct Access Bar to Cofre de Intenções */}
+          {/* Direct Access Bar to Meus Desejos */}
           <div className="flex flex-col gap-2.5 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)]/85 px-3.5 py-2.5 text-xs shadow-xs sm:flex-row sm:items-center sm:justify-between sm:gap-2">
             <button
               type="button"
               onClick={onOpenVault}
               className="flex min-w-0 flex-1 items-center gap-2 text-left hover:opacity-85"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#123B56] text-white">
-                <Bookmark className="h-3.5 w-3.5 text-[#F7931E]" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-borario-ocean text-white shadow-xs">
+                <Bookmark className="h-3.5 w-3.5 text-[#FFB347]" />
               </div>
               <span className="truncate font-semibold text-[var(--text-primary)]">
                 {vaultCount > 0
-                  ? `${vaultCount} ${vaultCount === 1 ? 'desejo salvo' : 'desejos salvos'} no Cofre`
-                  : 'Cofre de Intenções: guarde links e lugares'}
+                  ? `${vaultCount} ${vaultCount === 1 ? 'desejo salvo' : 'desejos salvos'} em Meus Desejos`
+                  : 'Meus Desejos: guarde links e lugares'}
               </span>
             </button>
 
@@ -711,7 +805,7 @@ export function HeroSection({
                 onClick={onOpenVault}
                 className="rounded-lg border border-[var(--border-hairline)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--text-primary)] hover:border-[#123B56]"
               >
-                Abrir Cofre
+                Ver Desejos
               </button>
             </div>
           </div>

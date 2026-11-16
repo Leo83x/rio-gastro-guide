@@ -51,7 +51,7 @@ export function ConciergeWidget({
     {
       id: 'welcome',
       sender: 'bot',
-      text: 'Olá! Sou a Bora IA. Cruzo o catálogo real do BoraRio, a agenda curada de A Noite Carioca, o seu Cofre de Intenções, indicações autorizadas da sua Rede Confia e o clima do Rio agora. O que você quer viver?',
+      text: 'Olá! Sou a Bora IA. Cruzo o catálogo real do BoraRio, a agenda curada de A Noite Carioca, os seus Desejos salvos, indicações de amigos e o clima do Rio agora. O que você quer viver?',
     },
   ]);
 
@@ -141,15 +141,15 @@ export function ConciergeWidget({
       {open && (
         <div className="fixed bottom-[9.25rem] right-3.5 z-50 flex h-[460px] max-h-[calc(100vh-11rem)] w-[calc(100vw-1.75rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-2xl lg:bottom-20 lg:right-6 lg:h-[480px]">
           {/* Header */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-[#123B56] via-[#102F46] to-[#FF6B35] px-4 py-3 text-white">
+          <div className="flex items-center justify-between bg-borario-ocean px-4 py-3 text-white shadow-xs">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
-                <Sparkles className="h-4.5 w-4.5 text-white" />
+                <Sparkles className="h-4.5 w-4.5 text-[#FFB347]" />
               </div>
               <div>
                 <p className="text-sm font-bold leading-tight">Bora IA Concierge</p>
                 <p className="text-[11px] text-[#F1E8D8]">
-                  Correspondência real: Catálogo + Noite + Cofre + Confia
+                  Catálogo + Noite Carioca + Desejos + Indicações
                 </p>
               </div>
             </div>

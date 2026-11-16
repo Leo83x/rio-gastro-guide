@@ -280,9 +280,9 @@ export function NightlifeEventModal({
                   onClose();
                   onOpenPermanentVenue(linkedVenue);
                 }}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#123B56]/35 bg-[#123B56] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#102F46] sm:text-sm"
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-400/30 bg-borario-ocean px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:brightness-110 sm:text-sm"
               >
-                <Building2 className="h-4 w-4 text-[#F7931E]" />
+                <Building2 className="h-4 w-4 text-[#FFB347]" />
                 Abrir ficha da casa no BoraRio
               </button>
             )}
@@ -298,7 +298,7 @@ export function NightlifeEventModal({
                 }`}
               >
                 <Bookmark className={`h-4 w-4 ${inVault ? 'fill-current' : ''}`} />
-                {inVault ? 'Salvo no Cofre' : 'Guardar no Cofre'}
+                {inVault ? 'Salvo em Meus Desejos' : 'Salvar em Desejos'}
               </button>
             )}
 

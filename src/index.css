@@ -86,6 +86,19 @@
   background: linear-gradient(90deg, #FF4B2B 0%, #FF6B35 50%, #F7931E 100%);
 }
 
+/* Official BoraRio Ocean Blue Gradient (from logo ocean element) */
+.bg-borario-ocean {
+  background: linear-gradient(135deg, #0E2235 0%, #123B56 50%, #0077B6 100%);
+}
+
+.bg-borario-ocean-soft {
+  background: linear-gradient(135deg, #102F46 0%, #1B5276 52%, #0096C7 100%);
+}
+
+.bg-borario-ocean-glow {
+  background: linear-gradient(135deg, #0A1C2A 0%, #0E2F49 55%, #00B4D8 120%);
+}
+
 /* Hide scrollbar for horizontal chips */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

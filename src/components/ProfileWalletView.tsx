@@ -642,7 +642,7 @@ export function ProfileWalletView({
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Bookmark className="h-3.5 w-3.5 text-[#FF6B35]" />
-                  {vaultCount} no Cofre
+                  {vaultCount} em Meus Desejos
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <HeartHandshake className="h-3.5 w-3.5 text-[#397B68]" />
@@ -663,9 +663,9 @@ export function ProfileWalletView({
             <button
               type="button"
               onClick={onOpenPersonalize}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#123B56] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#102F46]"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-borario-ocean px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:brightness-110"
             >
-              <Wand2 className="h-3.5 w-3.5 text-[#F7931E]" />
+              <Wand2 className="h-3.5 w-3.5 text-[#FFB347]" />
               Preferências de Match
             </button>
           </div>
@@ -828,10 +828,10 @@ export function ProfileWalletView({
           <div className="grid gap-6 lg:grid-cols-3">
             <div
               data-testid="wallet-hero-card"
-              className="rounded-3xl border border-[#E05A47]/30 bg-gradient-to-br from-[#1C1917] via-[#26221F] to-[#141210] p-6 text-white shadow-lg"
+              className="rounded-3xl border border-sky-400/30 bg-borario-ocean p-6 text-white shadow-xl"
             >
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#FF6B35]">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[#FFB347]">
                   <Award className="h-4 w-4" />
                   Carteira Rio Points
                 </span>
@@ -1016,7 +1016,7 @@ export function ProfileWalletView({
                     setCopiedRefLink(true);
                     setTimeout(() => setCopiedRefLink(false), 2500);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#123B56] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#102F46]"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-borario-ocean px-3 py-2 text-[11px] font-bold text-white shadow-xs hover:brightness-110"
                 >
                   {copiedRefLink ? (
                     <Check className="h-3.5 w-3.5 text-emerald-300" />
@@ -1937,18 +1937,18 @@ export function ProfileWalletView({
             </div>
           </section>
 
-          {/* Rede Confia & Vault Privacy Controls */}
+          {/* Rede Confia & Meus Desejos Privacy Controls */}
           <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#397B68]">
               <Lock className="h-4 w-4" />
-              Privacidade Rede Confia &amp; Cofre
+              Privacidade &amp; Meus Desejos
             </div>
             <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
-              Padrão fechado por design: seu Cofre de Intenções nunca é compartilhado automaticamente.
+              Padrão fechado por design: seus Desejos guardados nunca são compartilhados automaticamente.
             </p>
             <div className="mt-4 space-y-3 text-xs">
               <div className="flex items-center justify-between gap-2 rounded-xl bg-[var(--bg-canvas)] p-2.5">
-                <span className="text-[var(--text-secondary)]">Envio automático do Cofre para amigos</span>
+                <span className="text-[var(--text-secondary)]">Envio automático de Meus Desejos para amigos</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400">Bloqueado</span>
               </div>
 
@@ -1998,7 +1998,7 @@ export function ProfileWalletView({
             </div>
             <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
               {supabaseReady
-                ? 'Supabase configurado: conecte seu e-mail para sincronizar Cofre e Rede Confia entre dispositivos.'
+                ? 'Supabase configurado: conecte seu e-mail para sincronizar Desejos e conexões entre dispositivos.'
                 : 'Ambiente rodando em modo local neste dispositivo (variáveis Supabase não configuradas).'}
             </p>
 

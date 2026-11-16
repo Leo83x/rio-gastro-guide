@@ -4,8 +4,8 @@ import { AdminPanel, type AdminTab } from './components/AdminPanel';
 import { BrandLogo } from './components/BrandLogo';
 import { ClubView } from './components/ClubView';
 import { ConciergeWidget } from './components/ConciergeWidget';
-import { ConfiaHubView } from './components/confia/ConfiaHubView';
 import { IntentCaptureModal } from './components/confia/IntentCaptureModal';
+import { MeusDesejosView } from './components/wishes/MeusDesejosView';
 import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
@@ -25,7 +25,6 @@ import { PartnerDashboard } from './pages/PartnerDashboard';
 import { PartnersLandingPage } from './pages/PartnersLandingPage';
 import { getUserProfileIdentity, subscribeToAuthChanges, syncSupabaseSessionIdentity } from './services/authService';
 import {
-  getTrustCircles,
   getTrustConnections,
   getVisibleConfiaRecommendations,
 } from './services/confiaStore';
@@ -44,7 +43,7 @@ import {
   markAllNotificationsRead,
   saveUserPreferences,
 } from './services/superappStore';
-import type { ConfiaRecommendation, TrustCircle, TrustConnection } from './types/confia';
+import type { ConfiaRecommendation, TrustConnection } from './types/confia';
 import type { NotificationItem, ReservationRequest, UserPreferences } from './types/experience';
 import type { IntentVaultItem } from './types/intention';
 import { NIGHTLIFE_SUBAREA_META, type NightlifeEvent } from './types/nightlife';
@@ -93,18 +92,15 @@ export function App() {
     nonce: number;
   }>({ section: 'passport', focus: null, nonce: 0 });
 
-  // Cofre de Intenções & Rede Confia State
+  // Meus Desejos & Conexões State
   const [vaultItems, setVaultItems] = useState<IntentVaultItem[]>(() => getIntentVaultItems());
-  const [circles, setCircles] = useState<TrustCircle[]>(() => getTrustCircles());
-  const [connections, setConnections] = useState<TrustConnection[]>(() => getTrustConnections());
+  const [connections] = useState<TrustConnection[]>(() => getTrustConnections());
   const [confiaPosts, setConfiaPosts] = useState<ConfiaRecommendation[]>(() =>
     getVisibleConfiaRecommendations()
   );
 
-  const [confiaSubTab, setConfiaSubTab] = useState<'vault' | 'network'>('vault');
   const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [captureInitialVenue, setCaptureInitialVenue] = useState<Restaurant | null>(null);
-  const [externalShareVenue, setExternalShareVenue] = useState<Restaurant | null>(null);
   const [pendingBoraIaPrompt, setPendingBoraIaPrompt] = useState<string | null>(null);
   const [pendingPlannerPrompt, setPendingPlannerPrompt] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; showVaultAction?: boolean } | null>(null);
@@ -362,7 +358,7 @@ export function App() {
   const handleSaveVenueToVault = (venue: Restaurant) => {
     if (vaultVenueIds.has(venue.id)) {
       setToast({
-        text: `"${venue.name}" já está salvo no seu Cofre de Intenções.`,
+        text: `"${venue.name}" já está salvo em Meus Desejos.`,
         showVaultAction: true,
       });
       return;
@@ -381,21 +377,19 @@ export function App() {
     });
     setVaultItems(next);
     setToast({
-      text: `"${venue.name}" guardado no seu Cofre de Intenções!`,
+      text: `"${venue.name}" guardado em Meus Desejos!`,
       showVaultAction: true,
     });
   };
 
   const handleShareVenueToConfia = (venue: Restaurant) => {
     setSelectedRestaurant(null);
-    setExternalShareVenue(venue);
-    setConfiaSubTab('network');
-    setActiveTab('confia');
+    const text = `Olha esse lugar no BoraRio: *${venue.name}* em ${venue.neighborhood}! Bora combinar de ir?`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 
   const openVaultHub = () => {
-    setConfiaSubTab('vault');
-    setActiveTab('confia');
+    setActiveTab('wishes');
   };
 
   const savedNightlifeKeys = useMemo(() => {
@@ -412,7 +406,7 @@ export function App() {
   const handleSaveNightlifeToVault = (ev: NightlifeEvent) => {
     if (savedNightlifeKeys.has(ev.title) || (ev.ticket_url && savedNightlifeKeys.has(ev.ticket_url))) {
       setToast({
-        text: `"${ev.title}" já está salvo no seu Cofre de Intenções.`,
+        text: `"${ev.title}" já está salvo em Meus Desejos.`,
         showVaultAction: true,
       });
       return;
@@ -429,11 +423,11 @@ export function App() {
       notes: `${NIGHTLIFE_SUBAREA_META[ev.sub_area].label} · ${ev.event_date} às ${ev.start_time} · ${ev.price_display_label}`,
       status: 'SAVED',
       processing_status: 'COMPLETED',
-      processing_message: 'Evento curado de A Noite Carioca salvo no seu Cofre.',
+      processing_message: 'Evento curado de A Noite Carioca salvo em Meus Desejos.',
     });
     setVaultItems(next);
     setToast({
-      text: `"${ev.title}" guardado no seu Cofre de Intenções!`,
+      text: `"${ev.title}" guardado em Meus Desejos!`,
       showVaultAction: true,
     });
   };
@@ -635,8 +629,7 @@ export function App() {
                 onGoToClub={navigateToClub}
                 onGoToPlanner={() => setActiveTab('planner')}
                 onGoToConfia={() => {
-                  setConfiaSubTab('network');
-                  setActiveTab('confia');
+                  setActiveTab('wishes');
                 }}
                 onGoToProfile={navigateToProfile}
                 onOpenPersonalize={() => setShowPersonalize(true)}
@@ -835,37 +828,24 @@ export function App() {
             setToast({ text: 'Roteiro compartilhado com segurança na Rede Confia!' });
           }}
           onGoToConfia={() => {
-            setConfiaSubTab('network');
-            setActiveTab('confia');
+            setActiveTab('wishes');
           }}
           onSelectExperience={setSelectedRestaurant}
         />
       )}
 
-      {effectiveTab === 'confia' && (
-        <ConfiaHubView
+      {(effectiveTab === 'wishes' || effectiveTab === 'confia') && (
+        <MeusDesejosView
           catalog={restaurants}
-          vaultItems={vaultItems}
-          circles={circles}
-          connections={connections}
-          posts={confiaPosts}
-          activeSubTab={confiaSubTab}
-          onChangeSubTab={setConfiaSubTab}
-          externalShareVenue={externalShareVenue}
-          onClearExternalShareVenue={() => setExternalShareVenue(null)}
-          onVaultItemsChanged={setVaultItems}
-          onCirclesAndConnectionsChanged={(nextCircles, nextConnections) => {
-            setCircles(nextCircles);
-            setConnections(nextConnections);
-            setConfiaPosts(getVisibleConfiaRecommendations());
-          }}
-          onPostsChanged={setConfiaPosts}
+          items={vaultItems}
+          onItemsChanged={setVaultItems}
           onOpenCaptureModal={() => {
             setCaptureInitialVenue(null);
             setShowCaptureModal(true);
           }}
           onPlanWithBoraIa={(promptText) => setPendingBoraIaPrompt(promptText)}
           onSelectVenue={setSelectedRestaurant}
+          onGoToPlanner={() => setActiveTab('planner')}
         />
       )}
 
@@ -901,8 +881,7 @@ export function App() {
           onReservationsUpdated={setReservations}
           onOpenPersonalize={() => setShowPersonalize(true)}
           onOpenConfiaHub={() => {
-            setConfiaSubTab('network');
-            setActiveTab('confia');
+            setActiveTab('wishes');
           }}
           onPointsChanged={() => {
             setPointsBalance(getPointsBalance());
@@ -956,7 +935,7 @@ export function App() {
                 className="inline-flex items-center gap-1 rounded-lg bg-[#FF6B35] px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-95"
               >
                 <Bookmark className="h-3 w-3" />
-                Abrir Cofre
+                Ver Desejos
               </button>
             )}
             <button
@@ -1005,8 +984,8 @@ export function App() {
           onSaved={(nextItems) => {
             setVaultItems(nextItems);
             setToast({
-              text: 'Intenção guardada no seu Cofre privado!',
-              showVaultAction: effectiveTab !== 'confia',
+              text: 'Desejo salvo com sucesso em Meus Desejos!',
+              showVaultAction: effectiveTab !== 'wishes',
             });
           }}
         />

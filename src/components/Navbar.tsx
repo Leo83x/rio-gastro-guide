@@ -2,11 +2,11 @@ import {
   ArrowLeft,
   Award,
   Bell,
+  Bookmark,
   Building2,
   Compass,
   Crown,
   Download,
-  HeartHandshake,
   MapPin,
   Moon,
   MoreHorizontal,
@@ -21,7 +21,7 @@ import type { AppRoute } from '../services/router';
 import type { NotificationItem } from '../types/experience';
 import { BrandLogo } from './BrandLogo';
 
-export type AppTab = 'discover' | 'planner' | 'confia' | 'club' | 'profile' | 'admin';
+export type AppTab = 'discover' | 'planner' | 'club' | 'wishes' | 'profile' | 'admin' | 'confia';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -41,15 +41,16 @@ interface NavbarProps {
 }
 
 const MAIN_TABS: Array<{
-  id: Exclude<AppTab, 'admin'>;
+  id: 'discover' | 'planner' | 'club' | 'wishes' | 'profile';
   label: string;
   shortLabel: string;
   icon: typeof Compass;
+  isCenterHighlight?: boolean;
 }> = [
   { id: 'discover', label: 'Descobrir', shortLabel: 'Descobrir', icon: Compass },
   { id: 'planner', label: 'Roteiros', shortLabel: 'Roteiros', icon: MapPin },
-  { id: 'confia', label: 'Rede Confia', shortLabel: 'Confia', icon: HeartHandshake },
-  { id: 'club', label: 'Bora Club', shortLabel: 'Club', icon: Crown },
+  { id: 'club', label: 'Bora Club', shortLabel: 'Bora Club', icon: Crown, isCenterHighlight: true },
+  { id: 'wishes', label: 'Meus Desejos', shortLabel: 'Desejos', icon: Bookmark },
   { id: 'profile', label: 'Perfil', shortLabel: 'Perfil', icon: User },
 ];
 
@@ -143,7 +144,8 @@ export function Navbar({
             {MAIN_TABS.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
-              const badge = tab.id === 'confia' ? confiaBadgeCount : 0;
+              const badge = tab.id === 'wishes' ? confiaBadgeCount : 0;
+              const isCenter = tab.isCenterHighlight;
               return (
                 <button
                   key={tab.id}
@@ -152,19 +154,21 @@ export function Navbar({
                   className={`relative inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${
                     active
                       ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
-                      : isOverLightHero
-                        ? 'text-[#123B56] hover:bg-[#123B56]/8 hover:text-[#0A2233]'
-                        : isOverDarkHero
-                          ? 'text-white/90 hover:bg-white/15 hover:text-white'
-                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                      : isCenter
+                        ? 'bg-gradient-to-r from-[#0E2235] via-[#123B56] to-[#0077B6] text-white hover:brightness-110 shadow-xs'
+                        : isOverLightHero
+                          ? 'text-[#123B56] hover:bg-[#123B56]/8 hover:text-[#0A2233]'
+                          : isOverDarkHero
+                            ? 'text-white/90 hover:bg-white/15 hover:text-white'
+                            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className={`h-3.5 w-3.5 ${isCenter && !active ? 'text-[#FFB347]' : ''}`} />
                   <span>{tab.label}</span>
                   {badge > 0 && (
                     <span
                       className={`rounded-full px-1.5 py-0.5 text-[9px] font-extrabold ${
-                        active ? 'bg-white/25 text-white' : 'bg-[#397B68] text-white'
+                        active ? 'bg-white/25 text-white' : 'bg-[#FF6B35] text-white'
                       }`}
                     >
                       {badge}
@@ -355,22 +359,27 @@ export function Navbar({
             {MAIN_TABS.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
-              const badge = tab.id === 'confia' ? confiaBadgeCount : 0;
+              const isCenter = tab.isCenterHighlight;
+              const badge = tab.id === 'wishes' ? confiaBadgeCount : 0;
               return (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => onSelectTab(tab.id)}
                   className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[10px] font-bold transition-all ${
-                    active
-                      ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-md'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    isCenter
+                      ? active
+                        ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-md -translate-y-0.5 ring-2 ring-white/30'
+                        : 'bg-gradient-to-r from-[#0E2235] via-[#123B56] to-[#0077B6] text-white shadow-sm -translate-y-0.5 ring-1 ring-white/20'
+                      : active
+                        ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-4 w-4 ${isCenter && !active ? 'text-[#FFB347]' : ''}`} />
                   <span>{tab.shortLabel}</span>
                   {badge > 0 && (
-                    <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-[#397B68] ring-2 ring-white dark:ring-[#0D1E30]" />
+                    <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-[#FF6B35] ring-2 ring-white dark:ring-[#0D1E30]" />
                   )}
                 </button>
               );

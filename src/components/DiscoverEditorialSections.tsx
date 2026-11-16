@@ -1,23 +1,24 @@
 import {
   ArrowRight,
   Award,
-  BadgeCheck,
   CalendarCheck2,
+  CalendarRange,
+  Check,
   ChevronDown,
   ChevronUp,
   Clock3,
   Compass,
+  Copy,
   Crown,
   Gift,
   Heart,
-  HeartHandshake,
   History,
   Info,
-  Lock,
   MapPin,
   Navigation,
   QrCode,
   ReceiptText,
+  Share2,
   ShieldCheck,
   Sparkles,
   Store,
@@ -31,6 +32,7 @@ import { computeMissionSummary } from '../services/missionStore';
 import { getPartnerOfferings } from '../services/opportunityStore';
 import { computePassportSummary } from '../services/passportStore';
 import { getWalletSummary } from '../services/pointsLedger';
+import { getMyReferralLink } from '../services/referralStore';
 import { getPartnerRewards } from '../services/rewardMarketplaceStore';
 import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
 import type { ConfiaRecommendation } from '../types/confia';
@@ -128,10 +130,10 @@ export function DiscoverEditorialSections({
   savedNightlifeKeys,
   preferences,
   userCoords = null,
-  vaultCount,
+  vaultCount: _vaultCount,
   vaultVenueIds,
-  confiaConnectionsCount,
-  confiaPosts,
+  confiaConnectionsCount: _confiaConnectionsCount,
+  confiaPosts: _confiaPosts,
   confiaCountsByVenue,
   pointsBalance,
   onSelectExperience,
@@ -144,13 +146,14 @@ export function DiscoverEditorialSections({
   onGoToExploreMap,
   onGoToClub,
   onGoToPlanner,
-  onGoToConfia,
+  onGoToConfia: _onGoToConfia,
   onGoToProfile,
   onOpenPersonalize,
 }: DiscoverEditorialSectionsProps) {
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [showPassportList, setShowPassportList] = useState(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [copiedRef, setCopiedRef] = useState(false);
 
   const spotlight = useMemo(
     () => experiences.find((e) => e.is_featured) || experiences[0],
@@ -227,9 +230,85 @@ export function DiscoverEditorialSections({
     (r) => r.points_cost <= pointsBalance
   ).length;
 
+  const handleCopyRef = () => {
+    const link = getMyReferralLink();
+    void navigator.clipboard?.writeText(link);
+    setCopiedRef(true);
+    setTimeout(() => setCopiedRef(false), 2500);
+  };
+  const handleShareWhatsAppRef = () => {
+    const link = getMyReferralLink();
+    const text = `Vem conhecer o BoraRio comigo! Descubra experiências, reserve e ganhe benefícios no Rio: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="mb-12 space-y-11">
-      {/* SEÇÃO 2: O QUE VALE A PENA VIVER HOJE? (Foco visual e fotográfico) */}
+      {/* SEÇÃO 02 · CONVERSÃO: OPORTUNIDADES PARA APROVEITAR HOJE */}
+      <section aria-labelledby="home-block-opportunities">
+        <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2
+              id="home-block-opportunities"
+              className="font-sans text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl"
+            >
+              Oportunidades para aproveitar hoje
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Reserve, descubra ofertas especiais ou aproveite horários disponíveis nos estabelecimentos.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onGoToClub({ section: 'offerings', modality: 'ALL' })}
+            className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/12 px-3.5 py-1.5 text-xs font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
+          >
+            Abrir Bora Club <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {MODALITIES_TODAY.map((mod) => {
+            const Icon = mod.icon;
+            const liveCount = activeOfferingsByModality.get(mod.id) || 0;
+            return (
+              <button
+                key={mod.id}
+                type="button"
+                onClick={() => onGoToClub({ section: 'offerings', modality: mod.id })}
+                className="flex flex-col justify-between rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-[#FF6B35]/55"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${mod.tone}`}
+                    >
+                      <Icon className="h-4.5 w-4.5" />
+                    </span>
+                    <span className="rounded-full bg-[var(--bg-canvas)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-secondary)]">
+                      {liveCount > 0 ? `${liveCount} ativa${liveCount > 1 ? 's' : ''}` : mod.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-sm font-bold text-[var(--text-primary)]">{mod.title}</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
+                    {mod.description}
+                  </p>
+                </div>
+                <span className="mt-3 text-[11px] font-bold text-[#FF6B35]">
+                  Explorar modalidade →
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+          <Store className="h-3.5 w-3.5 shrink-0 text-[#397B68]" />
+          <span>{DIRECT_PAYMENT_NOTICE}</span>
+        </p>
+      </section>
+
+      {/* DESTAQUE DO DIA: O QUE VALE A PENA VIVER HOJE? */}
       <section aria-labelledby="home-block-spotlight">
         <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -315,7 +394,7 @@ export function DiscoverEditorialSections({
         </div>
       </section>
 
-      {/* SEÇÃO 2.5: A NOITE CARIOCA (Agenda Noturna Curada — após O que vale a pena viver hoje?) */}
+      {/* SEÇÃO 03 · FREQUÊNCIA: A NOITE CARIOCA */}
       <NightlifeSection
         events={nightlifeEvents}
         permanentVenues={experiences}
@@ -327,7 +406,98 @@ export function DiscoverEditorialSections({
         onGoToAdminNightlife={onGoToAdminNightlife}
       />
 
-      {/* SEÇÃO 3: PERTO DE VOCÊ NO RIO (Grade visual compacta + proximidade opcional) */}
+      {/* SEÇÃO 04 · PLANEJAMENTO: MONTE SEU PRÓXIMO PROGRAMA (com degradê azul da logo) */}
+      <section
+        aria-labelledby="home-block-planning"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0E2235] via-[#123B56] to-[#0077B6] p-6 text-white shadow-xl sm:p-8"
+      >
+        <div className="relative z-10 flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+          <div className="max-w-2xl space-y-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/30 bg-white/12 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#FFB347]">
+              <CalendarRange className="h-3.5 w-3.5" />
+              Planejamento de Experiências
+            </span>
+            <h2
+              id="home-block-planning"
+              className="font-sans text-2xl font-extrabold tracking-tight text-white sm:text-3xl"
+            >
+              Monte seu próximo programa
+            </h2>
+            <p className="text-sm text-[#F1E8D8]/90 leading-relaxed">
+              Escolha lugares, combine datas, convide amigos e compartilhe roteiros completos pela cidade com auxílio da Bora IA.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onGoToPlanner}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:brightness-105"
+            >
+              <CalendarRange className="h-4 w-4" />
+              Criar Roteiro
+            </button>
+
+            <button
+              type="button"
+              onClick={onGoToExploreMap}
+              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-xs font-bold text-white backdrop-blur-md transition hover:bg-white/20"
+            >
+              <MapPin className="h-4 w-4 text-[#FFB347]" />
+              Ver no Mapa
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* SEÇÃO 05 · RETENÇÃO: CARD INDIQUE E GANHE RIO POINTS */}
+      <section
+        aria-labelledby="home-block-referral"
+        className="rounded-3xl border border-sky-400/25 bg-gradient-to-br from-[#0E2235] via-[#123B56] to-[#0077B6] p-5 text-white shadow-md sm:p-6"
+      >
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#FFB347]">
+              <Share2 className="h-3 w-3" />
+              Indique e Ganhe Rio Points
+            </span>
+            <h3
+              id="home-block-referral"
+              className="mt-2 font-sans text-lg font-bold text-white sm:text-xl"
+            >
+              Ganhe 200 Rio Points por cada primeira visita validada
+            </h3>
+            <p className="mt-1 max-w-xl text-xs text-[#F1E8D8]/85">
+              Convide amigos para o BoraRio. Seus pontos são creditados assim que seu amigo fizer o primeiro check-in presencial validado no parceiro.
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopyRef}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-white/20"
+            >
+              {copiedRef ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+              {copiedRef ? 'Link Copiado!' : 'Copiar Link'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareWhatsAppRef}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:brightness-105"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              WhatsApp
+            </button>
+          </div>
+        </div>
+        <p className="mt-3 text-[10px] text-white/60">
+          * Benefício não conversível em dinheiro. Proteção antifraude e autoindicação ativa.
+        </p>
+      </section>
+
+      {/* SEÇÃO 06 · EXPLORAÇÃO: PERTO DE VOCÊ NO RIO */}
       <section aria-labelledby="home-block-nearby">
         <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -418,174 +588,6 @@ export function DiscoverEditorialSections({
         </div>
       </section>
 
-      {/* SEÇÃO 4: OPORTUNIDADES PARA APROVEITAR (4 Modalidades Comerciais) */}
-      <section aria-labelledby="home-block-opportunities">
-        <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2
-              id="home-block-opportunities"
-              className="font-sans text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl"
-            >
-              Encontre sua próxima oportunidade
-            </h2>
-            <p className="text-xs text-[var(--text-secondary)]">
-              Reserve, descubra ofertas especiais ou aproveite horários disponíveis nos estabelecimentos.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => onGoToClub({ section: 'offerings', modality: 'ALL' })}
-            className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/12 px-3.5 py-1.5 text-xs font-bold text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white"
-          >
-            Abrir Bora Club <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {MODALITIES_TODAY.map((mod) => {
-            const Icon = mod.icon;
-            const liveCount = activeOfferingsByModality.get(mod.id) || 0;
-            return (
-              <button
-                key={mod.id}
-                type="button"
-                onClick={() => onGoToClub({ section: 'offerings', modality: mod.id })}
-                className="flex flex-col justify-between rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-[#FF6B35]/55"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${mod.tone}`}
-                    >
-                      <Icon className="h-4.5 w-4.5" />
-                    </span>
-                    <span className="rounded-full bg-[var(--bg-canvas)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--text-secondary)]">
-                      {liveCount > 0 ? `${liveCount} ativa${liveCount > 1 ? 's' : ''}` : mod.badge}
-                    </span>
-                  </div>
-                  <h3 className="mt-3 text-sm font-bold text-[var(--text-primary)]">{mod.title}</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-                    {mod.description}
-                  </p>
-                </div>
-                <span className="mt-3 text-[11px] font-bold text-[#FF6B35]">
-                  Explorar modalidade →
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
-          <Store className="h-3.5 w-3.5 shrink-0 text-[#397B68]" />
-          <span>{DIRECT_PAYMENT_NOTICE}</span>
-        </p>
-      </section>
-
-      {/* SEÇÃO 5: REDE CONFIA */}
-      <section
-        aria-labelledby="home-block-confia"
-        className="rounded-3xl border border-[#397B68]/30 bg-[#397B68]/8 p-5 sm:p-6"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#397B68] text-white">
-              <HeartHandshake className="h-5 w-5" />
-            </div>
-            <div>
-              <h2
-                id="home-block-confia"
-                className="font-sans text-lg font-bold tracking-tight text-[var(--text-primary)] sm:text-xl"
-              >
-                Sua cidade, suas pessoas de confiança.
-              </h2>
-              <p className="mt-0.5 max-w-2xl text-xs text-[var(--text-secondary)]">
-                Compartilhe experiências reais, descubra recomendações de quem você conhece e monte programas em conjunto.
-              </p>
-              <p className="mt-1 text-[11px] font-semibold text-[#397B68] dark:text-[#4CA188]">
-                {confiaConnectionsCount}{' '}
-                {confiaConnectionsCount === 1 ? 'conexão aceita' : 'conexões aceitas'} ·{' '}
-                {vaultCount} no seu Cofre privado
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onGoToConfia}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68] px-4 py-2 text-xs font-bold text-white shadow-xs hover:opacity-95"
-          >
-            Abrir Rede Confia <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        {confiaPosts.length === 0 ? (
-          <div className="mt-4 flex flex-col justify-between gap-3 rounded-2xl border border-dashed border-[#397B68]/35 bg-[var(--bg-surface)]/90 p-4 text-xs sm:flex-row sm:items-center">
-            <div className="space-y-1.5">
-              <p className="flex items-center gap-1.5 font-bold text-[var(--text-primary)]">
-                <Lock className="h-3.5 w-3.5 text-[#397B68]" />
-                Zero recomendações anônimas ou conexões fictícias
-              </p>
-              <p className="text-[var(--text-secondary)]">
-                Aqui você só vê dicas de quem convidou e aceitou em seus círculos, com selos de visita real e votação conjunta no BoraJunto.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onGoToConfia}
-              className="shrink-0 rounded-xl border border-[#397B68] px-3.5 py-2 font-bold text-[#397B68] transition hover:bg-[#397B68] hover:text-white"
-            >
-              Convidar ou recomendar
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {confiaPosts.slice(0, 3).map((post) => {
-              const linkedVenue = experiences.find((v) => v.id === post.venue_id);
-              return (
-                <button
-                  key={post.id}
-                  type="button"
-                  onClick={() => (linkedVenue ? onSelectExperience(linkedVenue) : onGoToConfia())}
-                  className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 text-left shadow-xs transition hover:border-[#397B68]"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold text-[var(--text-primary)]">
-                      {post.is_self ? 'Você' : post.author_name}
-                    </span>
-                    {post.visit_proof_level === 'VERIFIED_CONSUMPTION' ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/15 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300">
-                        <BadgeCheck className="h-3 w-3" />
-                        Consumo Verificado
-                      </span>
-                    ) : post.visit_proof_level === 'VERIFIED_VISIT' ||
-                      post.endorsement_origin === 'VERIFIED_CHECKIN' ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                        <BadgeCheck className="h-3 w-3" />
-                        {post.visit_proof_level === 'CHECKIN_REGISTERED' ||
-                        post.visit_proof_level === 'PRESENCE_WITH_EVIDENCE'
-                          ? 'Check-in realizado'
-                          : 'Visita Verificada'}
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-[var(--bg-canvas)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                        Recomendação Pessoal
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 truncate font-sans text-sm font-bold text-[var(--text-primary)]">
-                    {post.venue_name}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-xs text-[var(--text-secondary)]">
-                    “{post.comment}”
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
       {/* SEÇÃO 6: SELECIONADO PARA VOCÊ (Motivo transparente + guarda estrita contra % Match sem base) */}
       <section aria-labelledby="home-block-curated">
         <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">
@@ -598,10 +600,10 @@ export function DiscoverEditorialSections({
             </h2>
             <p className="text-xs text-[var(--text-secondary)]">
               {isPersonalizationReady
-                ? 'Baseado no seu perfil, Cofre e indicações da Rede Confia com motivo explícito.'
+                ? 'Baseado no seu perfil, Desejos e indicações de amigos com motivo explícito.'
                 : preferences.lgpd_consents.personalization
                   ? 'Escolha ao menos 2 preferências no perfil para calcular afinidade (% Match) real.'
-                  : 'Curadoria transparente pelo catálogo e Cofre. Ative a personalização para receber recomendações sob medida.'}
+                  : 'Curadoria transparente pelo catálogo e Desejos. Ative a personalização para receber recomendações sob medida.'}
             </p>
           </div>
           <button

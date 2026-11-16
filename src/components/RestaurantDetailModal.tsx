@@ -215,7 +215,7 @@ export function RestaurantDetailModal({
                   }`}
                 >
                   <Bookmark className={`h-4 w-4 ${inVault ? 'fill-current' : ''}`} />
-                  {inVault ? 'Salvo no Cofre' : 'Guardar no Cofre'}
+                  {inVault ? 'Salvo em Meus Desejos' : 'Salvar em Desejos'}
                 </button>
               )}
 
@@ -226,7 +226,7 @@ export function RestaurantDetailModal({
                   className="inline-flex items-center gap-2 rounded-xl border border-[#397B68]/40 bg-[#397B68]/10 px-4 py-2.5 text-xs font-semibold text-[#397B68] transition-colors hover:bg-[#397B68] hover:text-white sm:text-sm"
                 >
                   <HeartHandshake className="h-4 w-4" />
-                  Indicar na Rede Confia
+                  Indicar a Amigos
                 </button>
               )}
 

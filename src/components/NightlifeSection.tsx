@@ -308,7 +308,7 @@ export function NightlifeSection({
                       {onSaveEventToVault && (
                         <button
                           type="button"
-                          aria-label={isSaved ? 'Salvo no Cofre' : 'Salvar evento no Cofre'}
+                          aria-label={isSaved ? 'Salvo em Meus Desejos' : 'Salvar evento em Meus Desejos'}
                           onClick={(e) => {
                             e.stopPropagation();
                             onSaveEventToVault(ev);

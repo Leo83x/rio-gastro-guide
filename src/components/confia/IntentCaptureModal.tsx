@@ -168,7 +168,7 @@ export function IntentCaptureModal({
     const cleanTitle = title.trim();
     if (!cleanTitle) {
       setProcessingStatus('ERROR');
-      setProcessingMsg('Informe um título claro para identificar esse desejo no seu Cofre.');
+      setProcessingMsg('Informe um título claro para identificar esse desejo em Meus Desejos.');
       return;
     }
 
@@ -226,13 +226,13 @@ export function IntentCaptureModal({
 
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#FF6B35]">
           <Lock className="h-3.5 w-3.5" />
-          Cofre de Intenções · Privado
+          Meus Desejos · Salvar lugar ou link
         </div>
         <h3 className="font-sans mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-          Adicionar link ou print ao Cofre
+          Salvar nos Meus Desejos
         </h3>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">
-          Guarde inspirações de rolês, vídeos e restaurantes para transformar em experiências reais. Só você tem acesso.
+          Guarde inspirações de rolês, eventos, links e lugares para transformar em planos reais. Só você tem acesso.
         </p>
 
         {/* Source Tabs */}
@@ -467,7 +467,7 @@ export function IntentCaptureModal({
               disabled={isAnalyzing}
               className="rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 disabled:opacity-50"
             >
-              Guardar no Cofre
+              Salvar nos Desejos
             </button>
           </div>
         </form>

@@ -1,4 +1,6 @@
-import { BadgeCheck, Bookmark, HeartHandshake, MapPin, Sparkles, Star } from 'lucide-react';
+import { BadgeCheck, Bookmark, Gift, HeartHandshake, MapPin, Sparkles, Star } from 'lucide-react';
+import { useMemo } from 'react';
+import { getPartnerOfferings } from '../services/opportunityStore';
 import type { Restaurant } from '../types/restaurant';
 import { SmartImage } from './SmartImage';
 
@@ -9,6 +11,7 @@ interface RestaurantCardProps {
   matchReason?: string;
   inVault?: boolean;
   confiaCount?: number;
+  distanceKm?: number | null;
   onSaveToVault?: (restaurant: Restaurant) => void;
   onSelect: (restaurant: Restaurant) => void;
 }
@@ -19,11 +22,23 @@ export function RestaurantCard({
   matchReason,
   inVault = false,
   confiaCount = 0,
+  distanceKm,
   onSaveToVault,
   onSelect,
 }: RestaurantCardProps) {
   const hasRating = restaurant.rating > 0 && restaurant.rating_source !== 'none';
   const showMatch = typeof matchScore === 'number' && matchScore >= 65;
+
+  const activeOffering = useMemo(() => {
+    try {
+      const all = getPartnerOfferings();
+      return all.find(
+        (o) => o.restaurant_id === restaurant.id && o.status === 'PUBLISHED'
+      );
+    } catch {
+      return undefined;
+    }
+  }, [restaurant.id]);
 
   const statusBadge =
     restaurant.operational_status === 'FECHADO' ||
@@ -51,13 +66,20 @@ export function RestaurantCard({
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
-        {/* Top badges: Operational & Geographic */}
+        {/* Top badges: Operational, Geographic & Distance */}
         <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-md">
               <MapPin className="h-3 w-3 text-[#FF6B35]" />
               {restaurant.neighborhood}
             </span>
+            {typeof distanceKm === 'number' && (
+              <span className="rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-md">
+                {distanceKm < 1
+                  ? `${Math.round(distanceKm * 1000)} m`
+                  : `${distanceKm.toFixed(1)} km`}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -73,15 +95,15 @@ export function RestaurantCard({
             {onSaveToVault && (
               <button
                 type="button"
-                aria-label={inVault ? 'Salvo no Cofre de Intenções' : 'Guardar no Cofre de Intenções'}
-                title={inVault ? 'Salvo no seu Cofre' : 'Guardar no Cofre de Intenções'}
+                aria-label={inVault ? 'Salvo em Meus Desejos' : 'Salvar em Meus Desejos'}
+                title={inVault ? 'Salvo em Meus Desejos' : 'Salvar em Meus Desejos'}
                 onClick={(e) => {
                   e.stopPropagation();
                   onSaveToVault(restaurant);
                 }}
                 className={`flex h-7 w-7 items-center justify-center rounded-full backdrop-blur-md transition ${
                   inVault
-                    ? 'bg-[#FF6B35] text-white'
+                    ? 'bg-[#FF6B35] text-white shadow-xs'
                     : 'bg-black/55 text-white hover:bg-[#FF6B35]'
                 }`}
               >
@@ -102,7 +124,7 @@ export function RestaurantCard({
             {confiaCount > 0 && (
               <span className="inline-flex items-center gap-1 rounded-lg bg-[#397B68]/95 px-2 py-1 text-[10px] font-bold text-white shadow-xs">
                 <HeartHandshake className="h-3 w-3" />
-                Confia ({confiaCount})
+                Recomendado ({confiaCount})
               </span>
             )}
           </div>
@@ -127,7 +149,7 @@ export function RestaurantCard({
       <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
         <div>
           {(showMatch || matchReason) && (
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-1.5 rounded-xl bg-[var(--bg-canvas)] px-2.5 py-1.5 text-[11px]">
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-1.5 rounded-xl bg-[var(--bg-canvas)] px-2.5 py-1.5 text-[11px]">
               <span className="truncate font-semibold text-[var(--text-secondary)]">
                 {matchReason || 'Afinidade com seu perfil'}
               </span>
@@ -136,6 +158,29 @@ export function RestaurantCard({
                   {matchScore}% Match
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Camada de Benefício / Oportunidade Real */}
+          {activeOffering && (
+            <div className="mb-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-900 dark:text-emerald-200">
+              <div className="flex items-center justify-between gap-1">
+                <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300">
+                  <Gift className="h-3.5 w-3.5" />
+                  Benefício disponível
+                </span>
+                {activeOffering.time_slot_label && (
+                  <span className="text-[10px] font-medium text-emerald-700/80 dark:text-emerald-300/80">
+                    {activeOffering.time_slot_label}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-xs font-semibold leading-snug text-[var(--text-primary)]">
+                {activeOffering.benefit_summary || activeOffering.condition_badge}
+              </p>
+              <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
+                Condição válida conforme regras e disponibilidade da casa.
+              </p>
             </div>
           )}
 
@@ -168,7 +213,7 @@ export function RestaurantCard({
             <span className="truncate">{restaurant.address}</span>
           </div>
           <span className="shrink-0 font-bold text-[#FF6B35] group-hover:underline">
-            Ver guia →
+            {activeOffering ? 'Ver benefício →' : 'Ver guia →'}
           </span>
         </div>
       </div>
