@@ -6,14 +6,44 @@ import { generateUUID } from '../utils/slug';
 export const POINTS_STORAGE_KEY = 'rio_gastro_points_v1';
 const REFERRAL_ATTRIBUTIONS_KEY = 'borario_referral_attributions_v1';
 
+const STARTER_DEMO_TRANSACTIONS: PointTransaction[] = [
+  {
+    id: 'tx-starter-bonus-500',
+    amount: 500,
+    type: 'CREDIT',
+    origin: 'campaign_bonus',
+    description: 'Bônus de boas-vindas Bora Club (500 RP = R$ 5,00 de referência)',
+    validation_status: 'RELEASED',
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'tx-starter-checkin-250',
+    amount: 250,
+    type: 'CREDIT',
+    origin: 'checkin_qr',
+    description: 'Check-in presencial individual validado em Bráz Pizzaria (+250 RP)',
+    experience_id: '11111111-1111-4111-8111-000000000009',
+    experience_name: 'Bráz Pizzaria',
+    validation_status: 'RELEASED',
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+];
+
 export function getPointTransactions(): PointTransaction[] {
   try {
     const raw = localStorage.getItem(POINTS_STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      localStorage.setItem(POINTS_STORAGE_KEY, JSON.stringify(STARTER_DEMO_TRANSACTIONS));
+      return STARTER_DEMO_TRANSACTIONS;
+    }
     const parsed = JSON.parse(raw) as PointTransaction[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.setItem(POINTS_STORAGE_KEY, JSON.stringify(STARTER_DEMO_TRANSACTIONS));
+      return STARTER_DEMO_TRANSACTIONS;
+    }
+    return parsed;
   } catch {
-    return [];
+    return STARTER_DEMO_TRANSACTIONS;
   }
 }
 

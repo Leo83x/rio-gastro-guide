@@ -185,8 +185,9 @@ export function ClubView({
       if (rewardCostFilter === 'AFFORDABLE' && r.points_cost > walletSummary.available_balance) {
         return false;
       }
-      if (rewardCostFilter === 'UP_TO_150' && r.points_cost > 150) return false;
-      if (rewardCostFilter === 'UP_TO_250' && r.points_cost > 250) return false;
+      if (rewardCostFilter === 'UP_TO_1000' && r.points_cost > 1000) return false;
+      if (rewardCostFilter === 'UP_TO_1800' && r.points_cost > 1800) return false;
+      if (rewardCostFilter === 'UP_TO_2500' && r.points_cost > 2500) return false;
       if (q) {
         const hay = `${r.title} ${r.restaurant_name} ${r.eligible_item} ${r.segment_category} ${r.neighborhood}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -637,7 +638,7 @@ export function ClubView({
                         {/* Action Buttons: Clean & Direct */}
                         <div className="mt-4 border-t border-[var(--border-hairline)] pt-3 flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                            +50 Rio Points no check-in
+                            +250 Rio Points no check-in
                           </span>
 
                           <div className="flex items-center gap-2">
@@ -804,13 +805,16 @@ export function ClubView({
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[#F7931E]">
-                  Marketplace Cross-Parceiro · Rio Points em toda a cidade
+                  Economia Rio Points · 100 RP = R$ 1,00 · Circulação Multicategoria
                 </p>
                 <h3 className="mt-1 font-sans text-2xl font-extrabold">
-                  Saldo disponível: {walletSummary.available_balance.toLocaleString('pt-BR')} Rio Points
+                  Saldo disponível: {walletSummary.available_balance.toLocaleString('pt-BR')} RP{' '}
+                  <span className="text-base font-semibold text-amber-300">
+                    (R$ {(walletSummary.available_balance / 100).toFixed(2)})
+                  </span>
                 </h3>
                 <p className="mt-1 text-xs text-white/75">
-                  Acumule pontos com check-ins validados em qualquer estabelecimento e resgate benefícios em restaurantes, museus, passeios e turismo — comissão ao parceiro: R$ 0,00 (0%).
+                  Ganhe <strong>+250 RP (R$ 2,50)</strong> por check-in individual validado em qualquer restaurante e troque por gastronomia, noites, passeios de escuna, diárias/day use de hotéis, bem-estar e museus. Comissão cobrada do parceiro pelo resgate: R$ 0,00.
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
@@ -932,12 +936,13 @@ export function ClubView({
                 onChange={(e) => setRewardCostFilter(e.target.value)}
                 className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 font-semibold text-[var(--text-primary)]"
               >
-                <option value="ALL">Qualquer pontuação</option>
+                <option value="ALL">Todas as pontuações</option>
                 <option value="AFFORDABLE">
                   Dentro do meu saldo ({walletSummary.available_balance} RP)
                 </option>
-                <option value="UP_TO_150">Até 150 RP</option>
-                <option value="UP_TO_250">Até 250 RP</option>
+                <option value="UP_TO_1000">Até 1.000 RP (R$ 10,00)</option>
+                <option value="UP_TO_1800">Até 1.800 RP (R$ 18,00)</option>
+                <option value="UP_TO_2500">Até 2.500 RP (R$ 25,00)</option>
               </select>
             </div>
           </section>
@@ -952,20 +957,26 @@ export function ClubView({
               {filteredRewards.map((rew) => {
                 const canAfford = walletSummary.available_balance >= rew.points_cost;
                 const isAvailable = rew.status === 'AVAILABLE' && rew.quantity_available > 0;
+                const refVal = rew.reference_price_brl ?? Number((rew.points_cost / 100).toFixed(2));
                 return (
                   <article
                     key={rew.id}
-                    className="flex flex-col justify-between rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 text-xs shadow-xs"
+                    className="flex flex-col justify-between rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 text-xs shadow-xs hover:border-[#FF6B35]/40 transition"
                   >
                     <div>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="rounded-full bg-[#123B56]/12 px-2.5 py-0.5 text-[10px] font-bold text-[#123B56] dark:bg-[#123B56]/35 dark:text-[#8DC4EA]">
-                          {rew.segment_category}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="rounded-full bg-[#123B56]/12 px-2.5 py-0.5 text-[10px] font-bold text-[#123B56] dark:bg-[#123B56]/35 dark:text-[#8DC4EA]">
+                            {rew.segment_category}
+                          </span>
+                          <span className="rounded-md bg-stone-100 dark:bg-stone-800 px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                            Ref: R$ {refVal.toFixed(2)}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1.5">
                           {rew.is_demonstrative && (
                             <span className="rounded-full bg-[var(--bg-canvas)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
-                              Piloto / Demo
+                              Piloto
                             </span>
                           )}
                           <span
@@ -997,18 +1008,27 @@ export function ClubView({
                         <p className="font-semibold text-[var(--text-primary)]">
                           Benefício: {rew.eligible_item}
                         </p>
-                        <p className="text-[var(--text-secondary)]">
-                          Estoque restante:{' '}
-                          <strong>
-                            {rew.quantity_available}/{rew.quantity_total}
-                          </strong>{' '}
-                          · Limite: <strong>{rew.max_per_user}x por usuário</strong>
-                        </p>
-                        <p className="text-[var(--text-secondary)]">
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--text-secondary)]">
+                          <span className="font-bold text-stone-700 dark:text-stone-300">
+                            {rew.min_consumption_brl
+                              ? `Consumo mín.: R$ ${rew.min_consumption_brl.toFixed(2)}`
+                              : 'Sem consumo mínimo'}
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Estoque:{' '}
+                            <strong>
+                              {rew.quantity_available}/{rew.quantity_total}
+                            </strong>
+                          </span>
+                          <span>·</span>
+                          <span>Limite: {rew.max_per_user}x</span>
+                        </div>
+                        <p className="text-[10px] text-[var(--text-secondary)]">
                           Uso: {rew.valid_days_hours} · Validade voucher: {rew.voucher_validity_days} dias
                         </p>
-                        <p className="text-[10px] text-[var(--text-secondary)]">
-                          Regras: {rew.rules_summary} ({rew.restrictions})
+                        <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1">
+                          Regras: {rew.rules_summary}
                         </p>
                       </div>
                     </div>
@@ -1016,24 +1036,29 @@ export function ClubView({
                     <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--border-hairline)] pt-3">
                       <div>
                         <span className="block text-[10px] uppercase text-[var(--text-secondary)]">
-                          Custo
+                          Custo do Resgate
                         </span>
-                        <strong className="font-sans text-lg font-extrabold text-[#FF6B35]">
-                          {rew.points_cost} RP
-                        </strong>
+                        <div className="flex items-baseline gap-1">
+                          <strong className="font-sans text-lg font-black text-[#FF6B35]">
+                            {rew.points_cost} RP
+                          </strong>
+                          <span className="text-[10px] text-[var(--text-secondary)]">
+                            (R$ {refVal.toFixed(2)})
+                          </span>
+                        </div>
                       </div>
                       <button
                         type="button"
                         disabled={!isAvailable || !canAfford}
                         onClick={() => handleRedeemMarketplaceReward(rew)}
-                        className="rounded-xl bg-[#123B56] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#102F46] disabled:cursor-not-allowed disabled:opacity-45"
+                        className="rounded-xl bg-[#123B56] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#102F46] disabled:cursor-not-allowed disabled:opacity-45 shadow-xs"
                       >
                         {!isAvailable
                           ? rew.status === 'PAUSED'
                             ? 'Pausada'
                             : 'Esgotada'
                           : canAfford
-                            ? `Ativar benefício (${rew.points_cost} RP)`
+                            ? `Resgatar benefício`
                             : `Faltam ${rew.points_cost - walletSummary.available_balance} RP`}
                       </button>
                     </div>

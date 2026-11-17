@@ -286,7 +286,7 @@ export function RestaurantDetailModal({
 
                       <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
                         <span className="text-[11px] font-bold text-emerald-400">
-                          +50 Rio Points no check-in
+                          +250 Rio Points no check-in
                         </span>
                         <button
                           type="button"

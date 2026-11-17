@@ -99,7 +99,7 @@ export function hasValidatedCheckinForVenue(experienceId: string): boolean {
 
 /**
  * Credita pontos conforme regra configurável vigente.
- * Garantia de Grupo: mesmo em reservas com guests > 1, o titular recebe no máximo 1x a cota individual (ex.: 50 RP).
+ * Garantia de Grupo: mesmo em reservas com guests > 1, o titular recebe no máximo 1x a cota individual (ex.: 250 RP).
  */
 function creditCheckinPointsWithRule(params: {
   reservation: ReservationRequest;

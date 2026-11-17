@@ -66,59 +66,7 @@ function generateVoucherCode(): string {
 function buildStarterRewards(): PartnerReward[] {
   const nowIso = new Date().toISOString();
   return [
-    {
-      id: 'rew-pilot-museu-amanha',
-      restaurant_id: '22222222-2222-4222-8222-000000000001',
-      restaurant_name: 'Museu do Amanhã',
-      neighborhood: 'Centro',
-      segment_category: 'Cultura & Museus',
-      reward_type: 'INGRESSO',
-      title: 'Ingresso Exposição Principal — Cultura & Museus',
-      description:
-        'Troque pontos acumulados em qualquer parceiro BoraRio por acesso à exposição principal na Praça Mauá.',
-      eligible_item: '1 Ingresso Individual (Exposição Principal)',
-      points_cost: 100,
-      quantity_total: 20,
-      quantity_available: 20,
-      max_per_user: 2,
-      valid_days_hours: 'Quarta a Domingo · 10h às 17h',
-      rules_summary:
-        'Apresente o código do voucher na bilheteria para validação digital antes de entrar. Sujeito à lotação do turno.',
-      restrictions: 'Não acumulável com gratuidade das terças ou eventos fechados.',
-      voucher_validity_days: 30,
-      status: 'AVAILABLE',
-      commission_rate: 0,
-      redemption_fee_brl: 0,
-      is_demonstrative: true,
-      created_at: nowIso,
-      updated_at: nowIso,
-    },
-    {
-      id: 'rew-pilot-parque-lage',
-      restaurant_id: '22222222-2222-4222-8222-000000000002',
-      restaurant_name: 'Parque Lage',
-      neighborhood: 'Jardim Botânico',
-      segment_category: 'Turismo & Praias',
-      reward_type: 'EXPERIENCIA',
-      title: 'Café Especial do Pátio + Curadoria Botânica',
-      description:
-        'Benefício cross-parceiro no pátio histórico aos pés do Cristo Redentor para aproveitar seus pontos.',
-      eligible_item: '1 Bebida artesanal + mapa ilustrado de trilhas',
-      points_cost: 120,
-      quantity_total: 15,
-      quantity_available: 15,
-      max_per_user: 1,
-      valid_days_hours: 'Segunda a Sexta · 09h30 às 16h30',
-      rules_summary: 'Valide o voucher no balcão do pátio antes do consumo. Válido para uso individual.',
-      restrictions: 'Não válido em feriados prolongados.',
-      voucher_validity_days: 30,
-      status: 'AVAILABLE',
-      commission_rate: 0,
-      redemption_fee_brl: 0,
-      is_demonstrative: true,
-      created_at: nowIso,
-      updated_at: nowIso,
-    },
+    // 1. GASTRONOMIA
     {
       id: 'rew-pilot-braz-sobremesa',
       restaurant_id: '11111111-1111-4111-8111-000000000009',
@@ -126,44 +74,21 @@ function buildStarterRewards(): PartnerReward[] {
       neighborhood: 'Jardim Botânico',
       segment_category: 'Gastronomia',
       reward_type: 'SOBREMESA',
-      title: 'Sobremesa Clássica da Casa (Tiramisù ou Torta Búlgara)',
+      title: 'Tiramisù della Nonna ou Torta Búlgara Artesanal',
       description:
-        'Recompensa gastronômica disponibilizada sem comissão por resgate. Válida no jantar presencial.',
-      eligible_item: '1 Tiramisù Tradicional ou Torta Búlgara',
-      points_cost: 150,
-      quantity_total: 12,
-      quantity_available: 12,
-      max_per_user: 1,
+        'Recompensa gastronômica para saborear no salão histórico após sua pizza clássica. Sem comissão cobrada da casa.',
+      eligible_item: '1 Sobremesa Artesanal (Tiramisù ou Torta Búlgara)',
+      points_cost: 1500,
+      reference_price_brl: 15.0,
+      estimated_cost_brl: 4.5,
+      min_consumption_brl: 40.0,
+      quantity_total: 25,
+      quantity_available: 25,
+      max_per_user: 2,
       valid_days_hours: 'Terça a Quinta · 18h30 às 22h30',
-      rules_summary: 'Válido no consumo em salão ao apresentar o voucher BR-REW antes do pedido.',
-      restrictions: 'Não válido para delivery ou feriados.',
-      voucher_validity_days: 30,
-      status: 'AVAILABLE',
-      commission_rate: 0,
-      redemption_fee_brl: 0,
-      is_demonstrative: true,
-      created_at: nowIso,
-      updated_at: nowIso,
-    },
-    {
-      id: 'rew-pilot-rioscenarium-drink',
-      restaurant_id: '22222222-2222-4222-8222-000000000008',
-      restaurant_name: 'Rio Scenarium',
-      neighborhood: 'Lapa',
-      segment_category: 'Vida Noturna',
-      reward_type: 'BEBIDA_NAO_ALCOOLICA',
-      title: 'Drink Sem Álcool Autoral + Acesso Prioritário Lapa',
-      description:
-        'Curta música ao vivo na Lapa resgatando benefícios com Rio Points ganhos em qualquer segmento.',
-      eligible_item: '1 Mocktail da Casa (bebida não alcoólica)',
-      points_cost: 180,
-      quantity_total: 10,
-      quantity_available: 10,
-      max_per_user: 1,
-      valid_days_hours: 'Quarta e Quinta · 19h às 23h',
-      rules_summary: 'Apresente o voucher na recepção e no bar principal. Não cobre ingresso quando aplicável.',
-      restrictions: 'Apenas maiores de 18 anos no casarão noturno.',
-      voucher_validity_days: 30,
+      rules_summary: 'Válido no consumo em salão apresentando o voucher BR-REW antes do fechamento da conta.',
+      restrictions: 'Válido para consumo mínimo de R$ 40 na mesa. Não cumulativo com delivery.',
+      voucher_validity_days: 45,
       status: 'AVAILABLE',
       commission_rate: 0,
       redemption_fee_brl: 0,
@@ -178,17 +103,51 @@ function buildStarterRewards(): PartnerReward[] {
       neighborhood: 'Leblon',
       segment_category: 'Gastronomia',
       reward_type: 'ENTRADA',
-      title: 'Entrada Clássica do Chef no Leblon',
+      title: 'Entrada Selecionada do Chef no Leblon (Carpaccio Clássico)',
       description:
-        'Troque seus pontos por uma entrada selecionada no restaurante do Leblon com validação simples no salão.',
-      eligible_item: '1 Entrada do Chef (Steak Tartare ou Salada)',
-      points_cost: 240,
-      quantity_total: 8,
-      quantity_available: 8,
+        'Troque seus pontos acumulados em qualquer parceiro por uma entrada refinada na casa de carnes do Leblon.',
+      eligible_item: '1 Entrada do Chef (Carpaccio Clássico ou Steak Tartare)',
+      points_cost: 2400,
+      reference_price_brl: 24.0,
+      estimated_cost_brl: 7.0,
+      min_consumption_brl: 60.0,
+      quantity_total: 15,
+      quantity_available: 15,
       max_per_user: 1,
       valid_days_hours: 'Segunda a Quinta · 12h às 15h30',
-      rules_summary: 'Válido mediante reserva ou mesa disponível no almoço de segunda a quinta.',
-      restrictions: '1 voucher por mesa por visita.',
+      rules_summary: 'Apresente o voucher no início da refeição. 1 voucher por mesa.',
+      restrictions: 'Consumo mínimo de R$ 60 no local. Exceto feriados.',
+      voucher_validity_days: 30,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+
+    // 2. BARES & NOITE
+    {
+      id: 'rew-pilot-rioscenarium-chopp',
+      restaurant_id: '22222222-2222-4222-8222-000000000008',
+      restaurant_name: 'Rio Scenarium',
+      neighborhood: 'Lapa',
+      segment_category: 'Bares & Noite',
+      reward_type: 'BEBIDA_NAO_ALCOOLICA',
+      title: 'Chopp Artesanal Carioca ou Mocktail Autoral na Lapa',
+      description:
+        'Curta as noites vibrantes de samba e choro na Lapa aproveitando seus Rio Points acumulados durante o dia.',
+      eligible_item: '1 Chopp Artesanal 350ml ou Mocktail Autoral',
+      points_cost: 800,
+      reference_price_brl: 8.0,
+      estimated_cost_brl: 2.5,
+      min_consumption_brl: 0,
+      quantity_total: 30,
+      quantity_available: 30,
+      max_per_user: 2,
+      valid_days_hours: 'Quarta a Sexta · 19h às 23h30',
+      rules_summary: 'Valide o voucher no balcão do bar principal antes de pedir sua bebida.',
+      restrictions: 'Entrada no casarão sujeita à bilheteria regular. Proibido para menores de 18 anos.',
       voucher_validity_days: 30,
       status: 'AVAILABLE',
       commission_rate: 0,
@@ -198,24 +157,296 @@ function buildStarterRewards(): PartnerReward[] {
       updated_at: nowIso,
     },
     {
-      id: 'rew-pilot-aquario-tour',
-      restaurant_id: '22222222-2222-4222-8222-000000000003',
-      restaurant_name: 'AquaRio — Aquário Marinho do Rio',
-      neighborhood: 'Centro',
-      segment_category: 'Atrações Infantis',
-      reward_type: 'PASSEIO',
-      title: 'Tour Bastidores do Tanque Oceânico (Família)',
+      id: 'rew-pilot-rooftop-sunset-drink',
+      restaurant_id: '22222222-2222-4222-8222-000000000007',
+      restaurant_name: 'Rooftop Arpoador Lounge',
+      neighborhood: 'Ipanema',
+      segment_category: 'Bares & Noite',
+      reward_type: 'EXPERIENCIA',
+      title: 'Drink Autoral ao Pôr do Sol no Terraço Panorâmico',
       description:
-        'Atividade educativa guiada para completar a experiência marinha no Porto Maravilha usando Rio Points.',
-      eligible_item: '1 Acesso ao Tour Bastidores (sujeito a ingresso de entrada)',
-      points_cost: 280,
-      quantity_total: 6,
-      quantity_available: 6,
+        'Vista deslumbrante das praias do Arpoador e Ipanema acompanhada de coquetel autoral premiado.',
+      eligible_item: '1 Drink Autoral da Carta Signature Sunset',
+      points_cost: 1800,
+      reference_price_brl: 18.0,
+      estimated_cost_brl: 5.0,
+      min_consumption_brl: 30.0,
+      quantity_total: 20,
+      quantity_available: 20,
       max_per_user: 1,
-      valid_days_hours: 'Segunda a Sexta · 10h às 16h',
-      rules_summary: 'Apresente o voucher no atendimento educativo com 20 minutos de antecedência.',
-      restrictions: 'Necessário calçado fechado para visita técnica aos bastidores.',
+      valid_days_hours: 'Segunda a Quinta · 17h às 20h',
+      rules_summary: 'Apresente o código do voucher na recepção do rooftop ao chegar.',
+      restrictions: 'Sujeito à capacidade do terraço ao ar livre. Não cumulativo com happy hour.',
       voucher_validity_days: 30,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+
+    // 3. PASSEIOS & TURISMO
+    {
+      id: 'rew-pilot-parque-lage',
+      restaurant_id: '22222222-2222-4222-8222-000000000002',
+      restaurant_name: 'Parque Lage & Trilha Botânica',
+      neighborhood: 'Jardim Botânico',
+      segment_category: 'Passeios & Turismo',
+      reward_type: 'PASSEIO',
+      title: 'Guia Ilustrado de Trilhas + Café Botânico Especial no Pátio',
+      description:
+        'Experiência completa no casarão histórico aos pés do Corcovado. Circulação cruzada com Rio Points.',
+      eligible_item: '1 Café Especial com grãos selecionados + Mapa Físico Curado de Trilhas',
+      points_cost: 1000,
+      reference_price_brl: 10.0,
+      estimated_cost_brl: 3.0,
+      min_consumption_brl: 0,
+      quantity_total: 20,
+      quantity_available: 20,
+      max_per_user: 1,
+      valid_days_hours: 'Segunda a Sexta · 09h às 16h',
+      rules_summary: 'Retire o kit de trilha e o café no quiosque de apoio do pátio interno.',
+      restrictions: 'Não aplicável em feriados prolongados.',
+      voucher_validity_days: 60,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+    {
+      id: 'rew-pilot-forte-copacabana',
+      restaurant_id: '22222222-2222-4222-8222-000000000005',
+      restaurant_name: 'Forte de Copacabana & Café do Forte',
+      neighborhood: 'Copacabana',
+      segment_category: 'Passeios & Turismo',
+      reward_type: 'PASSEIO',
+      title: 'Acesso ao Mirante Histórico da Baía + Café Artesanal',
+      description:
+        'Aproveite a vista privilegiada de toda a orla de Copacabana enquanto saboreia um café passado na hora.',
+      eligible_item: '1 Café Filtrado Especial + Acesso prioritário ao deque do forte',
+      points_cost: 800,
+      reference_price_brl: 8.0,
+      estimated_cost_brl: 2.0,
+      min_consumption_brl: 0,
+      quantity_total: 25,
+      quantity_available: 25,
+      max_per_user: 2,
+      valid_days_hours: 'Terça a Sexta · 10h às 17h',
+      rules_summary: 'Valide seu voucher na entrada do deck cultural.',
+      restrictions: 'Ingresso do Museu Histórico do Exército pago à parte na guarita militar.',
+      voucher_validity_days: 45,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+    {
+      id: 'rew-pilot-escuna-guanabara',
+      restaurant_id: '22222222-2222-4222-8222-000000000006',
+      restaurant_name: 'Passeios Náuticos Baía Carioca',
+      neighborhood: 'Marina da Glória',
+      segment_category: 'Passeios & Turismo',
+      reward_type: 'PASSEIO',
+      title: 'Passeio de Escuna na Baía de Guanabara (Pão de Açúcar & Ilha Fiscal)',
+      description:
+        'Navegação panorâmica com áudio-guia histórico pelos cartões postais mais célebres do Rio de Janeiro.',
+      eligible_item: '1 Ingresso Individual de Escuna (Circuito Clássico 1h30)',
+      points_cost: 2500,
+      reference_price_brl: 25.0,
+      estimated_cost_brl: 8.0,
+      min_consumption_brl: 0,
+      quantity_total: 10,
+      quantity_available: 10,
+      max_per_user: 1,
+      valid_days_hours: 'Quinta a Domingo · Saídas 10h e 14h',
+      rules_summary: 'Apresente o voucher no píer de embarque da Marina da Glória com 30min de antecedência.',
+      restrictions: 'Embarque sujeito às condições meteorológicas e de maré da capitania dos portos.',
+      voucher_validity_days: 60,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+
+    // 4. HOSPEDAGEM
+    {
+      id: 'rew-pilot-hotel-santa-teresa',
+      restaurant_id: '33333333-3333-4333-8333-000000000001',
+      restaurant_name: 'Hotel Boutique Santa Teresa',
+      neighborhood: 'Santa Teresa',
+      segment_category: 'Hospedagem',
+      reward_type: 'UPGRADE_HOTEL',
+      title: 'Welcome Drink Especial + Late Checkout de 2 Horas',
+      description:
+        'Circulação cruzada com hospedagem charmosa no bairro boêmio com drink autoral e check-out estendido.',
+      eligible_item: '1 Welcome Drink na Recepção + Late Check-out 2h garantido',
+      points_cost: 1800,
+      reference_price_brl: 18.0,
+      estimated_cost_brl: 4.0,
+      min_consumption_brl: 0,
+      quantity_total: 12,
+      quantity_available: 12,
+      max_per_user: 1,
+      valid_days_hours: 'Domingo a Quinta-feira · Diárias selecionadas',
+      rules_summary: 'Válido para hóspedes com reserva ativa no hotel ao apresentar o voucher no check-in.',
+      restrictions: 'Sujeito à disponibilidade no período de alta temporada e feriados.',
+      voucher_validity_days: 90,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+    {
+      id: 'rew-pilot-hotel-praia-ipanema',
+      restaurant_id: '33333333-3333-4333-8333-000000000002',
+      restaurant_name: 'Hotel Praia Ipanema',
+      neighborhood: 'Ipanema',
+      segment_category: 'Hospedagem',
+      reward_type: 'UPGRADE_HOTEL',
+      title: 'Day Use Piscina Panorâmica & Toalhas de Praia',
+      description:
+        'Aproveite o dia no terraço com vista de toda a praia de Ipanema utilizando pontos acumulados em restaurantes.',
+      eligible_item: '1 Acesso Day Use Piscina do Rooftop + Serviço de Toalhas',
+      points_cost: 2500,
+      reference_price_brl: 25.0,
+      estimated_cost_brl: 7.5,
+      min_consumption_brl: 50.0,
+      quantity_total: 8,
+      quantity_available: 8,
+      max_per_user: 1,
+      valid_days_hours: 'Segunda a Quinta · 10h às 16h',
+      rules_summary: 'Agendamento prévio com 24h de antecedência junto à gerência de hospedagem.',
+      restrictions: 'Consumo mínimo de R$ 50 no bar da piscina. Válido apenas para dias úteis.',
+      voucher_validity_days: 60,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+
+    // 5. BEM-ESTAR
+    {
+      id: 'rew-pilot-arpoador-yoga',
+      restaurant_id: '44444444-4444-4444-8444-000000000001',
+      restaurant_name: 'Arpoador Yoga Club',
+      neighborhood: 'Ipanema',
+      segment_category: 'Bem-estar',
+      reward_type: 'SERVICO_BEM_ESTAR',
+      title: 'Day Pass Yoga ao Nascer do Sol na Pedra do Arpoador',
+      description:
+        'Prática guiada com instrutor certificado conectando corpo, mente e a vista deslumbrante do amanhecer carioca.',
+      eligible_item: '1 Aula Coletiva Sunrise Yoga (Tapete incluso)',
+      points_cost: 900,
+      reference_price_brl: 9.0,
+      estimated_cost_brl: 2.5,
+      min_consumption_brl: 0,
+      quantity_total: 18,
+      quantity_available: 18,
+      max_per_user: 2,
+      valid_days_hours: 'Terça, Quinta e Sábado · 06h30 às 07h30',
+      rules_summary: 'Compareça ao ponto de encontro na pedra do Arpoador 15min antes do início.',
+      restrictions: 'Em caso de chuva a aula é transferida para o estúdio coberto.',
+      voucher_validity_days: 45,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+    {
+      id: 'rew-pilot-copa-massage',
+      restaurant_id: '44444444-4444-4444-8444-000000000002',
+      restaurant_name: 'Espaço Zen & Bem-Estar Copacabana',
+      neighborhood: 'Copacabana',
+      segment_category: 'Bem-estar',
+      reward_type: 'SERVICO_BEM_ESTAR',
+      title: 'Quick Massage Relaxante Pós-Praia (20 minutos)',
+      description:
+        'Alívio de tensões musculares com terapeutas especializados no coração de Copacabana.',
+      eligible_item: '1 Sessão de Quick Massage Cervical e Lombar (20 min)',
+      points_cost: 1600,
+      reference_price_brl: 16.0,
+      estimated_cost_brl: 5.0,
+      min_consumption_brl: 0,
+      quantity_total: 15,
+      quantity_available: 15,
+      max_per_user: 1,
+      valid_days_hours: 'Segunda a Sexta · 11h às 19h',
+      rules_summary: 'Apresente o voucher no check-in da clínica.',
+      restrictions: 'Atendimento por ordem de chegada ou agendamento telefônico.',
+      voucher_validity_days: 30,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+
+    // 6. CULTURA & ENTRETENIMENTO
+    {
+      id: 'rew-pilot-museu-amanha',
+      restaurant_id: '22222222-2222-4222-8222-000000000001',
+      restaurant_name: 'Museu do Amanhã',
+      neighborhood: 'Centro',
+      segment_category: 'Cultura & Entretenimento',
+      reward_type: 'INGRESSO',
+      title: 'Ingresso Exposição Principal — Praça Mauá',
+      description:
+        'Troque pontos acumulados em qualquer parceiro BoraRio por acesso à exposição principal no Porto Maravilha.',
+      eligible_item: '1 Ingresso Individual (Exposição Principal)',
+      points_cost: 1000,
+      reference_price_brl: 10.0,
+      estimated_cost_brl: 3.0,
+      min_consumption_brl: 0,
+      quantity_total: 25,
+      quantity_available: 25,
+      max_per_user: 2,
+      valid_days_hours: 'Quarta a Domingo · 10h às 17h',
+      rules_summary: 'Apresente o código do voucher na bilheteria para validação digital antes de entrar.',
+      restrictions: 'Não acumulável com gratuidade das terças ou eventos com bilheteria fechada.',
+      voucher_validity_days: 60,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+    {
+      id: 'rew-pilot-casa-choro',
+      restaurant_id: '22222222-2222-4222-8222-000000000009',
+      restaurant_name: 'Casa do Choro Tradicional',
+      neighborhood: 'Centro',
+      segment_category: 'Cultura & Entretenimento',
+      reward_type: 'INGRESSO',
+      title: 'Acesso à Roda de Choro Tradicional + Programa Cultural',
+      description:
+        'A melhor música instrumental brasileira em um dos casarões preservados mais encantadores da Rua da Carioca.',
+      eligible_item: '1 Ingresso para Roda de Choro ao Vivo + Guia do Choro Carioca',
+      points_cost: 1200,
+      reference_price_brl: 12.0,
+      estimated_cost_brl: 3.5,
+      min_consumption_brl: 0,
+      quantity_total: 16,
+      quantity_available: 16,
+      max_per_user: 2,
+      valid_days_hours: 'Quinta e Sexta · 18h30 às 20h30',
+      rules_summary: 'Apresente o código do voucher na bilheteria com 20min de antecedência da sessão.',
+      restrictions: 'Sujeito à lotação do auditório histórico (80 lugares).',
+      voucher_validity_days: 45,
       status: 'AVAILABLE',
       commission_rate: 0,
       redemption_fee_brl: 0,
@@ -228,7 +459,8 @@ function buildStarterRewards(): PartnerReward[] {
 
 function loadAndNormalizeRewards(): PartnerReward[] {
   let list = readJson<PartnerReward[]>(KEYS.REWARDS, []);
-  if (list.length === 0) {
+  // Migração transparente caso o catálogo esteja vazio ou usando escala antiga (< 500 RP)
+  if (list.length === 0 || list.some((r) => r.is_demonstrative && r.points_cost < 500)) {
     list = buildStarterRewards();
     writeJson(KEYS.REWARDS, list);
   }
@@ -297,6 +529,9 @@ export function createPartnerReward(payload: {
   description?: string;
   eligible_item: string;
   points_cost: number;
+  reference_price_brl?: number;
+  estimated_cost_brl?: number;
+  min_consumption_brl?: number;
   quantity_total: number;
   max_per_user?: number;
   valid_days_hours: string;
@@ -332,6 +567,17 @@ export function createPartnerReward(payload: {
 
   const now = new Date().toISOString();
   const totalQty = Math.max(1, Math.round(payload.quantity_total));
+  const pointsCost = Math.round(payload.points_cost);
+  const refPrice =
+    payload.reference_price_brl != null
+      ? Number(payload.reference_price_brl.toFixed(2))
+      : Number((pointsCost / 100).toFixed(2));
+  const estCost =
+    payload.estimated_cost_brl != null
+      ? Number(payload.estimated_cost_brl.toFixed(2))
+      : Number((refPrice * 0.3).toFixed(2));
+  const minConsumption =
+    payload.min_consumption_brl != null ? Math.max(0, Number(payload.min_consumption_brl.toFixed(2))) : 0;
 
   const reward: PartnerReward = {
     id: generateUUID(),
@@ -343,7 +589,10 @@ export function createPartnerReward(payload: {
     title: payload.title.trim(),
     description: payload.description?.trim() || `Recompensa oficial em ${payload.restaurant_name} sem comissão por resgate.`,
     eligible_item: payload.eligible_item.trim(),
-    points_cost: Math.round(payload.points_cost),
+    points_cost: pointsCost,
+    reference_price_brl: refPrice,
+    estimated_cost_brl: estCost,
+    min_consumption_brl: minConsumption,
     quantity_total: totalQty,
     quantity_available: totalQty,
     max_per_user: Math.max(1, Math.round(payload.max_per_user ?? 1)),
@@ -381,6 +630,9 @@ export function updatePartnerReward(
       | 'title'
       | 'eligible_item'
       | 'points_cost'
+      | 'reference_price_brl'
+      | 'estimated_cost_brl'
+      | 'min_consumption_brl'
       | 'quantity_total'
       | 'quantity_available'
       | 'valid_days_hours'
@@ -423,6 +675,16 @@ export function updatePartnerReward(
     ...target,
     ...patch,
     points_cost: Math.max(10, Math.round(patch.points_cost ?? target.points_cost)),
+    reference_price_brl:
+      patch.reference_price_brl !== undefined
+        ? patch.reference_price_brl
+        : target.reference_price_brl,
+    estimated_cost_brl:
+      patch.estimated_cost_brl !== undefined ? patch.estimated_cost_brl : target.estimated_cost_brl,
+    min_consumption_brl:
+      patch.min_consumption_brl !== undefined
+        ? patch.min_consumption_brl
+        : target.min_consumption_brl,
     quantity_total: nextTotal,
     quantity_available: nextAvail,
     voucher_validity_days: Math.max(
@@ -581,6 +843,9 @@ export function redeemPartnerReward(rewardId: string): {
       neighborhood: target.neighborhood,
       eligible_item: target.eligible_item,
       segment_category: target.segment_category,
+      reference_price_brl: target.reference_price_brl,
+      estimated_cost_brl: target.estimated_cost_brl,
+      min_consumption_brl: target.min_consumption_brl,
       valid_days_hours: target.valid_days_hours,
       rules_summary: target.rules_summary,
       restrictions: target.restrictions,
@@ -899,6 +1164,16 @@ export function getPartnerLoyaltyEconomics(
   ).length;
   const indirectRevenue = attributions.reduce((sum, a) => sum + a.indirect_fee_brl, 0);
 
+  const usedVouchers = vouchers.filter((v) => v.status === 'USED');
+  const totalEstimatedCostBrl = usedVouchers.reduce(
+    (sum, v) => sum + (v.snapshot_rules.estimated_cost_brl ?? 0),
+    0
+  );
+  const totalReferenceValueBrl = usedVouchers.reduce(
+    (sum, v) => sum + (v.snapshot_rules.reference_price_brl ?? Number((v.points_spent / 100).toFixed(2))),
+    0
+  );
+
   return {
     restaurant_id: restaurantId,
     registered_rewards_count: rewards.length,
@@ -907,12 +1182,14 @@ export function getPartnerLoyaltyEconomics(
     points_awarded_at_venue: pointsAwardedAtVenue,
     points_redeemed_on_venue: pointsRedeemedOnVenue,
     vouchers_issued_count: nonCancelledVouchers.length,
-    vouchers_used_count: vouchers.filter((v) => v.status === 'USED').length,
+    vouchers_used_count: usedVouchers.length,
     vouchers_expired_count: vouchers.filter((v) => v.status === 'EXPIRED').length,
     vouchers_cancelled_count: vouchers.filter((v) => v.status === 'CANCELLED').length,
     return_visits_post_redemption: returnVisits,
     subsequent_bookings_post_redemption: subsequentBookings,
     indirect_booking_revenue_brl: Number(indirectRevenue.toFixed(2)),
+    total_estimated_cost_brl: Number(totalEstimatedCostBrl.toFixed(2)),
+    total_reference_value_brl: Number(totalReferenceValueBrl.toFixed(2)),
     reward_commission_brl: 0,
     reward_redemption_fee_pct: 0,
     attribution_disclaimer:

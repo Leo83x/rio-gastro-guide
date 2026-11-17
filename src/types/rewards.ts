@@ -1,12 +1,10 @@
 export type RewardSegment =
   | 'Gastronomia'
-  | 'Cultura & Museus'
-  | 'Turismo & Praias'
-  | 'Atrações Infantis'
-  | 'Vida Noturna'
-  | 'Hotel'
+  | 'Bares & Noite'
+  | 'Passeios & Turismo'
+  | 'Hospedagem'
   | 'Bem-estar'
-  | 'Entretenimento';
+  | 'Cultura & Entretenimento';
 
 export type RewardType =
   | 'SOBREMESA'
@@ -17,6 +15,15 @@ export type RewardType =
   | 'SERVICO_BEM_ESTAR'
   | 'INGRESSO'
   | 'EXPERIENCIA';
+
+/**
+ * Constantes oficiais do Motor Central da Economia Rio Points
+ */
+export const RP_PER_BRL = 100; // 100 RP = R$ 1,00
+export const POINTS_PER_CHECKIN = 250; // 250 RP por check-in individual validado (R$ 2,50 de poder de troca)
+export const REWARD_MIN_POINTS = 500; // 500 RP (R$ 5,00)
+export const REWARD_MAX_POINTS = 2500; // 2.500 RP (R$ 25,00)
+export const REWARD_EXPIRATION_MONTHS = 12; // 12 meses de validade
 
 export type PartnerRewardStatus = 'AVAILABLE' | 'PAUSED' | 'CLOSED' | 'EXHAUSTED';
 
@@ -53,6 +60,12 @@ export interface PartnerReward {
   description: string;
   eligible_item: string;
   points_cost: number;
+  /** Preço de referência de mercado do item (R$) — 100 RP = R$ 1,00 */
+  reference_price_brl?: number;
+  /** Custo estimado direto do parceiro para produzir/entregar o benefício (R$) */
+  estimated_cost_brl?: number;
+  /** Consumo mínimo exigido no local (R$ 0 ou undefined se sem consumo mínimo) */
+  min_consumption_brl?: number;
   quantity_total: number;
   quantity_available: number;
   max_per_user: number;
@@ -77,6 +90,9 @@ export interface RewardVoucherSnapshotRules {
   neighborhood: string;
   eligible_item: string;
   segment_category: string;
+  reference_price_brl?: number;
+  estimated_cost_brl?: number;
+  min_consumption_brl?: number;
   valid_days_hours: string;
   rules_summary: string;
   restrictions: string;
@@ -170,6 +186,8 @@ export interface PartnerLoyaltyEconomicsSummary {
   return_visits_post_redemption: number;
   subsequent_bookings_post_redemption: number;
   indirect_booking_revenue_brl: number;
+  total_estimated_cost_brl: number;
+  total_reference_value_brl: number;
   reward_commission_brl: 0;
   reward_redemption_fee_pct: 0;
   attribution_disclaimer: string;

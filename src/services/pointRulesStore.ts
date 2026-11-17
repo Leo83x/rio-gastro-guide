@@ -1,6 +1,12 @@
 import type { PointTransaction } from '../types/experience';
-import type { PointEarningRule } from '../types/rewards';
+import {
+  POINTS_PER_CHECKIN,
+  RP_PER_BRL,
+  type PointEarningRule,
+} from '../types/rewards';
 import { generateUUID } from '../utils/slug';
+
+export { POINTS_PER_CHECKIN, RP_PER_BRL };
 
 const RULES_STORAGE_KEY = 'borario_point_earning_rules_v1';
 const COMPANION_LEDGER_KEY = 'borario_companion_group_credits_v1';
@@ -8,17 +14,17 @@ const COMPANION_LEDGER_KEY = 'borario_companion_group_credits_v1';
 const DEFAULT_RULES: PointEarningRule[] = [
   {
     id: 'rule-default-checkin',
-    rule_code: 'DEFAULT_CHECKIN_50',
+    rule_code: 'DEFAULT_CHECKIN_250',
     scope_type: 'DEFAULT',
-    points_amount: 50,
+    points_amount: POINTS_PER_CHECKIN,
     max_credits_per_user_day: 5,
     max_credits_per_user_venue_day: 1,
     max_credits_per_user_venue_month: 8,
     require_verified_checkin: true,
     active: true,
     notes:
-      'Regra padrão configurável por presença individual validada via QR dinâmico. Cliques, visualizações e reservas sem comparecimento geram 0 pontos.',
-    updated_at: '2026-11-15T00:00:00.000Z',
+      'Regra oficial de 250 RP por visita individual validada via QR dinâmico (equivalente a R$ 2,50 com referência 100 RP = R$ 1,00). Presenças não verificadas e no-show geram 0 pontos.',
+    updated_at: '2026-11-16T00:00:00.000Z',
   },
 ];
 
@@ -43,7 +49,22 @@ export function getPointEarningRules(): PointEarningRule[] {
     writeJson(RULES_STORAGE_KEY, DEFAULT_RULES);
     return DEFAULT_RULES;
   }
-  return stored;
+  // Migração transparente de versões antigas com 50 RP para o padrão oficial de 250 RP
+  const upgraded = stored.map((r) => {
+    if (r.scope_type === 'DEFAULT' && (r.points_amount === 50 || r.rule_code === 'DEFAULT_CHECKIN_50')) {
+      return {
+        ...r,
+        rule_code: 'DEFAULT_CHECKIN_250',
+        points_amount: POINTS_PER_CHECKIN,
+        updated_at: new Date().toISOString(),
+      };
+    }
+    return r;
+  });
+  if (JSON.stringify(upgraded) !== JSON.stringify(stored)) {
+    writeJson(RULES_STORAGE_KEY, upgraded);
+  }
+  return upgraded;
 }
 
 export function savePointEarningRule(

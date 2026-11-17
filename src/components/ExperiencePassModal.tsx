@@ -161,7 +161,7 @@ export function ExperiencePassModal({
               <p className="mt-1 text-xs text-stone-300">Visita validada no balcão.</p>
               <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 text-xs font-bold text-emerald-300">
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                +50 Rio Points Adicionados!
+                +250 Rio Points Adicionados!
               </div>
               <button
                 type="button"
@@ -215,7 +215,7 @@ export function ExperiencePassModal({
               {isCheckedIn ? (
                 <>
                   <CheckCircle2 className="h-4 w-4" />
-                  Presença Validada (+50 RP)
+                  Presença Validada (+250 RP)
                 </>
               ) : (
                 <>
@@ -281,12 +281,12 @@ export function ExperiencePassModal({
               <div>
                 <p className="text-xs font-bold text-[var(--text-primary)]">Recompensa após check-in</p>
                 <p className="text-[11px] text-[var(--text-secondary)]">
-                  Você receberá 50 Rio Points após a validação da visita.
+                  Você receberá 250 Rio Points (R$ 2,50) após a validação da visita.
                 </p>
               </div>
             </div>
             <span className="shrink-0 text-xs font-black text-emerald-500 bg-emerald-500/20 px-2.5 py-1 rounded-lg">
-              +50 RP
+              +250 RP
             </span>
           </div>
 
@@ -393,7 +393,7 @@ export function ExperiencePassModal({
           ) : (
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-800 dark:text-emerald-200">
               <p className="font-bold text-sm">✅ Benefício utilizado com sucesso!</p>
-              <p className="mt-0.5">Sua visita foi registrada e os 50 Rio Points foram creditados em seu saldo.</p>
+              <p className="mt-0.5">Sua visita foi registrada e os 250 Rio Points foram creditados em seu saldo.</p>
             </div>
           )}
 
@@ -411,7 +411,7 @@ export function ExperiencePassModal({
               </div>
 
               <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                <strong>Cada pessoa valida sua própria visita.</strong> Para todos receberem seus 50 Rio Points e registrarem o carimbo no Passaporte BoraRio, cada participante deve abrir o app e validar a presença no balcão.
+                <strong>Cada pessoa valida sua própria visita.</strong> Para todos receberem seus 250 Rio Points e registrarem o carimbo no Passaporte BoraRio, cada participante deve abrir o app e validar a presença no balcão.
               </p>
 
               <div className="space-y-1.5">

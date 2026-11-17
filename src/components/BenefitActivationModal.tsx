@@ -252,14 +252,14 @@ export function BenefitActivationModal({
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-[var(--text-primary)]">Recompensa após check-in</p>
+                <p className="text-xs font-bold text-[var(--text-primary)]">Recompensa após check-in individual</p>
                 <p className="text-[11px] text-[var(--text-secondary)]">
-                  Você receberá 50 Rio Points após a validação da visita.
+                  Você receberá 250 Rio Points (R$ 2,50 de poder de troca) após a validação da visita.
                 </p>
               </div>
             </div>
             <span className="shrink-0 text-xs font-black text-emerald-500 bg-emerald-500/20 px-2.5 py-1 rounded-lg">
-              +50 RP
+              +250 RP
             </span>
           </div>
 
@@ -267,9 +267,9 @@ export function BenefitActivationModal({
           <div className="flex items-start gap-2.5 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-3.5 text-xs text-sky-950 dark:text-sky-200">
             <Users className="h-4 w-4 shrink-0 text-[#0077B6] mt-0.5" />
             <div className="space-y-0.5">
-              <p className="font-bold text-[var(--text-primary)]">Vai com alguém?</p>
+              <p className="font-bold text-[var(--text-primary)]">Vai em casal ou grupo?</p>
               <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
-                Cada pessoa precisa ter o BoraRio e validar sua própria presença no balcão para receber seus 50 Rio Points e carimbar a visita no Passaporte.
+                Cada pessoa precisa ter o BoraRio e validar sua própria presença no balcão para receber seus 250 Rio Points e carimbar a visita no Passaporte.
               </p>
             </div>
           </div>

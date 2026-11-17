@@ -907,7 +907,7 @@ export function ProfileWalletView({
                 Check-in QR Code Dinâmico &amp; Antifraude
               </div>
               <h3 className="font-sans mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)]">
-                Validar Visita (+50 RP) &amp; Liberar Visita Verificada
+                Validar Visita (+250 RP) &amp; Liberar Visita Verificada
               </h3>
               <div className="mt-2 rounded-2xl border border-[#FF6B35]/30 bg-[#FF6B35]/8 px-3.5 py-2.5 text-xs font-semibold text-[#123B56] dark:text-[#F1E8D8]">
                 {POINTS_PREVISIT_CHECKIN_NOTICE}
@@ -955,7 +955,7 @@ export function ProfileWalletView({
                   className="inline-flex items-center gap-2 rounded-xl bg-[#1C1917] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#FF6B35] dark:bg-[#F5F2EB] dark:text-[#0F1115] dark:hover:bg-[#FF6B35] dark:hover:text-white"
                 >
                   <QrCode className="h-4 w-4" />
-                  Validar Check-in QR (+50 RP)
+                  Validar Check-in QR (+250 RP)
                 </button>
 
                 <button

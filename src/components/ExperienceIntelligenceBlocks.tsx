@@ -372,7 +372,7 @@ export function ExperienceIntelligenceBlocks({
             <div className="rounded-xl bg-white/70 dark:bg-black/30 p-3 text-xs text-[var(--text-secondary)] space-y-1">
               <p className="flex items-center gap-1.5 font-semibold text-[var(--text-primary)]">
                 <QrCode className="h-4 w-4 text-[#FF6B35]" />
-                <span>Faça o check-in no balcão ao chegar para validar e ganhar +50 RP.</span>
+                <span>Faça o check-in no balcão ao chegar para validar e ganhar +250 RP.</span>
               </p>
               <p className="text-xs text-[var(--text-tertiary)]">
                 Seu Passe VIP já está ativo no seu perfil e disponível para consulta.

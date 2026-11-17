@@ -293,8 +293,11 @@ export function PartnerDashboard({
   const [rewEligibleItem, setRewEligibleItem] = useState('');
   const [rewSegment, setRewSegment] = useState<RewardSegment>('Gastronomia');
   const [rewType, setRewType] = useState<RewardType>('SOBREMESA');
-  const [rewCost, setRewCost] = useState(100);
-  const [rewQty, setRewQty] = useState(15);
+  const [rewRefPrice, setRewRefPrice] = useState<number>(15);
+  const [rewEstCost, setRewEstCost] = useState<number>(4.5);
+  const [rewMinConsumption, setRewMinConsumption] = useState<number>(0);
+  const [rewCost, setRewCost] = useState<number>(1500);
+  const [rewQty, setRewQty] = useState(20);
   const [rewMaxPerUser, setRewMaxPerUser] = useState(1);
   const [rewValidityDays, setRewValidityDays] = useState(30);
   const [rewValidDaysHours, setRewValidDaysHours] = useState('Terça a Quinta · 12h às 22h');
@@ -303,7 +306,10 @@ export function PartnerDashboard({
   const [editingRewardId, setEditingRewardId] = useState<string | null>(null);
   const [editRewTitle, setEditRewTitle] = useState('');
   const [editRewItem, setEditRewItem] = useState('');
-  const [editRewCost, setEditRewCost] = useState(100);
+  const [editRewCost, setEditRewCost] = useState(1500);
+  const [editRewRefPrice, setEditRewRefPrice] = useState(15);
+  const [editRewEstCost, setEditRewEstCost] = useState(4.5);
+  const [editRewMinConsumption, setEditRewMinConsumption] = useState(0);
   const [editRewQty, setEditRewQty] = useState(10);
   const [editRewHours, setEditRewHours] = useState('');
   const [voucherCodeInput, setVoucherCodeInput] = useState('');
@@ -764,6 +770,9 @@ export function PartnerDashboard({
       title: rewTitle.trim(),
       eligible_item: rewEligibleItem.trim(),
       points_cost: rewCost,
+      reference_price_brl: rewRefPrice,
+      estimated_cost_brl: rewEstCost,
+      min_consumption_brl: rewMinConsumption,
       quantity_total: rewQty,
       max_per_user: rewMaxPerUser,
       valid_days_hours: rewValidDaysHours,
@@ -784,6 +793,9 @@ export function PartnerDashboard({
     setEditRewTitle(rew.title);
     setEditRewItem(rew.eligible_item);
     setEditRewCost(rew.points_cost);
+    setEditRewRefPrice(rew.reference_price_brl ?? Number((rew.points_cost / 100).toFixed(2)));
+    setEditRewEstCost(rew.estimated_cost_brl ?? 0);
+    setEditRewMinConsumption(rew.min_consumption_brl ?? 0);
     setEditRewQty(rew.quantity_total);
     setEditRewHours(rew.valid_days_hours);
   };
@@ -793,6 +805,9 @@ export function PartnerDashboard({
       title: editRewTitle.trim(),
       eligible_item: editRewItem.trim(),
       points_cost: editRewCost,
+      reference_price_brl: editRewRefPrice,
+      estimated_cost_brl: editRewEstCost,
+      min_consumption_brl: editRewMinConsumption,
       quantity_total: editRewQty,
       valid_days_hours: editRewHours.trim(),
     });
@@ -2104,22 +2119,28 @@ export function PartnerDashboard({
                     </div>
 
                     {loyaltyEconomics && (
-                      <div className="grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-center">
-                          <span className="block text-xs text-[var(--text-secondary)]">Ativas</span>
-                          <strong className="text-base text-[var(--text-primary)]">
+                      <div className="grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-center">
+                          <span className="block text-[11px] text-[var(--text-secondary)]">Ativas</span>
+                          <strong className="text-sm font-black text-[var(--text-primary)]">
                             {loyaltyEconomics.active_rewards_count}/{loyaltyEconomics.registered_rewards_count}
                           </strong>
                         </div>
-                        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-center">
-                          <span className="block text-xs text-[var(--text-secondary)]">Vouchers Usados</span>
-                          <strong className="text-base text-[#397B68] dark:text-[#4CA188]">
+                        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-center">
+                          <span className="block text-[11px] text-[var(--text-secondary)]">Vouchers Validados</span>
+                          <strong className="text-sm font-black text-[#397B68] dark:text-[#4CA188]">
                             {loyaltyEconomics.vouchers_used_count}/{loyaltyEconomics.vouchers_issued_count}
                           </strong>
                         </div>
-                        <div className="col-span-2 rounded-2xl border border-[#397B68]/35 bg-[#397B68]/10 px-3.5 py-2.5 text-center sm:col-span-1">
-                          <span className="block text-xs text-[#397B68] dark:text-[#4CA188]">Comissão</span>
-                          <strong className="text-base text-[#397B68] dark:text-[#4CA188]">R$ 0,00</strong>
+                        <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-center">
+                          <span className="block text-[11px] text-[var(--text-secondary)]">Custo Real Estimado</span>
+                          <strong className="text-sm font-black text-[#FF6B35]">
+                            R$ {loyaltyEconomics.total_estimated_cost_brl.toFixed(2)}
+                          </strong>
+                        </div>
+                        <div className="rounded-2xl border border-[#397B68]/35 bg-[#397B68]/10 px-3 py-2 text-center">
+                          <span className="block text-[11px] text-[#397B68] dark:text-[#4CA188]">Comissão BoraRio</span>
+                          <strong className="text-sm font-black text-[#397B68] dark:text-[#4CA188]">R$ 0,00 (0%)</strong>
                         </div>
                       </div>
                     )}
@@ -2139,7 +2160,7 @@ export function PartnerDashboard({
                       </h2>
                     </div>
                     <p className="text-xs text-[var(--text-secondary)]">
-                      Escolha o item do seu catálogo, a quantidade de unidades e quantos Rio Points o usuário utiliza no resgate.
+                      Ofereça benefícios para atrair novos clientes da rede com <strong>0% de comissão</strong> sobre resgates.
                     </p>
 
                     <div>
@@ -2149,7 +2170,7 @@ export function PartnerDashboard({
                         required
                         value={rewTitle}
                         onChange={(e) => setRewTitle(e.target.value)}
-                        placeholder="Ex: Sobremesa Clássica da Casa ou Upgrade"
+                        placeholder="Ex: Tiramisù da Casa ou Drink Autoral"
                         className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
@@ -2161,27 +2182,25 @@ export function PartnerDashboard({
                         required
                         value={rewEligibleItem}
                         onChange={(e) => setRewEligibleItem(e.target.value)}
-                        placeholder="Ex: 1 Petit Gâteau ou 1 Passeio Guiado"
+                        placeholder="Ex: 1 Tiramisù Tradicional ou 1 Chopp 350ml"
                         className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs font-bold">Segmento</label>
+                        <label className="text-xs font-bold">Segmento (6 Pilares)</label>
                         <select
                           value={rewSegment}
                           onChange={(e) => setRewSegment(e.target.value as RewardSegment)}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm font-semibold"
                         >
                           <option value="Gastronomia">Gastronomia</option>
-                          <option value="Cultura & Museus">Cultura &amp; Museus</option>
-                          <option value="Turismo & Praias">Turismo &amp; Praias</option>
-                          <option value="Atrações Infantis">Atrações Infantis</option>
-                          <option value="Vida Noturna">Vida Noturna</option>
-                          <option value="Hotel">Hotel</option>
+                          <option value="Bares & Noite">Bares &amp; Noite</option>
+                          <option value="Passeios & Turismo">Passeios &amp; Turismo</option>
+                          <option value="Hospedagem">Hospedagem</option>
                           <option value="Bem-estar">Bem-estar</option>
-                          <option value="Entretenimento">Entretenimento</option>
+                          <option value="Cultura & Entretenimento">Cultura &amp; Entretenimento</option>
                         </select>
                       </div>
                       <div>
@@ -2189,41 +2208,102 @@ export function PartnerDashboard({
                         <select
                           value={rewType}
                           onChange={(e) => setRewType(e.target.value as RewardType)}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm font-semibold"
                         >
                           <option value="SOBREMESA">Sobremesa</option>
                           <option value="ENTRADA">Entrada</option>
-                          <option value="BEBIDA_NAO_ALCOOLICA">Bebida não alcoólica</option>
-                          <option value="PASSEIO">Passeio / Atividade</option>
-                          <option value="UPGRADE_HOTEL">Upgrade / Hotel</option>
-                          <option value="SERVICO_BEM_ESTAR">Serviço de Bem-estar</option>
-                          <option value="INGRESSO">Ingresso</option>
+                          <option value="BEBIDA_NAO_ALCOOLICA">Bebida / Chopp</option>
+                          <option value="PASSEIO">Passeio / Tour</option>
+                          <option value="UPGRADE_HOTEL">Hospedagem / Day Use</option>
+                          <option value="SERVICO_BEM_ESTAR">Bem-estar / Massagem</option>
+                          <option value="INGRESSO">Ingresso / Museu</option>
                           <option value="EXPERIENCIA">Experiência especial</option>
                         </select>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Preço de Referência & Custo Estimado & Consumo Mínimo */}
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <label className="text-xs font-bold">Custo em Rio Points</label>
+                        <label className="text-[11px] font-bold text-[var(--text-primary)]">
+                          Preço Ref. (R$)
+                        </label>
                         <input
                           type="number"
-                          min={10}
-                          step={10}
-                          value={rewCost}
-                          onChange={(e) => setRewCost(Number(e.target.value))}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          min={1}
+                          step={0.5}
+                          value={rewRefPrice}
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            setRewRefPrice(val);
+                            setRewCost(Math.round(val * 100));
+                            setRewEstCost(Number((val * 0.3).toFixed(2)));
+                          }}
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-2 text-xs font-bold"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-bold">Quantidade (estoque)</label>
+                        <label className="text-[11px] font-bold text-[var(--text-primary)]">
+                          Custo Real (R$)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          value={rewEstCost}
+                          onChange={(e) => setRewEstCost(Number(e.target.value))}
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-2 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-[var(--text-primary)]">
+                          Consumo Mín. (R$)
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={5}
+                          value={rewMinConsumption}
+                          onChange={(e) => setRewMinConsumption(Number(e.target.value))}
+                          placeholder="0 = Livre"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-2 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold">Custo em Pontos</label>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                            100 RP = R$ 1
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          min={500}
+                          max={2500}
+                          step={50}
+                          value={rewCost}
+                          onChange={(e) => setRewCost(Number(e.target.value))}
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm font-extrabold text-[#FF6B35]"
+                        />
+                        <span className="mt-0.5 block text-[10px] text-[var(--text-secondary)]">
+                          Equivale a R$ {(rewCost / 100).toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold">Estoque de Recompensas</label>
                         <input
                           type="number"
                           min={1}
                           value={rewQty}
                           onChange={(e) => setRewQty(Number(e.target.value))}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm font-bold"
                         />
+                        <span className="mt-0.5 block text-[10px] text-[var(--text-secondary)]">
+                          Capacidade total desta oferta
+                        </span>
                       </div>
                     </div>
 
@@ -2282,7 +2362,7 @@ export function PartnerDashboard({
 
                     <button
                       type="submit"
-                      className="w-full rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white"
+                      className="w-full rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white shadow-md hover:brightness-110 active:scale-95 transition"
                     >
                       Publicar Recompensa BoraRio (0% Comissão)
                     </button>
@@ -2418,23 +2498,42 @@ export function PartnerDashboard({
                                     <span className="rounded-full bg-[#123B56]/12 px-2.5 py-0.5 text-xs font-bold text-[#123B56] dark:bg-[#123B56]/40 dark:text-[#8DC4EA]">
                                       {rew.segment_category}
                                     </span>
-                                    <span className="font-bold text-[#D49B27]">
+                                    <span className="font-extrabold text-[#FF6B35]">
                                       {rew.points_cost} RP
+                                    </span>
+                                    <span className="rounded-md bg-stone-100 dark:bg-stone-800 px-2 py-0.5 text-[11px] font-semibold text-[var(--text-secondary)]">
+                                      Ref: R$ {(rew.reference_price_brl ?? rew.points_cost / 100).toFixed(2)}
                                     </span>
                                   </div>
                                   <h3 className="mt-1.5 text-sm font-bold text-[var(--text-primary)]">
                                     {rew.title}
                                   </h3>
                                   <p className="text-xs text-[var(--text-secondary)]">
-                                    Item elegível: <strong>{rew.eligible_item}</strong> · Estoque:{' '}
+                                    Item: <strong>{rew.eligible_item}</strong> · Estoque:{' '}
                                     <strong>
                                       {rew.quantity_available}/{rew.quantity_total}
                                     </strong>{' '}
                                     · {rew.valid_days_hours}
                                   </p>
-                                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                                    Limite: {rew.max_per_user} por usuário · Comissão sobre resgates: R$ 0,00 (0%)
-                                  </p>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-[var(--text-secondary)]">
+                                    <span>
+                                      Custo real estimado:{' '}
+                                      <strong className="text-stone-700 dark:text-stone-300">
+                                        R$ {(rew.estimated_cost_brl ?? 0).toFixed(2)}
+                                      </strong>
+                                    </span>
+                                    <span>·</span>
+                                    <span>
+                                      Consumo mínimo:{' '}
+                                      <strong className="text-stone-700 dark:text-stone-300">
+                                        {rew.min_consumption_brl ? `R$ ${rew.min_consumption_brl.toFixed(2)}` : 'Livre'}
+                                      </strong>
+                                    </span>
+                                    <span>·</span>
+                                    <span>Limite: {rew.max_per_user}x por usuário</span>
+                                    <span>·</span>
+                                    <span className="text-[#397B68] font-bold">Comissão: R$ 0,00</span>
+                                  </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-1.5">
@@ -2481,51 +2580,110 @@ export function PartnerDashboard({
                               </div>
 
                               {editingRewardId === rew.id && (
-                                <div className="mt-3 space-y-2 border-t border-[var(--border-hairline)] pt-3">
+                                <div className="mt-3 space-y-2.5 border-t border-[var(--border-hairline)] pt-3">
                                   <div className="grid gap-2 sm:grid-cols-2">
-                                    <input
-                                      type="text"
-                                      value={editRewTitle}
-                                      onChange={(e) => setEditRewTitle(e.target.value)}
-                                      placeholder="Título da recompensa"
-                                      className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={editRewItem}
-                                      onChange={(e) => setEditRewItem(e.target.value)}
-                                      placeholder="Item elegível"
-                                      className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
-                                    />
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Título</label>
+                                      <input
+                                        type="text"
+                                        value={editRewTitle}
+                                        onChange={(e) => setEditRewTitle(e.target.value)}
+                                        placeholder="Título da recompensa"
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Item elegível</label>
+                                      <input
+                                        type="text"
+                                        value={editRewItem}
+                                        onChange={(e) => setEditRewItem(e.target.value)}
+                                        placeholder="Item elegível"
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="grid gap-2 sm:grid-cols-3">
-                                    <input
-                                      type="number"
-                                      min={10}
-                                      value={editRewCost}
-                                      onChange={(e) => setEditRewCost(Number(e.target.value))}
-                                      className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
-                                    />
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      value={editRewQty}
-                                      onChange={(e) => setEditRewQty(Number(e.target.value))}
-                                      className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
-                                    />
-                                    <input
-                                      type="text"
-                                      value={editRewHours}
-                                      onChange={(e) => setEditRewHours(e.target.value)}
-                                      placeholder="Horários de uso"
-                                      className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
-                                    />
+
+                                  <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Preço Ref. (R$)</label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        step={0.5}
+                                        value={editRewRefPrice}
+                                        onChange={(e) => {
+                                          const v = Math.max(0, Number(e.target.value));
+                                          setEditRewRefPrice(v);
+                                          setEditRewCost(Math.round(v * 100));
+                                        }}
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Custo Real (R$)</label>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        step={0.5}
+                                        value={editRewEstCost}
+                                        onChange={(e) => setEditRewEstCost(Number(e.target.value))}
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Consumo Mín. (R$)</label>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        step={5}
+                                        value={editRewMinConsumption}
+                                        onChange={(e) => setEditRewMinConsumption(Number(e.target.value))}
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Custo em Pontos</label>
+                                      <input
+                                        type="number"
+                                        min={500}
+                                        max={2500}
+                                        step={50}
+                                        value={editRewCost}
+                                        onChange={(e) => setEditRewCost(Number(e.target.value))}
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-black text-[#FF6B35]"
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="flex gap-2">
+
+                                  <div className="grid gap-2 sm:grid-cols-2">
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Estoque total</label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={editRewQty}
+                                        onChange={(e) => setEditRewQty(Number(e.target.value))}
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-bold text-[var(--text-secondary)]">Horários de uso</label>
+                                      <input
+                                        type="text"
+                                        value={editRewHours}
+                                        onChange={(e) => setEditRewHours(e.target.value)}
+                                        placeholder="Ex: Terça a Quinta · 12h às 22h"
+                                        className="w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="flex gap-2 pt-1">
                                     <button
                                       type="button"
                                       onClick={() => handleSaveEditReward(rew.id)}
-                                      className="rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white"
+                                      className="rounded-lg bg-[#123B56] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-[#102F46]"
                                     >
                                       Salvar alteração
                                     </button>
@@ -2534,7 +2692,7 @@ export function PartnerDashboard({
                                       onClick={() => setEditingRewardId(null)}
                                       className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
                                     >
-                                      Fechar
+                                      Cancelar
                                     </button>
                                   </div>
                                 </div>
