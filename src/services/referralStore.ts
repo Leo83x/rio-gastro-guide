@@ -44,11 +44,6 @@ export function getMyReferralCode(): string {
 
 export function getCanonicalAppBaseUrl(): string {
   if (typeof window === 'undefined') return 'https://borario.app';
-  const host = window.location.hostname;
-  // Se estiver em ambiente local ou de desenvolvimento, usa o domínio público oficial para compartilhamento externo
-  if (host === 'localhost' || host === '127.0.0.1' || host.includes('webcontainer') || host.includes('local')) {
-    return 'https://borario.app';
-  }
   return window.location.origin;
 }
 

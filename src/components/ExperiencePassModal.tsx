@@ -103,7 +103,7 @@ export function ExperiencePassModal({
         setShowQrScanner(false);
         setCheckinFeedback({
           ok: true,
-          msg: '🎉 Presença confirmada! +50 Pontos Rio adicionados à sua carteira.',
+          msg: '🎉 Presença confirmada! +250 Rio Points adicionados à sua carteira.',
         });
         const allUpdated = getReservations();
         onReservationsUpdated?.(allUpdated);

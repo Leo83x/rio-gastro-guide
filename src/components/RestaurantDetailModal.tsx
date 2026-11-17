@@ -102,11 +102,26 @@ export function RestaurantDetailModal({
   const uberUrl = buildUberUrl(rideCoords);
   const googleMapsUrl = buildGoogleMapsUrl(restaurant.latitude, restaurant.longitude);
 
-  const handleShareApp = () => {
+  const handleShareApp = async () => {
     const venueLink = getMyReferralLink(restaurant.id);
     const myCode = getMyReferralCode();
-    const text = `Olha esse lugar incrível no BoraRio: *${restaurant.name}* (${restaurant.neighborhood})!\nConfira as vantagens exclusivas e venha comigo:\n${venueLink}\n\nCódigo de indicação: *${myCode}*`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+    const shareText = `Olha esse lugar incrível no BoraRio: *${restaurant.name}* (${restaurant.neighborhood})!\nConfira as vantagens exclusivas e venha comigo:\n${venueLink}\n\nCódigo de indicação: *${myCode}*`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `${restaurant.name} · BoraRio`,
+          text: shareText,
+          url: venueLink,
+        });
+        onShareToConfia?.(restaurant);
+        return;
+      } catch {
+        // Usuário cancelou ou navegador não suporta compartilhamento direto
+      }
+    }
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank', 'noopener,noreferrer');
     onShareToConfia?.(restaurant);
   };
 
@@ -137,7 +152,7 @@ export function RestaurantDetailModal({
         className="relative my-auto max-h-[96vh] w-full max-w-4xl overflow-y-auto rounded-none border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-2xl sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Floating Top Controls (Close, Favorite, Share) */}
+        {/* Floating Top Controls (Desaglomerado: Apenas Favorito e Fechar) */}
         <div className="absolute right-4 top-4 z-30 flex items-center gap-2">
           {onSaveToVault && (
             <button
@@ -153,24 +168,6 @@ export function RestaurantDetailModal({
               <Bookmark className={`h-4 w-4 ${inVault ? 'fill-current' : ''}`} />
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={handleShareApp}
-            aria-label="Compartilhar no WhatsApp"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition-all shadow-md hover:bg-black/80"
-          >
-            <Share2 className="h-4 w-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            aria-label="Copiar link"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition-all shadow-md hover:bg-black/80"
-          >
-            {copiedLink ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-          </button>
 
           <button
             type="button"
@@ -387,6 +384,48 @@ export function RestaurantDetailModal({
               <p className="mt-1 text-sm leading-relaxed text-[var(--text-secondary)] line-clamp-3">
                 {restaurant.description}
               </p>
+            </div>
+          </div>
+
+          {/* AÇÃO DEDICADA: INDICAR ESTABELECIMENTO / COMPARTILHAR LINK DO APP */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-[#397B68]/30 bg-[#397B68]/10 p-4">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#397B68] dark:text-[#4CA188] flex items-center gap-1.5">
+                <Share2 className="h-3.5 w-3.5" />
+                Indicar para um Amigo (+200 Rio Points)
+              </span>
+              <p className="text-[11px] text-[var(--text-secondary)]">
+                Compartilhe o link oficial do BoraRio com amigos e acumule pontos quando a visita for validada.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleShareApp}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
+              >
+                <span>WhatsApp</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35] transition"
+                title="Copiar link direto do app"
+              >
+                {copiedLink ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Link Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+                    <span>Copiar Link</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 

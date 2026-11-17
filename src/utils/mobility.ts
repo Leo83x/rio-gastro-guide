@@ -46,6 +46,15 @@ export function launchNineNineRide(coords: RideCoordinates): void {
 
   const isAndroid = /android/i.test(navigator.userAgent);
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isMobile = isAndroid || isIOS;
+
+  if (!isMobile) {
+    // 99 opera exclusivamente via aplicativo mobile (sem web client de corridas).
+    // No desktop, abre a rota direta com destino no Google Maps.
+    window.open(buildGoogleMapsUrl(coords.latitude, coords.longitude), '_blank');
+    return;
+  }
+
   const nineNineUrl = buildNineNineUrl(coords);
 
   if (isAndroid) {
@@ -60,12 +69,5 @@ export function launchNineNineRide(coords: RideCoordinates): void {
     window.addEventListener('pagehide', () => window.clearTimeout(timer), { once: true });
     window.location.href = nineNineUrl;
     return;
-  }
-
-  // Desktop or web fallback
-  try {
-    window.location.href = nineNineUrl;
-  } catch {
-    window.open(buildGoogleMapsUrl(coords.latitude, coords.longitude), '_blank');
   }
 }
