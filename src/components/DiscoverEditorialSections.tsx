@@ -37,6 +37,7 @@ import { getPartnerRewards } from '../services/rewardMarketplaceStore';
 import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
 import type { ConfiaRecommendation } from '../types/confia';
 import type { UserPreferences } from '../types/experience';
+import type { PartnerOffering } from '../types/marketplace';
 import type { NightlifeDateFilter, NightlifeEvent, NightlifeSubArea } from '../types/nightlife';
 import type { CommercialModality } from '../types/partnerCommercial';
 import type { Restaurant } from '../types/restaurant';
@@ -64,6 +65,7 @@ interface DiscoverEditorialSectionsProps {
   confiaCountsByVenue: Map<string, number>;
   pointsBalance: number;
   onSelectExperience: (item: Restaurant) => void;
+  onOpenOfferingActivation?: (offering: PartnerOffering) => void;
   onFilterPermanentNightlife?: () => void;
   onSaveNightlifeToVault?: (event: NightlifeEvent) => void;
   onAskBoraIa?: (promptText: string) => void;
@@ -141,6 +143,7 @@ export function DiscoverEditorialSections({
   confiaCountsByVenue,
   pointsBalance,
   onSelectExperience,
+  onOpenOfferingActivation,
   onFilterPermanentNightlife,
   onSaveNightlifeToVault,
   onAskBoraIa,
@@ -316,7 +319,9 @@ export function DiscoverEditorialSections({
                 <div
                   key={off.id}
                   onClick={() => {
-                    if (linkedVenue) {
+                    if (onOpenOfferingActivation) {
+                      onOpenOfferingActivation(off);
+                    } else if (linkedVenue) {
                       onSelectExperience(linkedVenue);
                     } else {
                       onGoToClub({ section: 'offerings', modality: off.modality });
@@ -403,6 +408,14 @@ export function DiscoverEditorialSections({
 
                     <button
                       type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenOfferingActivation) {
+                          onOpenOfferingActivation(off);
+                        } else if (linkedVenue) {
+                          onSelectExperience(linkedVenue);
+                        }
+                      }}
                       className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-extrabold text-white shadow-md hover:brightness-110 active:scale-95 transition"
                     >
                       <span>

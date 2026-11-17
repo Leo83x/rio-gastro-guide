@@ -8,7 +8,9 @@ import { ConciergeWidget } from './components/ConciergeWidget';
 import { IntentCaptureModal } from './components/confia/IntentCaptureModal';
 import { MeusDesejosView } from './components/wishes/MeusDesejosView';
 import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
+import { BenefitActivationModal } from './components/BenefitActivationModal';
 import { ExperiencePassModal } from './components/ExperiencePassModal';
+import type { PartnerOffering } from './types/marketplace';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
 import { NightlifeEventModal } from './components/NightlifeEventModal';
@@ -84,6 +86,7 @@ export function App() {
   const [reservations, setReservations] = useState<ReservationRequest[]>(() => getReservations());
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => getNotifications());
   const [activePassReservation, setActivePassReservation] = useState<ReservationRequest | null>(null);
+  const [activeOfferingForActivation, setActiveOfferingForActivation] = useState<PartnerOffering | null>(null);
 
   const latestActiveReservation = useMemo(() => {
     return reservations.find(
@@ -809,6 +812,7 @@ export function App() {
                 confiaCountsByVenue={confiaCountsByVenue}
                 pointsBalance={pointsBalance}
                 onSelectExperience={setSelectedRestaurant}
+                onOpenOfferingActivation={setActiveOfferingForActivation}
                 onFilterPermanentNightlife={handleFilterPermanentNightlife}
                 onSaveNightlifeToVault={handleSaveNightlifeToVault}
                 onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
@@ -1157,6 +1161,7 @@ export function App() {
             setPointsBalance(getPointsBalance());
             setNotifications(getNotifications());
           }}
+          onOpenActivePass={setActivePassReservation}
         />
       )}
 
@@ -1321,6 +1326,25 @@ export function App() {
             </span>
           </button>
         </div>
+      )}
+
+      {activeOfferingForActivation && (
+        <BenefitActivationModal
+          offering={activeOfferingForActivation}
+          restaurant={
+            restaurants.find((r) => r.id === activeOfferingForActivation.restaurant_id) || null
+          }
+          onClose={() => setActiveOfferingForActivation(null)}
+          onActivated={(newRes) => {
+            setActiveOfferingForActivation(null);
+            setReservations((prev) => [newRes, ...prev]);
+            setNotifications(getNotifications());
+            setActivePassReservation(newRes);
+            setToast({
+              text: `Benefício ativado com sucesso em ${newRes.experience_name}!`,
+            });
+          }}
+        />
       )}
 
       {activePassReservation && (

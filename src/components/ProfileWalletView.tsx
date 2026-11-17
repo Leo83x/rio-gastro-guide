@@ -116,6 +116,7 @@ interface ProfileWalletViewProps {
   initialSectionTab?: ProfileSectionTab;
   focusTarget?: ProfileFocusTarget;
   deepLinkNonce?: number;
+  onOpenActivePass?: (reservation: ReservationRequest) => void;
 }
 
 interface BarcodeDetectorLike {
@@ -223,6 +224,7 @@ export function ProfileWalletView({
   initialSectionTab = 'passport',
   focusTarget = null,
   deepLinkNonce = 0,
+  onOpenActivePass,
 }: ProfileWalletViewProps) {
   const [sectionTab, setSectionTab] = useState<ProfileSectionTab>(initialSectionTab);
 
@@ -1624,6 +1626,16 @@ export function ProfileWalletView({
                       )}
 
                       <div className="mt-3 flex flex-wrap gap-2">
+                        {onOpenActivePass && !isClosed && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenActivePass(res)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-1.5 text-[11px] font-bold text-amber-500 hover:bg-amber-500/20"
+                          >
+                            <Ticket className="h-3.5 w-3.5" />
+                            Abrir Passe VIP &amp; Voucher
+                          </button>
+                        )}
                         {canDoCheckin && (
                           <button
                             type="button"

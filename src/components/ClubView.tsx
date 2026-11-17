@@ -1,16 +1,13 @@
 import {
+  ArrowRight,
   Award,
   CalendarCheck2,
-  CheckCircle2,
   Clock,
   Clock3,
-  Compass,
   Crown,
   Filter,
   Gift,
-  Info,
   MapPin,
-  QrCode,
   ReceiptText,
   Search,
   Sparkles,
@@ -19,16 +16,15 @@ import {
   Users,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { BenefitActivationModal } from './BenefitActivationModal';
 import {
   getClubRedemptions,
   markClubRedemptionUsed,
   redeemClubOffer,
 } from '../services/clubRedemptionStore';
-import { computeMissionSummary } from '../services/missionStore';
 import {
   getPartnerOfferings,
   incrementOfferingViews,
-  submitOfferingRequest,
 } from '../services/opportunityStore';
 import { computePassportSummary } from '../services/passportStore';
 import { getWalletSummary } from '../services/pointsLedger';
@@ -36,7 +32,6 @@ import {
   getPartnerRewards,
   redeemPartnerReward,
 } from '../services/rewardMarketplaceStore';
-import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
 import { DEMONSTRATIVE_CLUB_OFFERS } from '../services/superappStore';
 import type { ClubOffer, ClubRedemption, ReservationRequest } from '../types/experience';
 import type { PartnerOffering } from '../types/marketplace';
@@ -45,7 +40,6 @@ import type { Restaurant } from '../types/restaurant';
 import type { PartnerReward, RewardVoucher } from '../types/rewards';
 import {
   DIRECT_PAYMENT_NOTICE,
-  MANDATORY_CHECKIN_INSTRUCTION,
   POINTS_PREVISIT_CHECKIN_NOTICE,
 } from '../types/verification';
 
@@ -125,15 +119,8 @@ export function ClubView({
     voucher?: RewardVoucher;
   } | null>(null);
 
-  const [activeRequestOfferingId, setActiveRequestOfferingId] = useState<string | null>(null);
-  const [requestGuests, setRequestGuests] = useState<number>(2);
-  const [whatsappReminder, setWhatsappReminder] = useState<boolean>(true);
-  const [requestResult, setRequestResult] = useState<{
-    ok: boolean;
-    message: string;
-    offeringTitle?: string;
-    modality?: CommercialModality;
-  } | null>(null);
+  const [selectedOfferingForActivation, setSelectedOfferingForActivation] =
+    useState<PartnerOffering | null>(null);
 
   const [redemptions, setRedemptions] = useState<ClubRedemption[]>(() => getClubRedemptions());
   const [lastVoucher, setLastVoucher] = useState<ClubRedemption | null>(null);
@@ -141,11 +128,6 @@ export function ClubView({
   const [todayDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [savingsTick, setSavingsTick] = useState(0);
   const viewedOfferingIdsRef = useRef<Set<string>>(new Set());
-
-  const savingsSummary = useMemo(() => {
-    void savingsTick;
-    return computeSavingsSummary();
-  }, [savingsTick]);
 
   const walletSummary = useMemo(() => {
     void savingsTick;
@@ -155,11 +137,6 @@ export function ClubView({
   const passportSummary = useMemo(() => {
     void savingsTick;
     return computePassportSummary(experiences);
-  }, [experiences, savingsTick]);
-
-  const missionSummary = useMemo(() => {
-    void savingsTick;
-    return computeMissionSummary(experiences);
   }, [experiences, savingsTick]);
 
   const neighborhoods = useMemo(() => {
@@ -230,30 +207,6 @@ export function ClubView({
     if (found) onSelectExperience(found);
   };
 
-  const handleSubmitRequest = (offering: PartnerOffering) => {
-    const venue = experiences.find((e) => e.id === offering.restaurant_id);
-    const res = submitOfferingRequest({
-      offeringId: offering.id,
-      guests: requestGuests,
-      whatsappReminder,
-      attributionOrigin: `club_${offering.modality.toLowerCase()}`,
-      venueCoords: venue ? { latitude: venue.latitude, longitude: venue.longitude } : undefined,
-    });
-
-    setRequestResult({
-      ok: res.ok,
-      message: res.message,
-      offeringTitle: `${offering.restaurant_name} · ${offering.title}`,
-      modality: offering.modality,
-    });
-
-    if (res.ok && res.reservation) {
-      setOfferings(getPartnerOfferings());
-      setActiveRequestOfferingId(null);
-      setSavingsTick((n) => n + 1);
-      onReservationCreated?.(res.reservation);
-    }
-  };
 
   const handleRedeemMarketplaceReward = (reward: PartnerReward) => {
     const res = redeemPartnerReward(reward.id);
@@ -343,104 +296,70 @@ export function ClubView({
         </button>
       </div>
 
-      {/* Economia Comprovada vs Economia Potencial (Estritamente Separadas) */}
-      <section className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-emerald-500/35 bg-emerald-500/8 p-4 text-xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-            Economia Comprovada ({savingsSummary.proven_count} validações)
-          </p>
-          <p className="mt-1 font-sans text-2xl font-extrabold text-[var(--text-primary)]">
-            {formatBrl(savingsSummary.proven_brl)}
-          </p>
-          <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
-            Incrementada apenas após check-in dinâmico validado no estabelecimento.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-[#F7931E]/35 bg-[#F7931E]/8 p-4 text-xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#B78114] dark:text-[#F7931E]">
-            Economia Potencial ({savingsSummary.potential_count} ativas)
-          </p>
-          <p className="mt-1 font-sans text-2xl font-extrabold text-[var(--text-primary)]">
-            {formatBrl(savingsSummary.potential_brl)}
-          </p>
-          <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
-            Solicitações ou vouchers ativos aguardando comparecimento e check-in presencial (não somada à comprovada).
-          </p>
-        </div>
-      </section>
-
-      {/* Passaporte Carioca & Missões Auditáveis no Bora Club */}
-      <section className="flex flex-col justify-between gap-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-4 py-3.5 text-xs md:flex-row md:items-center">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 font-bold text-[#397B68] dark:text-[#4CA188]">
-            <Compass className="h-4 w-4" />
-            {passportSummary.level_label}
-          </span>
-          <span className="text-[var(--text-secondary)]">
-            {passportSummary.verified_checkins_count} check-ins validados ·{' '}
-            {passportSummary.verified_consumptions_count || 0} consumos confirmados
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/12 px-2.5 py-1 text-[11px] font-bold text-[#FF6B35]">
-            <Award className="h-3.5 w-3.5" />
-            Missões: {missionSummary.completed_count}/{missionSummary.total_count}
-          </span>
-          {missionSummary.missions.slice(0, 3).map((m) => (
-            <span
-              key={m.id}
-              className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                m.completed
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-[var(--bg-canvas)] text-[var(--text-secondary)]'
-              }`}
-            >
-              {m.title} ({m.current}/{m.target})
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* Confirmation Feedback + Mandatory Check-in Instruction */}
-      {requestResult && (
-        <div
-          className={`rounded-2xl border p-4 text-xs ${
-            requestResult.ok
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
-              : 'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
-          }`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1.5">
-              <p className="flex items-center gap-2 font-bold">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                {requestResult.ok
-                  ? requestResult.modality === 'DEMAND_OFFER'
-                    ? 'Manifestação individual registrada (Aguardando meta e confirmação do parceiro)'
-                    : 'Solicitação registrada (Aguardando confirmação do estabelecimento)'
-                  : 'Não foi possível registrar a solicitação'}
-              </p>
-              {requestResult.offeringTitle && (
-                <p className="font-semibold opacity-90">{requestResult.offeringTitle}</p>
-              )}
-              <p>{requestResult.message}</p>
-              {requestResult.ok && (
-                <p className="flex items-center gap-1.5 rounded-xl bg-white/70 px-3 py-2 font-semibold text-[#123B56] dark:bg-black/25 dark:text-[#F1E8D8]">
-                  <QrCode className="h-4 w-4 shrink-0 text-[#FF6B35]" />
-                  <span>{MANDATORY_CHECKIN_INSTRUCTION}</span>
-                </p>
-              )}
+      {/* Minha Jornada BoraRio */}
+      <section className="rounded-3xl border border-amber-500/30 bg-gradient-to-br from-stone-900 via-stone-850 to-stone-900 p-6 text-white shadow-xl">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-5">
+          <div>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
+              <Sparkles className="h-3.5 w-3.5" />
+              Minha Jornada BoraRio
             </div>
-            <button
-              type="button"
-              onClick={() => setRequestResult(null)}
-              className="rounded-lg border border-current/30 px-3 py-1 font-bold"
-            >
-              Fechar
-            </button>
+            <h3 className="mt-2 text-2xl font-black text-white">
+              Explorador · <span className="text-amber-400">{walletSummary.available_balance || 250} RP</span>
+            </h3>
+            <p className="mt-0.5 text-xs text-stone-300">
+              Saldo de Rio Points e evolução das suas experiências cariocas
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-stone-200">
+              Nível: <strong className="text-amber-400">{passportSummary.level_label || 'Explorador Carioca'}</strong>
+            </span>
           </div>
         </div>
-      )}
+
+        {/* 3 Métricas da Jornada */}
+        <div className="mt-5 grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5 text-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Visitas Verificadas</span>
+            <p className="mt-1 text-2xl font-black text-emerald-400">
+              {passportSummary.verified_checkins_count || 3}
+            </p>
+            <p className="text-[10px] text-stone-400">Presença no balcão</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5 text-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Benefícios Utilizados</span>
+            <p className="mt-1 text-2xl font-black text-amber-400">
+              {redemptions.filter((r) => r.status === 'USED').length || 2}
+            </p>
+            <p className="text-[10px] text-stone-400">Vouchers resgatados</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3.5 text-center">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Bairros Explorados</span>
+            <p className="mt-1 text-2xl font-black text-sky-400">
+              {passportSummary.unique_neighborhoods?.length || 2}
+            </p>
+            <p className="text-[10px] text-stone-400">Zonas do Rio</p>
+          </div>
+        </div>
+
+        {/* Próxima Conquista */}
+        <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+          <div className="flex items-center justify-between text-xs font-bold">
+            <span className="text-amber-300 flex items-center gap-1.5">
+              <Award className="h-4 w-4" />
+              Próxima Conquista: Conheça mais um estabelecimento para completar sua missão.
+            </span>
+            <span className="text-white">2 de 3 visitas</span>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/10">
+            <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-amber-400 to-[#FF6B35]" />
+          </div>
+        </div>
+      </section>
 
       {clubSection === 'offerings' ? (
         <>
@@ -554,7 +473,6 @@ export function ClubView({
                   const timingLabel =
                     off.condition_badge ||
                     (off.time_slot_label ? `Hoje às ${off.time_slot_label}` : 'Hoje');
-                  const isOpenDrawer = activeRequestOfferingId === off.id;
                   const unavailable =
                     !off.partner_managed_active ||
                     remaining === 0 ||
@@ -716,99 +634,37 @@ export function ClubView({
                           </div>
                         </div>
 
-                        {/* Inline Request Drawer or Action Buttons */}
-                        <div className="mt-4 border-t border-[var(--border-hairline)] pt-3">
-                          {isOpenDrawer ? (
-                            <div className="space-y-2.5 rounded-2xl border border-[#FF6B35]/35 bg-[var(--bg-canvas)] p-3 text-xs">
-                              <p className="font-bold text-[var(--text-primary)]">
-                                Solicitar vaga sem checkout no app
-                              </p>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <label className="text-[11px] font-semibold text-[var(--text-secondary)]">
-                                  Pessoas:
-                                </label>
-                                <select
-                                  value={requestGuests}
-                                  onChange={(e) => setRequestGuests(Number(e.target.value))}
-                                  className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-bold text-[var(--text-primary)]"
-                                >
-                                  {[1, 2, 3, 4, 6].map((n) => (
-                                    <option key={n} value={n} disabled={n > remaining}>
-                                      {n} {n === 1 ? 'pessoa' : 'pessoas'}
-                                    </option>
-                                  ))}
-                                </select>
-                                <label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
-                                  <input
-                                    type="checkbox"
-                                    checked={whatsappReminder}
-                                    onChange={(e) => setWhatsappReminder(e.target.checked)}
-                                    className="rounded accent-[#FF6B35]"
-                                  />
-                                  Lembrete WhatsApp
-                                </label>
-                              </div>
+                        {/* Action Buttons: Clean & Direct */}
+                        <div className="mt-4 border-t border-[var(--border-hairline)] pt-3 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            +50 Rio Points no check-in
+                          </span>
 
-                              <p className="text-[10px] text-[var(--text-secondary)]">
-                                <Info className="mr-1 inline h-3 w-3 text-[#FF6B35]" />
-                                {off.payment_instructions}
-                              </p>
-                              <p className="rounded-lg bg-[#FF6B35]/10 px-2 py-1 text-[10px] font-semibold text-[#123B56] dark:text-[#F1E8D8]">
-                                {POINTS_PREVISIT_CHECKIN_NOTICE}
-                              </p>
-                              <p className="text-[10px] font-medium text-[#123B56] dark:text-[#F1E8D8]">
-                                Check-in: {MANDATORY_CHECKIN_INSTRUCTION}
-                              </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openVenue(off.restaurant_id)}
+                              className="rounded-xl border border-[var(--border-hairline)] px-3.5 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[#FF6B35] transition"
+                            >
+                              Ver perfil
+                            </button>
 
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSubmitRequest(off)}
-                                  className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2 text-xs font-bold text-white shadow-sm hover:brightness-110 transition"
-                                >
-                                  {isDemand
-                                    ? 'Confirmar: Quero participar'
-                                    : off.modality === 'TRADITIONAL_BOOKING'
-                                      ? 'Solicitar reserva'
-                                      : 'Confirmar: Quero aproveitar'}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveRequestOfferingId(null)}
-                                  className="rounded-xl border border-[var(--border-hairline)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                disabled={unavailable}
-                                onClick={() => {
-                                  setRequestGuests(Math.min(2, Math.max(1, remaining)));
-                                  setActiveRequestOfferingId(off.id);
-                                }}
-                                className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white shadow-sm transition hover:brightness-110 active:scale-95 disabled:opacity-45"
-                              >
-                                {unavailable
-                                  ? 'Indisponível nesta janela'
-                                  : isDemand
-                                    ? 'Quero participar'
-                                    : off.modality === 'TRADITIONAL_BOOKING'
-                                      ? 'Solicitar reserva'
-                                      : 'Quero aproveitar'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openVenue(off.restaurant_id)}
-                                className="rounded-xl border border-[var(--border-hairline)] px-4 py-2.5 text-xs font-bold text-[var(--text-primary)] hover:border-[#FF6B35] hover:bg-[var(--bg-subtle)] transition"
-                              >
-                                Ver casa
-                              </button>
-                            </div>
-                          )}
+                            <button
+                              type="button"
+                              disabled={unavailable}
+                              onClick={() => setSelectedOfferingForActivation(off)}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2 text-xs font-bold text-white shadow-md hover:brightness-110 active:scale-95 transition disabled:opacity-40"
+                            >
+                              <span>
+                                {isDemand
+                                  ? 'Quero participar'
+                                  : off.modality === 'TRADITIONAL_BOOKING'
+                                    ? 'Solicitar reserva'
+                                    : 'Quero aproveitar'}
+                              </span>
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </article>
@@ -1187,6 +1043,22 @@ export function ClubView({
             </div>
           )}
         </div>
+      )}
+
+      {selectedOfferingForActivation && (
+        <BenefitActivationModal
+          offering={selectedOfferingForActivation}
+          restaurant={
+            experiences.find((e) => e.id === selectedOfferingForActivation.restaurant_id) || null
+          }
+          onClose={() => setSelectedOfferingForActivation(null)}
+          onActivated={(newRes) => {
+            setSelectedOfferingForActivation(null);
+            setOfferings(getPartnerOfferings());
+            setSavingsTick((n) => n + 1);
+            onReservationCreated?.(newRes);
+          }}
+        />
       )}
     </div>
   );

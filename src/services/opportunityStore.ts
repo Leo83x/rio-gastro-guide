@@ -292,6 +292,22 @@ function writeJson<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+export function formatOfferingSchedule(serviceDate?: string, timeSlot?: string): string {
+  if (!serviceDate) return timeSlot ? `às ${timeSlot}` : 'Hoje';
+  const today = getTodayIsoDate();
+  const [y, m, d] = serviceDate.split('-').map(Number);
+  const [ty, tm, td] = today.split('-').map(Number);
+  const offerD = new Date(y, m - 1, d);
+  const todayD = new Date(ty, tm - 1, td);
+  const diffDays = Math.round((offerD.getTime() - todayD.getTime()) / (86400 * 1000));
+
+  let dayLabel = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
+  if (diffDays === 0) dayLabel = 'Hoje';
+  else if (diffDays === 1) dayLabel = 'Amanhã';
+
+  return timeSlot ? `${dayLabel} · até ${timeSlot}` : dayLabel;
+}
+
 export function getPartnerOfferings(filters?: {
   restaurantId?: string;
   modality?: CommercialModality | 'ALL';
@@ -302,15 +318,39 @@ export function getPartnerOfferings(filters?: {
     list = buildStarterOfferings();
     writeJson(KEYS.OFFERINGS, list);
   } else {
-    // Enriquecimento automático de fotos e textos apetitosos para itens existentes
+    // Auditoria e enriquecimento automático: nenhuma oferta do sistema pode ter data no passado
+    const today = getTodayIsoDate();
+    const nowIso = new Date().toISOString();
     let updated = false;
+
     list = list.map((item) => {
+      let itemChanged = false;
+      let targetDate = item.service_date;
+
+      // Se a data estiver vencida (< today), rola para a data de hoje para manter ativa e consistente
+      if (!targetDate || targetDate < today) {
+        targetDate = today;
+        itemChanged = true;
+      }
+
       const enrichment = STARTER_ENRICHMENT_MAP[item.id];
-      if (enrichment && (!item.image_url || item.benefit_summary.includes('Mesa confirmada') || item.benefit_summary.includes('condição diferenciada'))) {
+      if (
+        enrichment &&
+        (!item.image_url ||
+          item.benefit_summary.includes('Mesa confirmada') ||
+          item.benefit_summary.includes('condição diferenciada'))
+      ) {
+        itemChanged = true;
+      }
+
+      if (itemChanged) {
         updated = true;
         return {
           ...item,
-          ...enrichment,
+          ...(enrichment || {}),
+          service_date: targetDate,
+          starts_at: item.starts_at && item.starts_at >= nowIso ? item.starts_at : nowIso,
+          ends_at: getFutureIso(72),
         };
       }
       return item;
