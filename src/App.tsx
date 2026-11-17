@@ -28,6 +28,7 @@ import { RestaurantDetailModal } from './components/RestaurantDetailModal';
 import { LandingPage } from './pages/LandingPage';
 import { PartnerDashboard } from './pages/PartnerDashboard';
 import { PartnersLandingPage } from './pages/PartnersLandingPage';
+import { PitchDeckPage } from './pages/PitchDeckPage';
 import { getUserProfileIdentity, subscribeToAuthChanges, syncSupabaseSessionIdentity } from './services/authService';
 import {
   getTrustConnections,
@@ -670,6 +671,17 @@ export function App() {
           setPointsBalance(getPointsBalance());
           setNotifications(getNotifications());
         }}
+      />
+    );
+  }
+
+  // 4. Pitch Deck Executivo (/pitch, /deck, /investidores)
+  if (route === '/pitch') {
+    return (
+      <PitchDeckPage
+        isDark={isDark}
+        onToggleTheme={() => setIsDark((prev) => !prev)}
+        onNavigate={navigate}
       />
     );
   }

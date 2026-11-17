@@ -432,6 +432,38 @@ export function PartnersLandingPage({
           </button>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-[var(--border-hairline)] bg-[var(--bg-surface)] py-6 text-xs text-[var(--text-secondary)]">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div>© 2026 BoraRio Partners · Plataforma B2B de Experiências Cariocas</div>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => onNavigate('/pitch')}
+              className="text-emerald-500 font-semibold hover:text-emerald-400"
+            >
+              Deck de Investidores Familiares
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => onNavigate('/')}
+              className="hover:text-[var(--text-primary)]"
+            >
+              Página Principal
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => onNavigate('/app')}
+              className="hover:text-[var(--text-primary)]"
+            >
+              Superapp
+            </button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

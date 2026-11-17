@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type AppRoute = '/' | '/app' | '/parceiros' | '/parceiros/painel' | '/admin';
+export type AppRoute = '/' | '/app' | '/parceiros' | '/parceiros/painel' | '/admin' | '/pitch';
 
 export function normalizeRoute(pathname: string): AppRoute {
   const clean = pathname.replace(/\/+$/, '') || '/';
@@ -8,6 +8,7 @@ export function normalizeRoute(pathname: string): AppRoute {
   if (clean === '/parceiros') return '/parceiros';
   if (clean === '/parceiros/painel') return '/parceiros/painel';
   if (clean === '/admin') return '/admin';
+  if (clean === '/pitch' || clean === '/deck' || clean === '/investidores') return '/pitch';
   return '/';
 }
 

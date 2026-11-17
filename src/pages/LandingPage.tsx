@@ -861,6 +861,11 @@ export function LandingPage({
                 </button>
               </li>
               <li>
+                <button type="button" onClick={() => onNavigate('/pitch')} className="text-emerald-500 font-semibold hover:text-emerald-400">
+                  Deck para Investidores Familiares
+                </button>
+              </li>
+              <li>
                 <button type="button" onClick={() => setLegalModal('privacy')} className="hover:text-[#FF6B35]">
                   Política de Privacidade (LGPD)
                 </button>
