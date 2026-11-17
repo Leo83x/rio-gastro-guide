@@ -2704,6 +2704,162 @@ export function PartnerDashboard({
                     </section>
                   </div>
                 </div>
+
+                {/* 3. RELATÓRIO DE AUDITORIA & UTILIZAÇÃO DE RECOMPENSAS */}
+                {loyaltyEconomics && (
+                  <section className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center border-b border-[var(--border-hairline)] pb-4">
+                      <div>
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                          <ShieldCheck className="h-4 w-4" />
+                          Auditoria de Resgates, Passivo &amp; Utilização
+                        </div>
+                        <h2 className="mt-1 font-sans text-lg font-bold text-[var(--text-primary)]">
+                          Relatório de Auditoria da Economia Rio Points
+                        </h2>
+                        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                          Auditoria do passivo de pontos, custo real das recompensas e velocidade de acúmulo da sua casa.
+                        </p>
+                      </div>
+                      <div className="inline-flex items-center gap-2 rounded-2xl bg-[#397B68]/15 border border-[#397B68]/30 px-3.5 py-1.5 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Auditoria Antifraude Ativa
+                      </div>
+                    </div>
+
+                    {/* 4 Blocos da Auditoria */}
+                    <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+                      {/* Velocidade de Acúmulo */}
+                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs">
+                        <span className="block text-[11px] font-bold uppercase text-[var(--text-secondary)]">
+                          Velocidade de Acúmulo
+                        </span>
+                        <p className="mt-1 font-sans text-xl font-black text-[#FF6B35]">
+                          +250 RP / visita
+                        </p>
+                        <p className="mt-1 text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                          Usuário acumula 1 recompensa (500 a 2.500 RP) a cada <strong>2 a 10 visitas</strong> individuais verificadas.
+                        </p>
+                      </div>
+
+                      {/* Custo Real Incorrido */}
+                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs">
+                        <span className="block text-[11px] font-bold uppercase text-[var(--text-secondary)]">
+                          Custo Real Absorvido
+                        </span>
+                        <p className="mt-1 font-sans text-xl font-black text-stone-800 dark:text-stone-200">
+                          R$ {loyaltyEconomics.total_estimated_cost_brl.toFixed(2)}
+                        </p>
+                        <p className="mt-1 text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                          CMV estimado de 30% sobre <strong>R$ {loyaltyEconomics.total_reference_value_brl.toFixed(2)}</strong> em valor de referência entregue.
+                        </p>
+                      </div>
+
+                      {/* Passivo & Regra de Expiração */}
+                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs">
+                        <span className="block text-[11px] font-bold uppercase text-[var(--text-secondary)]">
+                          Passivo &amp; Expiração
+                        </span>
+                        <p className="mt-1 font-sans text-xl font-black text-amber-600 dark:text-amber-400">
+                          12 Meses
+                        </p>
+                        <p className="mt-1 text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                          Expiração auditada a cada 12 meses. Pontos não utilizados presencialmente prescrevem, protegendo a rede.
+                        </p>
+                      </div>
+
+                      {/* Retorno Comercial Líquido */}
+                      <div className="rounded-2xl border border-[#397B68]/30 bg-[#397B68]/10 p-4 text-xs">
+                        <span className="block text-[11px] font-bold uppercase text-[#397B68] dark:text-[#4CA188]">
+                          Retorno Pós-Resgate
+                        </span>
+                        <p className="mt-1 font-sans text-xl font-black text-[#397B68] dark:text-[#4CA188]">
+                          {loyaltyEconomics.return_visits_post_redemption} visitas
+                        </p>
+                        <p className="mt-1 text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                          Clientes que retornaram à casa. Faturamento indireto: <strong>R$ {loyaltyEconomics.indirect_booking_revenue_brl.toFixed(2)}</strong> (0% comissão).
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Tabela Auditável de Vouchers Emitidos / Utilizados */}
+                    <div className="border-t border-[var(--border-hairline)] pt-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                          Extrato Auditável de Vouchers ({tenantVouchers.length})
+                        </h3>
+                        <span className="text-[11px] text-[var(--text-secondary)]">
+                          {loyaltyEconomics.vouchers_used_count} validados · {loyaltyEconomics.vouchers_issued_count - loyaltyEconomics.vouchers_used_count} pendentes · {loyaltyEconomics.vouchers_expired_count} expirados
+                        </span>
+                      </div>
+
+                      {tenantVouchers.length === 0 ? (
+                        <p className="mt-3 text-center text-xs text-[var(--text-secondary)] py-4">
+                          Nenhum voucher resgatado ou emitido para este estabelecimento até o momento.
+                        </p>
+                      ) : (
+                        <div className="mt-3 max-h-64 overflow-y-auto divide-y divide-[var(--border-hairline)] rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
+                          {tenantVouchers.map((v) => {
+                            const refPrice = v.snapshot_rules.reference_price_brl ?? Number((v.points_spent / 100).toFixed(2));
+                            const estCost = v.snapshot_rules.estimated_cost_brl ?? Number((refPrice * 0.3).toFixed(2));
+                            return (
+                              <div
+                                key={v.id}
+                                className="flex flex-wrap items-center justify-between gap-3 p-3 text-xs"
+                              >
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono font-black text-[#FF6B35]">
+                                      {v.voucher_code}
+                                    </span>
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                        v.status === 'USED'
+                                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                          : v.status === 'ISSUED'
+                                            ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300'
+                                            : 'bg-stone-500/15 text-stone-600 dark:text-stone-300'
+                                      }`}
+                                    >
+                                      {v.status}
+                                    </span>
+                                    <span className="text-[10px] text-[var(--text-secondary)]">
+                                      {new Date(v.issued_at).toLocaleDateString('pt-BR')}
+                                    </span>
+                                  </div>
+                                  <p className="font-bold text-[var(--text-primary)]">
+                                    {v.snapshot_rules.title} · <span className="font-normal text-[var(--text-secondary)]">{v.snapshot_rules.eligible_item}</span>
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-4 text-right">
+                                  <div>
+                                    <span className="block text-[10px] text-[var(--text-secondary)]">Pontos / Ref</span>
+                                    <span className="font-bold text-[var(--text-primary)]">
+                                      {v.points_spent} RP <span className="font-normal text-stone-500">(R$ {refPrice.toFixed(2)})</span>
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="block text-[10px] text-[var(--text-secondary)]">Custo Real Casa</span>
+                                    <span className="font-bold text-stone-700 dark:text-stone-300">
+                                      R$ {estCost.toFixed(2)}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="block text-[10px] text-[#397B68] dark:text-[#4CA188]">Comissão</span>
+                                    <span className="font-black text-[#397B68] dark:text-[#4CA188]">
+                                      R$ 0,00 (0%)
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                )}
               </div>
             )}
 
