@@ -69,6 +69,33 @@ export async function analyzeIntentUrl(
   const isInstagram = domain.includes('instagram.com') || domain.includes('instagr.am');
   const isTikTok = domain.includes('tiktok.com');
 
+  // Match inteligente: verifica se no texto original colado ou na URL consta o nome/slug/instagram de algum local do catálogo
+  const rawLower = (rawUrl || '').toLowerCase();
+  const urlLower = safeUrl.toLowerCase();
+  const matchedVenueFromContext = catalog.find((venue) => {
+    const vName = venue.name.toLowerCase().trim();
+    const vSlug = venue.slug.toLowerCase().trim();
+    const vInsta = (venue.instagram || '').replace(/^@/, '').toLowerCase().trim();
+    if (vName.length >= 4 && (rawLower.includes(vName) || urlLower.includes(vName))) return true;
+    if (vSlug.length >= 4 && (rawLower.includes(vSlug) || urlLower.includes(vSlug))) return true;
+    if (vInsta.length >= 3 && (rawLower.includes(vInsta) || urlLower.includes(vInsta))) return true;
+    return false;
+  });
+
+  if (matchedVenueFromContext) {
+    return {
+      processing_status: 'COMPLETED',
+      processing_message: `Local identificado com sucesso: ${matchedVenueFromContext.name} (${matchedVenueFromContext.neighborhood})! Suas vantagens do Bora Club estão ativadas.`,
+      suggested_title: matchedVenueFromContext.name,
+      suggested_neighborhood: matchedVenueFromContext.neighborhood,
+      suggested_category: matchedVenueFromContext.macro_category || 'Gastronomia',
+      suggested_venue_id: matchedVenueFromContext.id,
+      suggested_venue_name: matchedVenueFromContext.name,
+      suggested_notes: `Salvo via link (${safeUrl})`,
+      source_domain: domain,
+    };
+  }
+
   // Caso 1: Instagram
   if (isInstagram) {
     let candidateHandle: string | null = null;
@@ -96,13 +123,14 @@ export async function analyzeIntentUrl(
 
       if (matched) {
         return {
-          processing_status: 'NEEDS_CONFIRMATION',
+          processing_status: 'COMPLETED',
           processing_message: `Local identificado com sucesso: ${matched.name} (${matched.neighborhood})! Suas vantagens do Bora Club estão ativadas.`,
           suggested_title: matched.name,
           suggested_neighborhood: matched.neighborhood,
           suggested_category: matched.macro_category || 'Gastronomia',
           suggested_venue_id: matched.id,
           suggested_venue_name: matched.name,
+          suggested_notes: `Perfil @${candidateHandle} verificado no Instagram.`,
           source_domain: domain,
         };
       }
@@ -111,19 +139,21 @@ export async function analyzeIntentUrl(
         .replace(/[._-]+/g, ' ')
         .replace(/\b\w/g, (c) => c.toUpperCase());
       return {
-        processing_status: 'NEEDS_CONFIRMATION',
-        processing_message: `Perfil @${candidateHandle} detectado no Instagram! Vincule a um estabelecimento parceiro abaixo para garantir seus benefícios:`,
+        processing_status: 'COMPLETED',
+        processing_message: `Perfil @${candidateHandle} do Instagram capturado com sucesso! Dica: selecione o estabelecimento parceiro abaixo para ativar seus pontos:`,
         suggested_title: formattedTitle,
         suggested_category: 'Gastronomia',
+        suggested_notes: `Salvo a partir de @${candidateHandle} (${safeUrl})`,
         source_domain: domain,
       };
     }
 
     return {
-      processing_status: 'NEEDS_CONFIRMATION',
-      processing_message: 'Link do Instagram detectado! Selecione ou busque o restaurante carioca para ativar suas vantagens e pontos:',
-      suggested_title: 'Desejo do Instagram',
+      processing_status: 'COMPLETED',
+      processing_message: 'Link do Instagram capturado e pronto para salvar! Selecione ou busque o restaurante carioca abaixo para vincular seus pontos:',
+      suggested_title: 'Experiência no Instagram',
       suggested_category: 'Gastronomia',
+      suggested_notes: `Salvo via Instagram (${safeUrl})`,
       source_domain: domain,
     };
   }

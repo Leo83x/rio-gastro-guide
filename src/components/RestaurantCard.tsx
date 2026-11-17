@@ -221,7 +221,7 @@ export function RestaurantCard({
             <span className="truncate">{restaurant.address}</span>
           </div>
           <span className="shrink-0 font-bold text-[#FF6B35] group-hover:underline">
-            {activeOffering ? 'Ver benefício →' : 'Ver guia →'}
+            {activeOffering ? 'Quero aproveitar →' : 'Conhecer experiência →'}
           </span>
         </div>
       </div>

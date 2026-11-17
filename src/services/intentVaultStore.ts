@@ -14,11 +14,20 @@ export function sanitizeHttpUrl(raw?: string): string | null {
   if (!raw) return null;
   let trimmed = raw.trim();
   if (!trimmed) return null;
-  if (!/^https?:\/\//i.test(trimmed)) {
+
+  // Extrai URL mesmo se vier com texto ao redor (ex: compartilhamento do Instagram / WhatsApp)
+  const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/i);
+  if (urlMatch) {
+    trimmed = urlMatch[1];
+  } else if (!/^https?:\/\//i.test(trimmed)) {
     if (trimmed.includes('.') || trimmed.startsWith('localhost')) {
       trimmed = `https://${trimmed}`;
     }
   }
+
+  // Remove pontuação acidental anexada ao final por apps de mensagens (ex: .,!?)
+  trimmed = trimmed.replace(/[.,!?)]+$/, '');
+
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {

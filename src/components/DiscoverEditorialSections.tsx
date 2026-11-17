@@ -405,7 +405,13 @@ export function DiscoverEditorialSections({
                       type="button"
                       className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-extrabold text-white shadow-md hover:brightness-110 active:scale-95 transition"
                     >
-                      <span>Reservar</span>
+                      <span>
+                        {isDemand
+                          ? 'Quero participar'
+                          : off.modality === 'TRADITIONAL_BOOKING'
+                            ? 'Solicitar reserva'
+                            : 'Quero aproveitar'}
+                      </span>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   </div>

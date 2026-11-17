@@ -1067,21 +1067,43 @@ export function PartnerDashboard({
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-3 shrink-0">
+                <div className="flex flex-wrap gap-2.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
                       setActiveTab('offers');
                       setOpFeedback(null);
                     }}
-                    className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                    className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
                       hasCondition1Configured
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                         : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]'
                     }`}
                   >
-                    <Gift className="h-4 w-4" />
-                    {hasCondition1Configured ? 'Ofertas Ativas' : '+ Nova Oferta'}
+                    <Gift className="h-4 w-4 text-[#FF6B35]" />
+                    {hasCondition1Configured ? 'Ofertas Ativas' : '+ Nova Oferta com Foto'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('profile');
+                      setOpFeedback(null);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                  >
+                    <ImagePlus className="h-4 w-4 text-[#0077B6]" />
+                    Fotos &amp; Galeria ({gallery.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('checkin');
+                      setOpFeedback(null);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                  >
+                    <QrCode className="h-4 w-4 text-[#397B68]" />
+                    QR Code do Balcão
                   </button>
                   <button
                     type="button"
@@ -1089,7 +1111,7 @@ export function PartnerDashboard({
                       setActiveTab('rewards');
                       setOpFeedback(null);
                     }}
-                    className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+                    className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
                       hasCondition2Configured
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                         : 'border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20'
@@ -1103,7 +1125,7 @@ export function PartnerDashboard({
             </section>
 
             {/* Operational Tabs */}
-            <nav className="flex flex-wrap gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2.5">
+            <nav className="flex flex-wrap gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2">
               {[
                 {
                   id: 'traditional' as const,
@@ -1112,12 +1134,12 @@ export function PartnerDashboard({
                 },
                 {
                   id: 'offers' as const,
-                  label: `Ofertas & Mesas (${individualAndLastMinute.length})`,
+                  label: `Ofertas no Clube (${individualAndLastMinute.length})`,
                   icon: Gift,
                 },
                 {
                   id: 'demand' as const,
-                  label: `Mesas por Demanda (${demandOfferings.length})`,
+                  label: `Mesas Coletivas (${demandOfferings.length})`,
                   icon: Users,
                 },
                 {
@@ -1132,7 +1154,7 @@ export function PartnerDashboard({
                 },
                 {
                   id: 'checkin' as const,
-                  label: `Check-in & QR (${tenantContingencies.length})`,
+                  label: `Validação & QR (${tenantContingencies.length})`,
                   icon: QrCode,
                 },
                 {
@@ -1142,7 +1164,7 @@ export function PartnerDashboard({
                 },
                 {
                   id: 'profile' as const,
-                  label: 'Dados & Fotos',
+                  label: `Fotos & Perfil`,
                   icon: Building2,
                 },
               ].map((tab) => {
@@ -1156,7 +1178,7 @@ export function PartnerDashboard({
                       setActiveTab(tab.id);
                       setOpFeedback(null);
                     }}
-                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition sm:text-sm ${
                       active
                         ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-canvas)] hover:text-[var(--text-primary)]'
@@ -2779,6 +2801,31 @@ export function PartnerDashboard({
             {/* TAB 5: CHECK-IN DINÂMICO, CONTINGÊNCIA & PÓS-CONSUMO */}
             {activeTab === 'checkin' && (
               <div className="space-y-6">
+                <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5">
+                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Geração de QR Code e Validação Prontas
+                      </div>
+                      <h2 className="mt-2 text-lg font-bold text-[var(--text-primary)]">
+                        Validação de Presença e Check-in no Balcão
+                      </h2>
+                      <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                        Exiba o QR Code abaixo no balcão para os clientes escanearem pelo app BoraRio, ou digite o PIN de 6 dígitos para validar instantaneamente.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowQrTotemModal(true)}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-md hover:opacity-95"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                      Abrir QR em Tela Cheia (Totem)
+                    </button>
+                  </div>
+                </div>
+
                 <div className="grid gap-6 lg:grid-cols-2">
                   {/* Dynamic Rotating QR Issuer */}
                   <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
@@ -2787,7 +2834,7 @@ export function PartnerDashboard({
                       Emissor de QR Dinâmico Temporário (Balcão)
                     </div>
                     <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                      Gera código <code className="font-mono">BR-QR-...</code> com expiração rápida e PIN de 6 dígitos exclusivo para <strong>{activeTenant.name}</strong>. Bloqueia reutilização e validação unilateral.
+                      Gera código <code className="font-mono">BR-QR-...</code> com expiração rápida e PIN de 6 dígitos exclusivo para <strong>{activeTenant.name}</strong>.
                     </p>
 
                     <div className="mt-4 grid grid-cols-2 gap-3 text-xs">

@@ -236,6 +236,7 @@ export function RestaurantDetailModal({
                   type="button"
                   onClick={() => onShareToConfia(restaurant)}
                   className="inline-flex items-center gap-2 rounded-xl border border-[#397B68]/40 bg-[#397B68]/10 px-4 py-2.5 text-xs font-semibold text-[#397B68] transition-colors hover:bg-[#397B68] hover:text-white sm:text-sm"
+                  title="Compartilhar link oficial deste local no WhatsApp"
                 >
                   <HeartHandshake className="h-4 w-4" />
                   Indicar a Amigos

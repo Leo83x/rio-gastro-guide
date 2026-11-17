@@ -767,8 +767,10 @@ export function ClubView({
                                   className="flex-1 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2 text-xs font-bold text-white shadow-sm hover:brightness-110 transition"
                                 >
                                   {isDemand
-                                    ? 'Registrar Manifestação Individual'
-                                    : 'Enviar Solicitação de Reserva'}
+                                    ? 'Confirmar: Quero participar'
+                                    : off.modality === 'TRADITIONAL_BOOKING'
+                                      ? 'Solicitar reserva'
+                                      : 'Confirmar: Quero aproveitar'}
                                 </button>
                                 <button
                                   type="button"
@@ -793,8 +795,10 @@ export function ClubView({
                                 {unavailable
                                   ? 'Indisponível nesta janela'
                                   : isDemand
-                                    ? 'Manifestar Interesse no Destrave'
-                                    : 'Reservar Mesa com Vantagem'}
+                                    ? 'Quero participar'
+                                    : off.modality === 'TRADITIONAL_BOOKING'
+                                      ? 'Solicitar reserva'
+                                      : 'Quero aproveitar'}
                               </button>
                               <button
                                 type="button"
@@ -1173,7 +1177,7 @@ export function ClubView({
                             ? 'Pausada'
                             : 'Esgotada'
                           : canAfford
-                            ? `Resgatar (${rew.points_cost} RP)`
+                            ? `Ativar benefício (${rew.points_cost} RP)`
                             : `Faltam ${rew.points_cost - walletSummary.available_balance} RP`}
                       </button>
                     </div>

@@ -5,6 +5,7 @@ import {
   Link2,
   Loader2,
   Lock,
+  Search,
   Sparkles,
   StickyNote,
   Upload,
@@ -77,6 +78,7 @@ export function IntentCaptureModal({
   );
   const [momentTag, setMomentTag] = useState<MomentMode>('all');
   const [linkedVenueId, setLinkedVenueId] = useState(initialVenue?.id || '');
+  const [venueSearchQuery, setVenueSearchQuery] = useState('');
   const [notes, setNotes] = useState('');
 
   const [processingStatus, setProcessingStatus] = useState<IntentProcessingStatus>(
@@ -131,11 +133,11 @@ export function IntentCaptureModal({
     setProcessingStatus(res.processing_status);
     setProcessingMsg(res.processing_message);
 
-    if (res.suggested_title && !title) setTitle(res.suggested_title);
-    if (res.suggested_neighborhood && !neighborhood) setNeighborhood(res.suggested_neighborhood);
+    if (res.suggested_title) setTitle(res.suggested_title);
+    if (res.suggested_neighborhood) setNeighborhood(res.suggested_neighborhood);
     if (res.suggested_category) setCategoryTag(res.suggested_category);
     if (res.suggested_venue_id) setLinkedVenueId(res.suggested_venue_id);
-    if (res.suggested_notes && !notes) setNotes(res.suggested_notes);
+    if (res.suggested_notes) setNotes(res.suggested_notes);
 
     setIsAnalyzing(false);
   };
@@ -173,9 +175,11 @@ export function IntentCaptureModal({
     setLinkedVenueId(venueId);
     const found = catalog.find((v) => v.id === venueId);
     if (found) {
-      if (!title.trim()) setTitle(found.name);
+      setTitle(found.name);
       setNeighborhood(found.neighborhood);
       setCategoryTag(found.macro_category || 'Gastronomia');
+      setProcessingStatus('COMPLETED');
+      setProcessingMsg(`Vinculado a ${found.name}! Vantagens do Bora Club ativadas.`);
     }
   };
 
@@ -499,18 +503,94 @@ export function IntentCaptureModal({
               <label className="mb-1 block text-xs font-bold text-[var(--text-primary)]">
                 Vincular a local do catálogo BoraRio (opcional)
               </label>
-              <select
-                value={linkedVenueId}
-                onChange={(e) => handleVenuePick(e.target.value)}
-                className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-xs text-[var(--text-primary)]"
-              >
-                <option value="">Sem vínculo específico por enquanto</option>
-                {catalog.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} — {v.neighborhood} ({v.category})
-                  </option>
-                ))}
-              </select>
+
+              {linkedVenueId ? (
+                (() => {
+                  const linkedVenue = catalog.find((v) => v.id === linkedVenueId);
+                  return (
+                    <div className="flex items-center justify-between rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="font-bold text-xs text-[var(--text-primary)]">
+                            {linkedVenue?.name || 'Local selecionado'}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                          {linkedVenue?.neighborhood} · {linkedVenue?.category} · Vantagens do Bora Club ativadas
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLinkedVenueId('');
+                          setProcessingStatus('NEEDS_CONFIRMATION');
+                          setProcessingMsg('');
+                        }}
+                        className="rounded-lg bg-black/5 dark:bg-white/10 px-2.5 py-1 text-xs font-semibold hover:opacity-80"
+                      >
+                        Trocar local
+                      </button>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+                    <input
+                      type="text"
+                      value={venueSearchQuery}
+                      onChange={(e) => setVenueSearchQuery(e.target.value)}
+                      placeholder="Buscar restaurante no Rio (ex: Bráz, CT Boucherie, Gero, Sat's...)"
+                      className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] pl-9 pr-3.5 py-2 text-xs text-[var(--text-primary)] focus:border-[#FF6B35] focus:outline-none"
+                    />
+                  </div>
+
+                  {venueSearchQuery.trim().length >= 2 && (
+                    <div className="max-h-48 overflow-y-auto rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-1 shadow-md">
+                      {catalog
+                        .filter(
+                          (v) =>
+                            v.name.toLowerCase().includes(venueSearchQuery.toLowerCase()) ||
+                            v.neighborhood.toLowerCase().includes(venueSearchQuery.toLowerCase()) ||
+                            (v.category && v.category.toLowerCase().includes(venueSearchQuery.toLowerCase()))
+                        )
+                        .slice(0, 6)
+                        .map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              handleVenuePick(v.id);
+                              setVenueSearchQuery('');
+                            }}
+                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition hover:bg-[var(--bg-canvas)]"
+                          >
+                            <div>
+                              <span className="font-bold text-[var(--text-primary)]">{v.name}</span>
+                              <span className="ml-1.5 text-xs text-[var(--text-secondary)]">· {v.neighborhood}</span>
+                            </div>
+                            <span className="text-xs font-semibold text-[#FF6B35]">+ Vincular</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+
+                  <select
+                    value={linkedVenueId}
+                    onChange={(e) => handleVenuePick(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs text-[var(--text-secondary)]"
+                  >
+                    <option value="">Ou selecione da lista completa...</option>
+                    {catalog.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} — {v.neighborhood} ({v.category})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div>

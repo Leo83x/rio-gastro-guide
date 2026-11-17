@@ -36,7 +36,7 @@ import { calculateMatchScore, getMatchReasonLabel } from './services/matchServic
 import { getAllNightlifeEvents } from './services/nightlife/nightlifeStore';
 import { usePwaStatus } from './services/pwa';
 import { useAppRoute } from './services/router';
-import { captureReferralCodeFromUrl } from './services/referralStore';
+import { captureReferralCodeFromUrl, getMyReferralCode } from './services/referralStore';
 import {
   getNotifications,
   getPointsBalance,
@@ -128,9 +128,15 @@ export function App() {
   // Garante que qualquer troca de aba ou rota inicie sempre no topo da página
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
+      const resetScroll = () => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      };
+      resetScroll();
+      requestAnimationFrame(resetScroll);
+      const timer = setTimeout(resetScroll, 50);
+      return () => clearTimeout(timer);
     }
   }, [activeTab, route]);
 
@@ -221,6 +227,18 @@ export function App() {
       setRestaurants(rests);
       setClaims(claimList);
       setNightlifeEvents(nlEvents);
+
+      // Deep link para abrir automaticamente o estabelecimento compartilhado (?venue=ID ou SLUG)
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const venueParam = params.get('venue');
+        if (venueParam) {
+          const found = rests.find((r) => r.id === venueParam || r.slug === venueParam);
+          if (found) {
+            setSelectedRestaurant(found);
+          }
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -510,7 +528,10 @@ export function App() {
 
   const handleShareVenueToConfia = (venue: Restaurant) => {
     setSelectedRestaurant(null);
-    const text = `Olha esse lugar no BoraRio: *${venue.name}* em ${venue.neighborhood}! Bora combinar de ir?`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://borario.app';
+    const myCode = getMyReferralCode();
+    const venueLink = `${origin}/app?venue=${venue.id}&ref=${myCode}`;
+    const text = `Olha esse lugar no BoraRio: *${venue.name}* (${venue.neighborhood})!\nConfira as vantagens exclusivas e venha comigo:\n${venueLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 

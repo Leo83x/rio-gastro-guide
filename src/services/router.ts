@@ -18,7 +18,9 @@ export function navigateTo(route: AppRoute) {
     window.history.pushState({}, '', route);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 }
 
 export function useAppRoute(): [AppRoute, (route: AppRoute) => void] {
@@ -29,6 +31,9 @@ export function useAppRoute(): [AppRoute, (route: AppRoute) => void] {
   useEffect(() => {
     const onPopState = () => {
       setRoute(normalizeRoute(window.location.pathname));
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
