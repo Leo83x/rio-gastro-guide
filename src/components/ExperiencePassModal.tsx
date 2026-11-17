@@ -59,6 +59,7 @@ export function ExperiencePassModal({
   const offeringTitle =
     currentRes.offering_title || currentRes.snapshot_terms?.title || 'Experiência Bora Club';
 
+  const totalGuests = Math.max(1, currentRes.guests || 1);
   const scheduleLabel = formatOfferingSchedule(currentRes.date, currentRes.time);
 
   const rideCoords = {
@@ -393,6 +394,56 @@ export function ExperiencePassModal({
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-800 dark:text-emerald-200">
               <p className="font-bold text-sm">✅ Benefício utilizado com sucesso!</p>
               <p className="mt-0.5">Sua visita foi registrada e os 50 Rio Points foram creditados em seu saldo.</p>
+            </div>
+          )}
+
+          {/* 4. SEU GRUPO & VALIDAÇÃO INDIVIDUAL */}
+          {totalGuests > 1 && (
+            <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-[#FF6B35]" />
+                  Seu grupo ({isCheckedIn ? 1 : 0} de {totalGuests} confirmados)
+                </span>
+                <span className="text-[10px] font-bold uppercase rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 px-2.5 py-0.5">
+                  Check-in individual
+                </span>
+              </div>
+
+              <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                <strong>Cada pessoa valida sua própria visita.</strong> Para todos receberem seus 50 Rio Points e registrarem o carimbo no Passaporte BoraRio, cada participante deve abrir o app e validar a presença no balcão.
+              </p>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-xs border border-[var(--border-hairline)]">
+                  <span className="font-semibold text-[var(--text-primary)]">Você (Titular)</span>
+                  {isCheckedIn ? (
+                    <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Validado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-semibold text-amber-500">
+                      <Clock className="h-3.5 w-3.5" /> Aguardando check-in
+                    </span>
+                  )}
+                </div>
+
+                {Array.from({ length: totalGuests - 1 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-xs border border-[var(--border-hairline)]"
+                  >
+                    <span className="text-[var(--text-secondary)]">Participante {idx + 2}</span>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--text-tertiary)]">
+                      <Clock className="h-3 w-3" /> Aguardando no app
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-xl bg-sky-500/10 border border-sky-500/20 p-2.5 text-[11px] text-sky-950 dark:text-sky-200">
+                💡 <em>Por que cada um deve fazer o check-in?</em> Assim, cada pessoa recebe seus próprios pontos e registra sua visita no Passaporte BoraRio.
+              </div>
             </div>
           )}
 

@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  CreditCard,
   Edit3,
   Eye,
+  FileText,
   Gift,
   History,
   ImagePlus,
@@ -33,6 +35,7 @@ import {
   Sun,
   Ticket,
   Trash2,
+  TrendingUp,
   Upload,
   Users,
   X,
@@ -57,6 +60,8 @@ import {
   disputePartnerFeeEntry,
   getPartnerCommercialPlan,
   getPartnerFeeLedger,
+  getPartnerMonthlyInvoices,
+  payPartnerInvoice,
   savePartnerCommercialPlan,
 } from '../services/partnerCommercialStore';
 import {
@@ -96,6 +101,7 @@ import {
 import type {
   PartnerBillingModel,
   PartnerCommercialPlan,
+  PartnerMonthlyInvoice,
 } from '../types/partnerCommercial';
 import type { Restaurant } from '../types/restaurant';
 import type { PartnerReward, RewardSegment, RewardType } from '../types/rewards';
@@ -332,6 +338,11 @@ export function PartnerDashboard({
   } | null>(null);
   const [disputeTargetId, setDisputeTargetId] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState('');
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] =
+    useState<PartnerMonthlyInvoice | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO'>('PIX');
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentFeedback, setPaymentFeedback] = useState<string | null>(null);
 
   const bumpStore = (syncReservations = false) => {
     setStoreVersion((v) => v + 1);
@@ -457,6 +468,11 @@ export function PartnerDashboard({
 
   const tenantFeeLedger =
     activeTenant && storeVersion >= 0 ? getPartnerFeeLedger(activeTenant.id) : [];
+
+  const tenantInvoices = useMemo(() => {
+    if (!activeTenant || storeVersion < 0) return [];
+    return getPartnerMonthlyInvoices(activeTenant.id);
+  }, [activeTenant, storeVersion]);
 
   // Handlers
   const handleSubmitPartnerNightlife = async (e: FormEvent) => {
@@ -908,6 +924,23 @@ export function PartnerDashboard({
       msg: 'Contestação registrada na auditoria de remuneração do BoraRio.',
     });
     bumpStore();
+  };
+
+  const handlePayInvoice = (invoiceId: string) => {
+    if (!activeTenant) return;
+    setPaymentProcessing(true);
+    setTimeout(() => {
+      const res = payPartnerInvoice(activeTenant.id, invoiceId, paymentMethod);
+      setPaymentProcessing(false);
+      if (res.ok) {
+        setPaymentFeedback(res.message);
+        bumpStore();
+        setTimeout(() => {
+          setSelectedInvoiceForPayment(null);
+          setPaymentFeedback(null);
+        }, 2200);
+      }
+    }, 800);
   };
 
   const copyText = (txt: string) => {
@@ -3183,9 +3216,267 @@ export function PartnerDashboard({
               </div>
             )}
 
-            {/* TAB 5: FINANCEIRO & REMUNERAÇÃO AUDITÁVEL */}
+            {/* TAB 5: FINANCEIRO & REMUNERAÇÃO AUDITÁVEL (POR CHECK-IN INDIVIDUAL) */}
             {activeTab === 'billing' && currentPlan && (
               <div className="space-y-6">
+                {/* 1. Header do Financeiro com Fechamento Mensal Consolidado */}
+                {(() => {
+                  const currentInvoice =
+                    tenantInvoices.find((i) => i.status === 'OPEN') || tenantInvoices[0];
+                  const isPromo = Boolean(currentPlan.launch_promo_active);
+                  const effectiveFee = isPromo
+                    ? currentPlan.launch_promo_fee_per_guest_brl || 5.0
+                    : currentPlan.fixed_fee_per_guest_brl || 10.0;
+                  const displayCheckinsCount =
+                    totalGuestsBilled > 0
+                      ? totalGuestsBilled
+                      : currentInvoice?.total_attended_guests || 50;
+                  const displayTotalBrl =
+                    accruedBrl > 0
+                      ? accruedBrl
+                      : currentInvoice?.total_brl || displayCheckinsCount * effectiveFee;
+
+                  return (
+                    <div className="overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-gradient-to-br from-[#0A1828] via-[#0E2439] to-[#0A1828] text-white p-6 sm:p-8 shadow-xl">
+                      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-2">
+                          <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold text-amber-300">
+                            <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                            Financeiro BoraRio · Fechamento Mensal
+                          </div>
+
+                          <h2 className="font-sans text-3xl font-extrabold sm:text-4xl text-white">
+                            R$ {displayTotalBrl.toFixed(2).replace('.', ',')}
+                          </h2>
+
+                          <p className="text-sm text-stone-300 flex flex-wrap items-center gap-2">
+                            <span>
+                              <strong>{displayCheckinsCount} check-ins individuais validados</strong> × R${' '}
+                              {effectiveFee.toFixed(2).replace('.', ',')}
+                            </span>
+                            <span className="hidden sm:inline">·</span>
+                            <span className="text-amber-400 font-semibold">
+                              {currentInvoice?.period_label || 'Mês de Lançamento'}
+                            </span>
+                          </p>
+
+                          <div className="pt-1 flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-3 py-0.5 text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Fatura em Aberto (Vence em 05/12/2026)
+                            </span>
+
+                            {isPromo && (
+                              <span className="rounded-full bg-[#FF6B35]/20 border border-[#FF6B35]/40 px-3 py-0.5 text-xs font-bold text-[#FFB347]">
+                                🚀 Condição de Lançamento: 50% OFF (R$ 5,00/pessoa)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Ações de Liquidação */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                          {currentInvoice && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedInvoiceForPayment(currentInvoice);
+                                setPaymentFeedback(null);
+                              }}
+                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#FF4B2B]/25 hover:brightness-110 active:scale-95 transition"
+                            >
+                              <CreditCard className="h-4 w-4" />
+                              Pagar Fatura com PIX ou Boleto
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 4 Garantias do Modelo de Cobrança BoraRio */}
+                      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border-t border-white/10 pt-6">
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                            Zero Intermediação
+                          </span>
+                          <p className="mt-1 text-xs font-bold text-white">Pagamento 100% no seu caixa</p>
+                          <p className="text-[10px] text-stone-300">Cliente consome e paga direto na sua maquininha.</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                            Zero No-Show
+                          </span>
+                          <p className="mt-1 text-xs font-bold text-white">Sem cobrança se não comparecer</p>
+                          <p className="text-[10px] text-stone-300">Reserva cancelada ou no-show = R$ 0,00.</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400">
+                            Por Pessoa Validada
+                          </span>
+                          <p className="mt-1 text-xs font-bold text-white">Check-in individual por app</p>
+                          <p className="text-[10px] text-stone-300">Acompanhante só conta se validar seu próprio QR.</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                            Fidelidade Grátis
+                          </span>
+                          <p className="mt-1 text-xs font-bold text-white">Comissão zero em resgates</p>
+                          <p className="text-[10px] text-stone-300">Resgates de Rio Points não geram taxa ao parceiro.</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 2. Simulador de Retorno & Retorno sobre o Investimento (ROI) */}
+                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border-hairline)] pb-4">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <TrendingUp className="h-4 w-4" />
+                        Impacto Comercial na Casa
+                      </span>
+                      <h3 className="mt-1 font-sans text-lg font-bold text-[var(--text-primary)]">
+                        Retorno do Investimento (ROI)
+                      </h3>
+                    </div>
+                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      Custo de Aquisição (CAC): ~5,5% do consumo
+                    </span>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
+                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                        Visitantes Trazidos
+                      </span>
+                      <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                        {totalGuestsBilled > 0 ? totalGuestsBilled : 50}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-tertiary)]">Presenças validadas</p>
+                    </div>
+
+                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
+                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                        Ticket Médio Estimado
+                      </span>
+                      <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">R$ 90,00</p>
+                      <p className="text-[10px] text-[var(--text-tertiary)]">Gasto por cliente no local</p>
+                    </div>
+
+                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
+                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                        Faturamento na Casa
+                      </span>
+                      <p className="mt-1 text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                        R${' '}
+                        {((totalGuestsBilled > 0 ? totalGuestsBilled : 50) * 90)
+                          .toFixed(2)
+                          .replace('.', ',')}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-tertiary)]">100% recebido no caixa</p>
+                    </div>
+
+                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
+                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                        Retorno Médio
+                      </span>
+                      <p className="mt-1 text-2xl font-black text-[#FF6B35]">18x</p>
+                      <p className="text-[10px] text-[var(--text-tertiary)]">Retorno sobre taxa BoraRio</p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 3. Faturas Mensais Consolidadas */}
+                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
+                  <div className="flex items-center justify-between border-b border-[var(--border-hairline)] pb-4">
+                    <div>
+                      <h3 className="font-sans text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-[#FF6B35]" />
+                        Faturas Mensais
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Demonstrativos consolidados mês a mês para conferência contábil e fiscal.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 divide-y divide-[var(--border-hairline)]">
+                    {tenantInvoices.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-[var(--text-primary)]">
+                              {inv.period_label}
+                            </span>
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                                inv.status === 'PAID'
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                              }`}
+                            >
+                              {inv.status === 'PAID' ? 'Paga ✅' : 'Em Aberto ⏳'}
+                            </span>
+                            {inv.is_launch_promo && (
+                              <span className="rounded-full bg-[#FF6B35]/15 text-[#FF6B35] px-2 py-0.5 text-[10px] font-bold">
+                                50% OFF Lançamento
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            {inv.valid_checkins_count} check-ins válidos ({inv.total_attended_guests} pessoas)
+                            · Vencimento: {new Date(inv.due_date).toLocaleDateString('pt-BR')}
+                            {inv.paid_at && (
+                              <span>
+                                {' '}
+                                · Liquidada via {inv.payment_method || 'PIX'} em{' '}
+                                {new Date(inv.paid_at).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-bold text-base text-[var(--text-primary)]">
+                              R$ {inv.total_brl.toFixed(2).replace('.', ',')}
+                            </p>
+                            {inv.discount_brl > 0 && (
+                              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold line-through">
+                                De R$ {inv.subtotal_brl.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+
+                          {inv.status === 'OPEN' ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedInvoiceForPayment(inv);
+                                setPaymentFeedback(null);
+                              }}
+                              className="rounded-xl bg-[#123B56] hover:bg-[#102F46] px-4 py-2 text-xs font-bold text-white transition"
+                            >
+                              Pagar Fatura
+                            </button>
+                          ) : (
+                            <span className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 text-xs font-bold text-[var(--text-secondary)]">
+                              Comprovante Emitido
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
                 <div className="grid gap-6 lg:grid-cols-3">
                   <form
                     onSubmit={handleSavePlan}
@@ -3500,6 +3791,158 @@ export function PartnerDashboard({
                       {loyaltyEconomics.attribution_disclaimer}
                     </p>
                   </section>
+                )}
+
+                {/* MODAL DE PAGAMENTO DA FATURA (PIX & BOLETO) */}
+                {selectedInvoiceForPayment && (
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+                    onClick={() => setSelectedInvoiceForPayment(null)}
+                  >
+                    <div
+                      className="relative w-full max-w-md rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-2xl space-y-5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-between border-b border-[var(--border-hairline)] pb-4">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF6B35]">
+                            Liquidação de Fatura
+                          </span>
+                          <h4 className="text-lg font-bold text-[var(--text-primary)]">
+                            {selectedInvoiceForPayment.period_label}
+                          </h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedInvoiceForPayment(null)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Total */}
+                      <div className="rounded-2xl bg-[var(--bg-canvas)] p-4 text-center">
+                        <span className="text-xs text-[var(--text-secondary)]">Valor Total da Fatura</span>
+                        <p className="text-3xl font-black text-[var(--text-primary)] mt-0.5">
+                          R$ {selectedInvoiceForPayment.total_brl.toFixed(2).replace('.', ',')}
+                        </p>
+                        <p className="text-[11px] text-[var(--text-tertiary)] mt-1">
+                          {selectedInvoiceForPayment.valid_checkins_count} check-ins individuais validados
+                        </p>
+                      </div>
+
+                      {/* Seletor PIX vs Boleto */}
+                      <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)]">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('PIX')}
+                          className={`py-2 text-xs font-bold rounded-xl transition ${
+                            paymentMethod === 'PIX'
+                              ? 'bg-[#123B56] text-white shadow-xs'
+                              : 'text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          ⚡ PIX Instantâneo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('BOLETO')}
+                          className={`py-2 text-xs font-bold rounded-xl transition ${
+                            paymentMethod === 'BOLETO'
+                              ? 'bg-[#123B56] text-white shadow-xs'
+                              : 'text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          📄 Boleto Bancário
+                        </button>
+                      </div>
+
+                      {/* Conteúdo PIX */}
+                      {paymentMethod === 'PIX' && (
+                        <div className="space-y-3">
+                          <p className="text-xs text-[var(--text-secondary)] text-center">
+                            Copie a chave Pix abaixo ou pague pelo aplicativo do seu banco:
+                          </p>
+                          <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-canvas)] p-2.5 border border-[var(--border-hairline)]">
+                            <input
+                              type="text"
+                              readOnly
+                              value={selectedInvoiceForPayment.pix_copy_paste_key || 'borario-pix-chave'}
+                              className="w-full bg-transparent font-mono text-[11px] text-[var(--text-secondary)] outline-hidden truncate"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                copyText(
+                                  selectedInvoiceForPayment.pix_copy_paste_key || 'borario-pix-chave'
+                                )
+                              }
+                              className="shrink-0 rounded-lg bg-[#FF6B35] px-3 py-1.5 text-xs font-bold text-white"
+                            >
+                              Copiar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Conteúdo Boleto */}
+                      {paymentMethod === 'BOLETO' && (
+                        <div className="space-y-3">
+                          <p className="text-xs text-[var(--text-secondary)] text-center">
+                            Linha digitável do boleto para pagamento:
+                          </p>
+                          <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-canvas)] p-2.5 border border-[var(--border-hairline)]">
+                            <input
+                              type="text"
+                              readOnly
+                              value={
+                                selectedInvoiceForPayment.bank_slip_barcode ||
+                                '23793.38128 60000.123456 78000.987654 1 95400000025000'
+                              }
+                              className="w-full bg-transparent font-mono text-[11px] text-[var(--text-secondary)] outline-hidden truncate"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                copyText(
+                                  selectedInvoiceForPayment.bank_slip_barcode ||
+                                    '23793.38128 60000.123456 78000.987654 1 95400000025000'
+                                )
+                              }
+                              className="shrink-0 rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white"
+                            >
+                              Copiar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {paymentFeedback && (
+                        <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3 text-xs text-emerald-800 dark:text-emerald-300 font-bold text-center">
+                          {paymentFeedback}
+                        </div>
+                      )}
+
+                      {/* Botão de Confirmação */}
+                      <button
+                        type="button"
+                        disabled={paymentProcessing}
+                        onClick={() => handlePayInvoice(selectedInvoiceForPayment.id)}
+                        className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-[#397B68] py-3.5 text-sm font-bold text-white shadow-lg hover:brightness-105 active:scale-95 transition disabled:opacity-50"
+                      >
+                        {paymentProcessing ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <RefreshCw className="h-4 w-4 animate-spin" /> Processando baixa...
+                          </span>
+                        ) : (
+                          `Confirmar Pagamento (${paymentMethod === 'PIX' ? 'PIX Instantâneo' : 'Boleto'})`
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}

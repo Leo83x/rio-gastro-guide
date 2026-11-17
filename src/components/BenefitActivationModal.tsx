@@ -263,6 +263,17 @@ export function BenefitActivationModal({
             </span>
           </div>
 
+          {/* Aviso Pedagógico para Casais & Grupos */}
+          <div className="flex items-start gap-2.5 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-3.5 text-xs text-sky-950 dark:text-sky-200">
+            <Users className="h-4 w-4 shrink-0 text-[#0077B6] mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-bold text-[var(--text-primary)]">Vai com alguém?</p>
+              <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                Cada pessoa precisa ter o BoraRio e validar sua própria presença no balcão para receber seus 50 Rio Points e carimbar a visita no Passaporte.
+              </p>
+            </div>
+          </div>
+
           {errorMsg && (
             <div className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-500">
               <AlertCircle className="h-4 w-4 shrink-0" />

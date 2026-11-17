@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarCheck2,
+  CheckCircle2,
   ChevronRight,
   Gift,
   Moon,
@@ -200,6 +201,156 @@ export function PartnersLandingPage({
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Modelo Comercial & Condição Especial de Lançamento */}
+      <section className="border-t border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-amber-500">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              Modelo Comercial Transparente
+            </span>
+            <h2 className="mt-3 font-sans text-3xl font-extrabold tracking-tight sm:text-4xl text-[var(--text-primary)]">
+              Traga mais clientes. Pague apenas pelas visitas realizadas.
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-base text-[var(--text-secondary)]">
+              Cobrança por pessoa com check-in individual autenticado no local. Sem mensalidade obrigatória, sem comissão sobre a conta e sem cobrança por no-show.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto">
+            {/* Card 1: Condição Especial de Lançamento */}
+            <div className="relative flex flex-col justify-between rounded-3xl border-2 border-[#FF6B35] bg-[var(--bg-surface)] p-8 shadow-xl">
+              <div className="absolute -top-3.5 right-8 rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-1 text-xs font-black text-white shadow-md">
+                50% DE DESCONTO
+              </div>
+
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                  Condição Especial de Lançamento
+                </span>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="font-sans text-5xl font-black text-[var(--text-primary)]">R$ 5,00</span>
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">/ pessoa com visita validada</span>
+                </div>
+                <p className="mt-3 text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Condição exclusiva para parceiros fundadores durante o período promocional de lançamento (primeiros 30 dias após adesão).
+                </p>
+
+                <div className="mt-6 space-y-2.5 border-t border-[var(--border-hairline)] pt-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                    Exemplos práticos de fechamento:
+                  </p>
+                  <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
+                    <div className="flex justify-between py-1 border-b border-[var(--border-hairline)]">
+                      <span>1 pessoa atendida</span>
+                      <strong className="text-[var(--text-primary)]">R$ 5,00</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[var(--border-hairline)]">
+                      <span>Casal (2 pessoas validadas)</span>
+                      <strong className="text-[var(--text-primary)]">R$ 10,00</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[var(--border-hairline)]">
+                      <span>Grupo (4 pessoas validadas)</span>
+                      <strong className="text-[var(--text-primary)]">R$ 20,00</strong>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span>Mesa de amigos (6 pessoas validadas)</span>
+                      <strong className="text-[var(--text-primary)]">R$ 30,00</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-5 border-t border-[var(--border-hairline)]">
+                <button
+                  type="button"
+                  onClick={() => onNavigate('/parceiros/painel')}
+                  className="w-full rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-3.5 text-center text-sm font-bold text-white shadow-lg hover:brightness-105 transition"
+                >
+                  Garantir Condição de Lançamento
+                </button>
+              </div>
+            </div>
+
+            {/* Card 2: Tarifa Padrão */}
+            <div className="flex flex-col justify-between rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-8">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                  Tarifa Regular Pós-Promoção
+                </span>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="font-sans text-5xl font-black text-[var(--text-primary)]">R$ 10,00</span>
+                  <span className="text-xs font-semibold text-[var(--text-secondary)]">/ pessoa com visita validada</span>
+                </div>
+                <p className="mt-3 text-xs text-[var(--text-secondary)] leading-relaxed">
+                  Tarifa definitiva e transparente após o período promocional. Cobrança alinhada ao resultado real da sua casa.
+                </p>
+
+                <div className="mt-6 space-y-2.5 border-t border-[var(--border-hairline)] pt-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                    Exemplos práticos de fechamento:
+                  </p>
+                  <div className="space-y-1.5 text-xs text-[var(--text-secondary)]">
+                    <div className="flex justify-between py-1 border-b border-[var(--border-hairline)]">
+                      <span>1 pessoa atendida</span>
+                      <strong className="text-[var(--text-primary)]">R$ 10,00</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[var(--border-hairline)]">
+                      <span>Casal (2 pessoas validadas)</span>
+                      <strong className="text-[var(--text-primary)]">R$ 20,00</strong>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[var(--border-hairline)]">
+                      <span>Grupo (4 pessoas validadas)</span>
+                      <strong className="text-[var(--text-primary)]">R$ 40,00</strong>
+                    </div>
+                    <div className="flex justify-between py-1">
+                      <span>Mesa de amigos (6 pessoas validadas)</span>
+                      <strong className="text-[var(--text-primary)]">R$ 60,00</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-5 border-t border-[var(--border-hairline)]">
+                <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <span>Fatura mensal consolidada com pagamento via Pix ou Boleto.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Compromissos Oficiais */}
+          <div className="mt-12 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 max-w-5xl mx-auto">
+            <h4 className="text-center font-sans text-base font-bold text-[var(--text-primary)] mb-6">
+              Compromissos do Contrato com o Parceiro
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+              <div className="p-3">
+                <span className="text-xl">💳</span>
+                <p className="font-bold text-xs mt-1 text-[var(--text-primary)]">Sem Comissão</p>
+                <p className="text-[11px] text-[var(--text-secondary)]">100% da conta é paga diretamente no seu caixa.</p>
+              </div>
+              <div className="p-3">
+                <span className="text-xl">🚫</span>
+                <p className="font-bold text-xs mt-1 text-[var(--text-primary)]">Sem Taxa em No-Show</p>
+                <p className="text-[11px] text-[var(--text-secondary)]">Reserva não comparecida ou cancelada = R$ 0,00.</p>
+              </div>
+              <div className="p-3">
+                <span className="text-xl">👥</span>
+                <p className="font-bold text-xs mt-1 text-[var(--text-primary)]">Check-in Individual</p>
+                <p className="text-[11px] text-[var(--text-secondary)]">Acompanhantes só contam se validarem pelo app.</p>
+              </div>
+              <div className="p-3">
+                <span className="text-xl">⚖️</span>
+                <p className="font-bold text-xs mt-1 text-[var(--text-primary)]">Auditoria e Contestação</p>
+                <p className="text-[11px] text-[var(--text-secondary)]">Prazo de até 7 dias para reportar divergências.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
