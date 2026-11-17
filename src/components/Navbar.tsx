@@ -235,12 +235,17 @@ export function Navbar({
                       notifications.map((n) => (
                         <div key={n.id} className="px-4 py-3 text-xs">
                           <div className="flex items-center justify-between gap-2">
-                            <strong className="text-[var(--text-primary)]">{n.title}</strong>
-                            <span className="rounded bg-[var(--bg-subtle)] px-1.5 py-0.5 text-[10px] uppercase text-[var(--text-secondary)]">
-                              {n.channel}
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {!n.read && (
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF4B2B]" />
+                              )}
+                              <strong className="truncate text-[var(--text-primary)]">{n.title}</strong>
+                            </div>
+                            <span className="shrink-0 text-[10px] font-semibold text-[var(--text-tertiary)]">
+                              {!n.read ? 'Nova' : 'Recente'}
                             </span>
                           </div>
-                          <p className="mt-1 text-[var(--text-secondary)]">{n.message}</p>
+                          <p className="mt-1 text-[var(--text-secondary)] leading-relaxed">{n.message}</p>
                         </div>
                       ))
                     )}

@@ -119,10 +119,20 @@ export function App() {
 
   const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [captureInitialVenue, setCaptureInitialVenue] = useState<Restaurant | null>(null);
+  const [captureInitialUrl, setCaptureInitialUrl] = useState<string>('');
   const [pendingBoraIaPrompt, setPendingBoraIaPrompt] = useState<string | null>(null);
   const [pendingPlannerPrompt, setPendingPlannerPrompt] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; showVaultAction?: boolean } | null>(null);
   const [showPwaInstallModal, setShowPwaInstallModal] = useState(false);
+
+  // Garante que qualquer troca de aba ou rota inicie sempre no topo da página
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, [activeTab, route]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -732,8 +742,9 @@ export function App() {
             vaultCount={activeVaultCount}
             onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
             onOpenVault={openVaultHub}
-            onOpenVaultCapture={() => {
+            onOpenVaultCapture={(url) => {
               setCaptureInitialVenue(null);
+              setCaptureInitialUrl(url || '');
               setShowCaptureModal(true);
             }}
             externalOpenFiltersSignal={filterDrawerSignal}
@@ -1181,9 +1192,11 @@ export function App() {
         <IntentCaptureModal
           catalog={restaurants}
           initialVenue={captureInitialVenue}
+          initialUrl={captureInitialUrl}
           onClose={() => {
             setShowCaptureModal(false);
             setCaptureInitialVenue(null);
+            setCaptureInitialUrl('');
           }}
           onSaved={(nextItems) => {
             setVaultItems(nextItems);

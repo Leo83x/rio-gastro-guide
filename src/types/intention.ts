@@ -56,5 +56,6 @@ export interface IntentAnalysisResult {
   suggested_category?: MacroCategory;
   suggested_notes?: string;
   suggested_venue_id?: string;
+  suggested_venue_name?: string;
   source_domain?: string;
 }

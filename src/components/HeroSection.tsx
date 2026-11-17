@@ -52,7 +52,7 @@ interface HeroSectionProps {
   vaultCount?: number;
   onAskBoraIa: (intentText: string) => void;
   onOpenVault?: () => void;
-  onOpenVaultCapture?: () => void;
+  onOpenVaultCapture?: (initialUrl?: string) => void;
   externalOpenFiltersSignal?: number;
   isDark: boolean;
 }
@@ -253,7 +253,7 @@ export function HeroSection({
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div className="max-w-[280px] sm:max-w-md lg:max-w-xl">
+            <div className="max-w-xs sm:max-w-md lg:max-w-xl">
               <p
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#FFB347] ${heroGlassClass}`}
               >
@@ -262,9 +262,9 @@ export function HeroSection({
               </p>
 
               <h1 className="mt-2 text-2xl font-black leading-tight tracking-tight text-white [text-shadow:0_2px_14px_rgba(5,14,24,0.85),0_1px_3px_rgba(5,14,24,0.95)] sm:text-4xl">
-                O Rio tem mais para você.
+                O Rio tem mais<br />para você.
               </h1>
-              <p className="mt-1.5 text-xs font-semibold text-[#F1E8D8]/95 [text-shadow:0_1px_6px_rgba(5,14,24,0.9)] sm:text-sm">
+              <p className="mt-2 text-sm font-semibold text-white leading-relaxed [text-shadow:0_2px_8px_rgba(5,14,24,0.95),0_1px_2px_rgba(5,14,24,0.9)] sm:text-base max-w-lg">
                 Descubra experiências, aproveite vantagens exclusivas e acumule benefícios a cada rolê.
               </p>
             </div>
@@ -368,7 +368,7 @@ export function HeroSection({
               </div>
               <button
                 type="button"
-                onClick={() => onOpenVaultCapture?.()}
+                onClick={() => onOpenVaultCapture?.(filters.search.trim())}
                 className="shrink-0 rounded-lg bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:brightness-105"
               >
                 Salvar em Desejos

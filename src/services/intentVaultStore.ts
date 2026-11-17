@@ -12,8 +12,13 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export function sanitizeHttpUrl(raw?: string): string | null {
   if (!raw) return null;
-  const trimmed = raw.trim();
+  let trimmed = raw.trim();
   if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    if (trimmed.includes('.') || trimmed.startsWith('localhost')) {
+      trimmed = `https://${trimmed}`;
+    }
+  }
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {

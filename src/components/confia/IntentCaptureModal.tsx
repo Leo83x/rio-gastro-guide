@@ -10,7 +10,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { analyzeIntentScreenshot, analyzeIntentUrl } from '../../services/intentAnalyzer';
 import {
   addIntentVaultItem,
@@ -31,6 +31,7 @@ interface IntentCaptureModalProps {
   onClose: () => void;
   onSaved: (nextItems: IntentVaultItem[]) => void;
   initialVenue?: Restaurant | null;
+  initialUrl?: string;
 }
 
 type CaptureTab = 'link' | 'screenshot' | 'manual';
@@ -64,9 +65,10 @@ export function IntentCaptureModal({
   onClose,
   onSaved,
   initialVenue,
+  initialUrl,
 }: IntentCaptureModalProps) {
   const [tab, setTab] = useState<CaptureTab>(initialVenue ? 'manual' : 'link');
-  const [urlInput, setUrlInput] = useState('');
+  const [urlInput, setUrlInput] = useState(initialUrl || '');
   const [imagePreview, setImagePreview] = useState<string>('');
   const [title, setTitle] = useState(initialVenue?.name || '');
   const [neighborhood, setNeighborhood] = useState(initialVenue?.neighborhood || '');
@@ -87,11 +89,37 @@ export function IntentCaptureModal({
   );
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const handleAnalyzeUrl = async () => {
-    const safe = sanitizeHttpUrl(urlInput);
+  useEffect(() => {
+    if (initialUrl && !initialVenue) {
+      setUrlInput(initialUrl);
+      void (async () => {
+        const safe = sanitizeHttpUrl(initialUrl);
+        if (!safe) return;
+        setIsAnalyzing(true);
+        setProcessingStatus('PROCESSING');
+        setProcessingMsg('Validando link e verificando correspondências...');
+
+        const res = await analyzeIntentUrl(safe, catalog);
+        setProcessingStatus(res.processing_status);
+        setProcessingMsg(res.processing_message);
+
+        if (res.suggested_title) setTitle(res.suggested_title);
+        if (res.suggested_neighborhood) setNeighborhood(res.suggested_neighborhood);
+        if (res.suggested_category) setCategoryTag(res.suggested_category);
+        if (res.suggested_venue_id) setLinkedVenueId(res.suggested_venue_id);
+        if (res.suggested_notes) setNotes(res.suggested_notes);
+
+        setIsAnalyzing(false);
+      })();
+    }
+  }, [initialUrl, initialVenue, catalog]);
+
+  const handleAnalyzeUrl = async (overrideUrl?: string) => {
+    const rawTarget = overrideUrl || urlInput;
+    const safe = sanitizeHttpUrl(rawTarget);
     if (!safe) {
       setProcessingStatus('ERROR');
-      setProcessingMsg('URL inválida. Informe um link completo iniciado com https:// ou http://.');
+      setProcessingMsg('URL inválida. Informe um link como instagram.com/... ou link completo com https://.');
       return;
     }
 
@@ -350,6 +378,69 @@ export function IntentCaptureModal({
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               )}
               <span>{processingMsg}</span>
+            </div>
+          )}
+
+          {/* Sugestões rápidas de estabelecimentos cariocas */}
+          <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Locais em Destaque no Rio (vincule em 1 toque)
+              </span>
+              <span className="text-[10px] font-semibold text-[#FF6B35]">
+                Ativa benefícios no Bora Club
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { name: 'Bráz Pizzaria', neighborhood: 'Jardim Botânico' },
+                { name: 'CT Boucherie', neighborhood: 'Leblon' },
+                { name: 'Satyricon', neighborhood: 'Ipanema' },
+                { name: 'Aprazível', neighborhood: 'Santa Teresa' },
+                { name: 'Bar Urca', neighborhood: 'Urca' },
+                { name: 'Gero Ipanema', neighborhood: 'Ipanema' },
+                { name: 'Parque Lage', neighborhood: 'Jardim Botânico' },
+                { name: 'Galeto Sat’s', neighborhood: 'Copacabana' },
+              ].map((spot) => {
+                const venue = catalog.find((v) =>
+                  v.name.toLowerCase().includes(spot.name.toLowerCase()) ||
+                  spot.name.toLowerCase().includes(v.name.toLowerCase())
+                );
+                const isSelected = linkedVenueId && venue?.id === linkedVenueId;
+                return (
+                  <button
+                    key={spot.name}
+                    type="button"
+                    onClick={() => {
+                      if (venue) {
+                        handleVenuePick(venue.id);
+                      } else {
+                        setTitle(spot.name);
+                        setNeighborhood(spot.neighborhood);
+                      }
+                      setProcessingStatus('COMPLETED');
+                      setProcessingMsg(`Vinculado a ${spot.name}! Vantagens do Bora Club ativadas.`);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-semibold transition ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs'
+                        : 'border border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:border-[#FF6B35]'
+                    }`}
+                  >
+                    <span>{spot.name}</span>
+                    <span className="text-[10px] opacity-75">· {spot.neighborhood}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {linkedVenueId && (
+            <div className="flex items-center gap-2 rounded-xl border border-[#397B68]/30 bg-[#397B68]/15 px-3.5 py-2 text-xs font-semibold text-[#397B68] dark:text-[#4CA188]">
+              <Sparkles className="h-4 w-4 shrink-0 text-[#FF6B35]" />
+              <span>
+                Estabelecimento parceiro vinculado! Vantagens do Bora Club e pontos confirmados na visita.
+              </span>
             </div>
           )}
 

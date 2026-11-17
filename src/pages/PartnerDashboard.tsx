@@ -932,7 +932,7 @@ export function PartnerDashboard({
             <button type="button" onClick={() => onNavigate('/parceiros')}>
               <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
             </button>
-            <span className="rounded-full bg-[#123B56] px-2.5 py-0.5 text-[11px] font-bold text-white">
+            <span className="rounded-full bg-[#123B56] px-2.5 py-0.5 text-xs font-bold text-white">
               Painel do Parceiro
             </span>
           </div>
@@ -1024,7 +1024,7 @@ export function PartnerDashboard({
             {/* Tenant Banner */}
             <div className="flex flex-col justify-between gap-4 rounded-3xl bg-borario-day p-6 text-white sm:flex-row sm:items-center">
               <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
                   <ShieldCheck className="h-3.5 w-3.5 text-[#A7E3CE]" />
                   Tenant isolado · {partnerEmail}
                 </div>
@@ -1047,43 +1047,41 @@ export function PartnerDashboard({
             </div>
 
             {/* Dual Commercial Conditions Onboarding Banner (Incentivado, não bloqueante) */}
-            <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
-              <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-                <div className="space-y-1">
+            <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
+              <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+                <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/15 px-3 py-0.5 text-[11px] font-bold text-[#FF6B35]">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/15 px-3 py-1 text-xs font-bold text-[#FF6B35]">
                       <Sparkles className="h-3.5 w-3.5" />
-                      Configuração Comercial ({configuredConditionsCount}/2)
+                      Vantagens do Estabelecimento ({configuredConditionsCount}/2 ativas)
                     </span>
-                    <span className="rounded-full bg-[#397B68]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#397B68] dark:text-[#4CA188]">
-                      Comissão sobre resgates: R$ 0,00 (0%)
+                    <span className="rounded-full bg-[#397B68]/15 px-3 py-1 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
+                      Taxa sobre consumo: 0%
                     </span>
                   </div>
-                  <h2 className="font-sans text-base font-bold text-[var(--text-primary)]">
-                    Duas condições comerciais complementares para atrair e fidelizar no BoraRio
+                  <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                    Atraia e fidelize clientes com condições sob seu controle
                   </h2>
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    <strong>Condição 1 (Oferta para Atrair):</strong> gere aquisição e ocupe horários estratégicos.{' '}
-                    <strong>Condição 2 (Recompensa BoraRio):</strong> permita trocas por Rio Points com comissão zero.{' '}
-                    As duas condições são incentivadas, mas opcionais — reservas tradicionais funcionam normalmente sem bloqueio.
+                  <p className="text-sm text-[var(--text-secondary)] max-w-2xl">
+                    Crie ofertas pontuais para ocupar mesas ociosas ou disponibilize cortesias para acúmulo de pontos.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
                       setActiveTab('offers');
                       setOpFeedback(null);
                     }}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold ${
+                    className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                       hasCondition1Configured
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                         : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]'
                     }`}
                   >
-                    <Gift className="h-3.5 w-3.5" />
-                    {hasCondition1Configured ? 'Condição 1 ativa' : 'Configurar Condição 1'}
+                    <Gift className="h-4 w-4" />
+                    {hasCondition1Configured ? 'Ofertas Ativas' : '+ Nova Oferta'}
                   </button>
                   <button
                     type="button"
@@ -1091,60 +1089,60 @@ export function PartnerDashboard({
                       setActiveTab('rewards');
                       setOpFeedback(null);
                     }}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold ${
+                    className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
                       hasCondition2Configured
                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                        : 'border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/15'
+                        : 'border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20'
                     }`}
                   >
-                    <Ticket className="h-3.5 w-3.5" />
-                    {hasCondition2Configured ? 'Condição 2 ativa' : 'Configurar Condição 2'}
+                    <Ticket className="h-4 w-4" />
+                    {hasCondition2Configured ? 'Recompensas Ativas' : '+ Nova Recompensa'}
                   </button>
                 </div>
               </div>
             </section>
 
             {/* Operational Tabs */}
-            <nav className="flex flex-wrap gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2">
+            <nav className="flex flex-wrap gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2.5">
               {[
                 {
                   id: 'traditional' as const,
-                  label: `Reservas Tradicionais (${tenantReservations.length})`,
+                  label: `Reservas (${tenantReservations.length})`,
                   icon: CalendarCheck,
                 },
                 {
                   id: 'offers' as const,
-                  label: `Condição 1 · Ofertas & Última Hora (${individualAndLastMinute.length})`,
+                  label: `Ofertas & Mesas (${individualAndLastMinute.length})`,
                   icon: Gift,
                 },
                 {
                   id: 'demand' as const,
-                  label: `Condição 1 · Reserva por Demanda (${demandOfferings.length})`,
+                  label: `Mesas por Demanda (${demandOfferings.length})`,
                   icon: Users,
                 },
                 {
                   id: 'rewards' as const,
-                  label: `Condição 2 · Minha Recompensa BoraRio (${tenantRewards.length})`,
+                  label: `Recompensas (${tenantRewards.length})`,
                   icon: Ticket,
                 },
                 {
                   id: 'nightlife' as const,
-                  label: `Agenda Noturna da Casa (${tenantNightlifeEvents.length})`,
+                  label: `Agenda Noturna (${tenantNightlifeEvents.length})`,
                   icon: MoonStar,
                 },
                 {
                   id: 'checkin' as const,
-                  label: `Check-in Dinâmico (${tenantContingencies.length})`,
+                  label: `Check-in & QR (${tenantContingencies.length})`,
                   icon: QrCode,
                 },
                 {
                   id: 'billing' as const,
-                  label: 'Financeiro & Remuneração',
+                  label: 'Financeiro',
                   icon: ReceiptText,
                 },
                 {
                   id: 'profile' as const,
-                  label: 'Dados Oficiais',
+                  label: 'Dados & Fotos',
                   icon: Building2,
                 },
               ].map((tab) => {
@@ -1158,13 +1156,13 @@ export function PartnerDashboard({
                       setActiveTab(tab.id);
                       setOpFeedback(null);
                     }}
-                    className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                       active
                         ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-canvas)] hover:text-[var(--text-primary)]'
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-4 w-4" />
                     {tab.label}
                   </button>
                 );
@@ -1190,7 +1188,7 @@ export function PartnerDashboard({
                 <button
                   type="button"
                   onClick={() => setOpFeedback(null)}
-                  className="rounded px-2 py-0.5 text-[11px] font-bold hover:bg-black/5"
+                  className="rounded px-2 py-0.5 text-xs font-bold hover:bg-black/5"
                 >
                   Fechar
                 </button>
@@ -1220,7 +1218,7 @@ export function PartnerDashboard({
                       required
                       value={tradTitle}
                       onChange={(e) => setTradTitle(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1230,7 +1228,7 @@ export function PartnerDashboard({
                         type="date"
                         value={tradDate}
                         onChange={(e) => setTradDate(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -1240,7 +1238,7 @@ export function PartnerDashboard({
                         value={tradTime}
                         onChange={(e) => setTradTime(e.target.value)}
                         placeholder="20:00"
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -1251,7 +1249,7 @@ export function PartnerDashboard({
                       min={1}
                       value={tradCapacity}
                       onChange={(e) => setTradCapacity(Number(e.target.value))}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
                   <button
@@ -1263,7 +1261,7 @@ export function PartnerDashboard({
 
                   {traditionalOfferings.length > 0 && (
                     <div className="space-y-2 border-t border-[var(--border-hairline)] pt-3">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                         Janelas publicadas ({traditionalOfferings.length})
                       </p>
                       {traditionalOfferings.map((off) => (
@@ -1273,14 +1271,14 @@ export function PartnerDashboard({
                         >
                           <div>
                             <p className="font-bold">{off.title}</p>
-                            <p className="text-[11px] text-[var(--text-secondary)]">
+                            <p className="text-xs text-[var(--text-secondary)]">
                               {off.service_date} · {off.time_slot_label} ({off.reserved_count}/{off.capacity_total})
                             </p>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleToggleOffering(off)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] px-2.5 py-1 text-[11px] font-semibold"
+                            className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] px-2.5 py-1 text-xs font-semibold"
                           >
                             {off.partner_managed_active ? (
                               <>
@@ -1333,14 +1331,14 @@ export function PartnerDashboard({
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${meta.cls}`}>
+                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${meta.cls}`}>
                                     {meta.label}
                                   </span>
-                                  <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                                  <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
                                     {res.modality || 'TRADITIONAL_BOOKING'}
                                   </span>
                                   {res.visit_proof_level && (
-                                    <span className="rounded bg-[#397B68]/15 px-2 py-0.5 text-[10px] font-bold text-[#397B68]">
+                                    <span className="rounded bg-[#397B68]/15 px-2 py-0.5 text-xs font-bold text-[#397B68]">
                                       Prova: {res.visit_proof_level}
                                     </span>
                                   )}
@@ -1348,13 +1346,13 @@ export function PartnerDashboard({
                                 <p className="mt-1.5 font-bold text-[var(--text-primary)]">
                                   {res.offering_title || res.experience_name}
                                 </p>
-                                <p className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--text-secondary)]">
+                                <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--text-secondary)]">
                                   <Clock className="h-3 w-3" />
                                   {res.date} às {res.time} · {res.guests} pessoa(s) · Origem:{' '}
                                   {res.attribution_origin || 'catalog'}
                                 </p>
                                 {res.snapshot_terms?.price_summary && (
-                                  <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
                                     Termo congelado: {res.snapshot_terms.price_summary}
                                   </p>
                                 )}
@@ -1373,7 +1371,7 @@ export function PartnerDashboard({
                                         });
                                         bumpStore(true);
                                       }}
-                                      className="rounded-lg bg-[#397B68] px-3 py-1.5 text-[11px] font-bold text-white hover:opacity-95"
+                                      className="rounded-lg bg-[#397B68] px-3 py-1.5 text-xs font-bold text-white hover:opacity-95"
                                     >
                                       Confirmar Reserva
                                     </button>
@@ -1390,7 +1388,7 @@ export function PartnerDashboard({
                                           });
                                           bumpStore(true);
                                         }}
-                                        className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300"
+                                        className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300"
                                       >
                                         No-Show
                                       </button>
@@ -1404,7 +1402,7 @@ export function PartnerDashboard({
                                           });
                                           bumpStore(true);
                                         }}
-                                        className="rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-bold text-red-600 dark:text-red-300"
+                                        className="rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
                                       >
                                         Cancelar
                                       </button>
@@ -1415,7 +1413,7 @@ export function PartnerDashboard({
                             </div>
 
                             {isPendingDemand && (
-                              <p className="mt-2 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
+                              <p className="mt-2 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-200">
                                 Participante em <strong>Reserva por Demanda</strong>. Confirme a campanha consolidada na aba <strong>Reserva por Demanda</strong>.
                               </p>
                             )}
@@ -1436,8 +1434,8 @@ export function PartnerDashboard({
                   className="space-y-3 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
                 >
                   <div className="space-y-1">
-                    <span className="inline-block rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#FF6B35]">
-                      Condição 1 — Oferta para Atrair
+                    <span className="inline-block rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                      Oferta de Atração
                     </span>
                     <div className="flex items-center gap-2">
                       <Gift className="h-5 w-5 text-[#FF6B35]" />
@@ -1446,7 +1444,7 @@ export function PartnerDashboard({
                       </h2>
                     </div>
                   </div>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
+                  <p className="text-xs text-[var(--text-secondary)]">
                     Desconto opcional, cortesia, preço fechado ou experiência diferenciada para gerar aquisição sem comissão sobre a conta.
                   </p>
 
@@ -1457,7 +1455,7 @@ export function PartnerDashboard({
                       onChange={(e) =>
                         setOffModality(e.target.value as 'INDIVIDUAL_OFFER' | 'LAST_MINUTE')
                       }
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     >
                       <option value="INDIVIDUAL_OFFER">
                         B. Oferta Individual (sem depender de grupo)
@@ -1476,7 +1474,7 @@ export function PartnerDashboard({
                       value={offTitle}
                       onChange={(e) => setOffTitle(e.target.value)}
                       placeholder="Ex: Menu executivo em 2 tempos / Mesas hoje 20h"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
 
@@ -1488,7 +1486,7 @@ export function PartnerDashboard({
                       value={offBenefit}
                       onChange={(e) => setOffBenefit(e.target.value)}
                       placeholder="Ex: Sobremesa cortesia ou preço fechado R$ 135"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
 
@@ -1499,7 +1497,7 @@ export function PartnerDashboard({
                       value={offEligibleItem}
                       onChange={(e) => setOffEligibleItem(e.target.value)}
                       placeholder="Ex: Entrada + Prato Principal / Passeio de Barco"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
 
@@ -1510,7 +1508,7 @@ export function PartnerDashboard({
                       value={offValidDaysHours}
                       onChange={(e) => setOffValidDaysHours(e.target.value)}
                       placeholder="Ex: Terça a Quinta · 19h às 22h"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
 
@@ -1522,7 +1520,7 @@ export function PartnerDashboard({
                         min={0}
                         value={offBasePrice}
                         onChange={(e) => setOffBasePrice(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -1532,7 +1530,7 @@ export function PartnerDashboard({
                         min={0}
                         value={offCondPrice}
                         onChange={(e) => setOffCondPrice(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -1544,7 +1542,7 @@ export function PartnerDashboard({
                         type="date"
                         value={offDate}
                         onChange={(e) => setOffDate(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -1553,7 +1551,7 @@ export function PartnerDashboard({
                         type="text"
                         value={offTime}
                         onChange={(e) => setOffTime(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -1563,7 +1561,7 @@ export function PartnerDashboard({
                         min={1}
                         value={offCapacity}
                         onChange={(e) => setOffCapacity(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -1574,7 +1572,7 @@ export function PartnerDashboard({
                       rows={2}
                       value={offRules}
                       onChange={(e) => setOffRules(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
 
@@ -1589,7 +1587,7 @@ export function PartnerDashboard({
                         <button
                           type="button"
                           onClick={() => setOffImage('')}
-                          className="text-[10px] text-red-500 hover:underline"
+                          className="text-xs text-red-500 hover:underline"
                         >
                           Remover
                         </button>
@@ -1618,7 +1616,7 @@ export function PartnerDashboard({
                           <span className="mt-1 text-xs font-semibold text-[var(--text-primary)]">
                             Clique para enviar foto do prato/espaço
                           </span>
-                          <span className="text-[10px] text-[var(--text-secondary)]">
+                          <span className="text-xs text-[var(--text-secondary)]">
                             PNG, JPG ou WEBP (até 5MB)
                           </span>
                           <input
@@ -1633,7 +1631,7 @@ export function PartnerDashboard({
                           value={offImage}
                           onChange={(e) => setOffImage(e.target.value)}
                           placeholder="Ou cole a URL direta da imagem..."
-                          className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[11px]"
+                          className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
                         />
                       </div>
                     )}
@@ -1652,7 +1650,7 @@ export function PartnerDashboard({
                     <h2 className="font-sans text-lg font-bold">
                       Condições Ativas &amp; Proteção Retroativa ({individualAndLastMinute.length})
                     </h2>
-                    <span className="text-[11px] text-[var(--text-secondary)]">
+                    <span className="text-xs text-[var(--text-secondary)]">
                       Termos com reservas confirmadas ficam protegidos contra alteração retroativa.
                     </span>
                   </div>
@@ -1689,11 +1687,11 @@ export function PartnerDashboard({
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#FF6B35]">
+                                  <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-xs font-bold text-[#FF6B35]">
                                     {off.condition_badge}
                                   </span>
                                   <span
-                                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                                       isCancelled
                                         ? 'bg-red-500/15 text-red-600 dark:text-red-300'
                                         : off.partner_managed_active
@@ -1718,17 +1716,17 @@ export function PartnerDashboard({
                                   </div>
                                 )}
                                 <h3 className="mt-1.5 text-sm font-bold">{off.title}</h3>
-                                <p className="text-[11px] text-[var(--text-secondary)]">
+                                <p className="text-xs text-[var(--text-secondary)]">
                                   {off.benefit_summary} · {off.service_date} às {off.time_slot_label} ({off.reserved_count}/{off.capacity_total} vagas)
                                 </p>
                                 {(off.eligible_item || off.valid_days_hours) && (
-                                  <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
                                     {off.eligible_item ? `Item: ${off.eligible_item}` : ''}
                                     {off.eligible_item && off.valid_days_hours ? ' · ' : ''}
                                     {off.valid_days_hours ? `Janela: ${off.valid_days_hours}` : ''}
                                   </p>
                                 )}
-                                <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-semibold text-[var(--text-secondary)]">
+                                <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-[var(--text-secondary)]">
                                   <span className="inline-flex items-center gap-1">
                                     <Eye className="h-3.5 w-3.5 text-[#123B56] dark:text-[#8DC4EA]" />
                                     Visualizações: <strong>{off.views_count || 0}</strong>
@@ -1747,7 +1745,7 @@ export function PartnerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => handleToggleOffering(off)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[11px] font-bold"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
                                   >
                                     {off.partner_managed_active ? 'Pausar' : 'Reativar'}
                                   </button>
@@ -1757,14 +1755,14 @@ export function PartnerDashboard({
                                       setEditingOfferingId(off.id);
                                       setEditBenefitDraft(off.benefit_summary);
                                     }}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[11px] font-bold"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
                                   >
                                     <Edit3 className="h-3 w-3" /> Editar termos
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleCloseOffering(off)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-bold text-red-600 dark:text-red-300"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
                                   >
                                     Encerrar
                                   </button>
@@ -1783,14 +1781,14 @@ export function PartnerDashboard({
                                 <button
                                   type="button"
                                   onClick={() => handleSaveOfferingTermEdit(off.id)}
-                                  className="rounded-lg bg-[#123B56] px-3 py-1.5 text-[11px] font-bold text-white"
+                                  className="rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white"
                                 >
                                   Salvar alteração
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingOfferingId(null)}
-                                  className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-[11px]"
+                                  className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
                                 >
                                   Fechar
                                 </button>
@@ -1830,7 +1828,7 @@ export function PartnerDashboard({
                       value={demTitle}
                       onChange={(e) => setDemTitle(e.target.value)}
                       placeholder="Ex: Jantar Degustação Quinta-feira"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
                   <div>
@@ -1841,7 +1839,7 @@ export function PartnerDashboard({
                       value={demBenefit}
                       onChange={(e) => setDemBenefit(e.target.value)}
                       placeholder="Ex: Menu em 3 tempos a R$ 210 + taça de boas-vindas"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1852,7 +1850,7 @@ export function PartnerDashboard({
                         min={2}
                         value={demGoal}
                         onChange={(e) => setDemGoal(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -1862,7 +1860,7 @@ export function PartnerDashboard({
                         min={2}
                         value={demCapacity}
                         onChange={(e) => setDemCapacity(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -1874,7 +1872,7 @@ export function PartnerDashboard({
                         min={0}
                         value={demBasePrice}
                         onChange={(e) => setDemBasePrice(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -1884,7 +1882,7 @@ export function PartnerDashboard({
                         min={0}
                         value={demCondPrice}
                         onChange={(e) => setDemCondPrice(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -1895,7 +1893,7 @@ export function PartnerDashboard({
                         type="date"
                         value={demDate}
                         onChange={(e) => setDemDate(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -1904,7 +1902,7 @@ export function PartnerDashboard({
                         type="text"
                         value={demTime}
                         onChange={(e) => setDemTime(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -1951,15 +1949,15 @@ export function PartnerDashboard({
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#FF6B35]">
+                                  <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-xs font-bold text-[#FF6B35]">
                                     {off.status}
                                   </span>
-                                  <span className="text-[11px] text-[var(--text-secondary)]">
+                                  <span className="text-xs text-[var(--text-secondary)]">
                                     {off.service_date} às {off.time_slot_label}
                                   </span>
                                 </div>
                                 <h3 className="mt-1 text-sm font-bold">{off.title}</h3>
-                                <p className="text-[11px] text-[var(--text-secondary)]">
+                                <p className="text-xs text-[var(--text-secondary)]">
                                   {off.benefit_summary}
                                 </p>
                               </div>
@@ -1973,7 +1971,7 @@ export function PartnerDashboard({
                                       setOpFeedback({ ok: res.ok, msg: res.message });
                                       bumpStore(true);
                                     }}
-                                    className="rounded-xl bg-[#397B68] px-3 py-1.5 text-[11px] font-bold text-white hover:opacity-95"
+                                    className="rounded-xl bg-[#397B68] px-3 py-1.5 text-xs font-bold text-white hover:opacity-95"
                                   >
                                     Confirmar Demanda e Condições
                                   </button>
@@ -1984,7 +1982,7 @@ export function PartnerDashboard({
                                       setOpFeedback({ ok: res.ok, msg: res.message });
                                       bumpStore(true);
                                     }}
-                                    className="rounded-xl border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-600 dark:text-red-300"
+                                    className="rounded-xl border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
                                   >
                                     Encerrar Sem Meta
                                   </button>
@@ -1993,7 +1991,7 @@ export function PartnerDashboard({
                             </div>
 
                             <div className="mt-3">
-                              <div className="mb-1 flex justify-between text-[11px]">
+                              <div className="mb-1 flex justify-between text-xs">
                                 <span>
                                   <strong>{off.reserved_count}</strong>/{goal} lugares manifestados (capacidade {off.capacity_total})
                                 </span>
@@ -2007,7 +2005,7 @@ export function PartnerDashboard({
                               </div>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-hairline)] pt-2.5 text-[11px] text-[var(--text-secondary)]">
+                            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-hairline)] pt-2.5 text-xs text-[var(--text-secondary)]">
                               <span>
                                 Solicitações individuais independentes registradas:{' '}
                                 <strong>{Math.max(parts.length, linkedRequests.length)}</strong>
@@ -2038,14 +2036,14 @@ export function PartnerDashboard({
                 <section className="rounded-3xl border border-[#397B68]/35 bg-gradient-to-r from-[#397B68]/12 via-[#123B56]/8 to-[#FF6B35]/10 p-6">
                   <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                     <div className="max-w-3xl space-y-1.5">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68] px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68] px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-white">
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        Condição 2 · Economia de Recompensas BoraRio (Comissão 0%)
+                        Economia de Recompensas (Comissão 0%)
                       </span>
                       <p className="text-sm font-semibold leading-relaxed text-[var(--text-primary)]">
                         {REWARDS_ZERO_COMMISSION_PARTNER_COPY}
                       </p>
-                      <p className="text-[11px] text-[var(--text-secondary)]">
+                      <p className="text-xs text-[var(--text-secondary)]">
                         Percentual de comissão sobre resgates em Rio Points: <strong>0% (R$ 0,00)</strong>. Nunca há cobrança no extrato contratual pelo uso de recompensas.
                       </p>
                     </div>
@@ -2053,19 +2051,19 @@ export function PartnerDashboard({
                     {loyaltyEconomics && (
                       <div className="grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-3">
                         <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-center">
-                          <span className="block text-[10px] text-[var(--text-secondary)]">Ativas</span>
+                          <span className="block text-xs text-[var(--text-secondary)]">Ativas</span>
                           <strong className="text-base text-[var(--text-primary)]">
                             {loyaltyEconomics.active_rewards_count}/{loyaltyEconomics.registered_rewards_count}
                           </strong>
                         </div>
                         <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-center">
-                          <span className="block text-[10px] text-[var(--text-secondary)]">Vouchers Usados</span>
+                          <span className="block text-xs text-[var(--text-secondary)]">Vouchers Usados</span>
                           <strong className="text-base text-[#397B68] dark:text-[#4CA188]">
                             {loyaltyEconomics.vouchers_used_count}/{loyaltyEconomics.vouchers_issued_count}
                           </strong>
                         </div>
                         <div className="col-span-2 rounded-2xl border border-[#397B68]/35 bg-[#397B68]/10 px-3.5 py-2.5 text-center sm:col-span-1">
-                          <span className="block text-[10px] text-[#397B68] dark:text-[#4CA188]">Comissão</span>
+                          <span className="block text-xs text-[#397B68] dark:text-[#4CA188]">Comissão</span>
                           <strong className="text-base text-[#397B68] dark:text-[#4CA188]">R$ 0,00</strong>
                         </div>
                       </div>
@@ -2085,7 +2083,7 @@ export function PartnerDashboard({
                         Publicar Recompensa BoraRio
                       </h2>
                     </div>
-                    <p className="text-[11px] text-[var(--text-secondary)]">
+                    <p className="text-xs text-[var(--text-secondary)]">
                       Escolha o item do seu catálogo, a quantidade de unidades e quantos Rio Points o usuário utiliza no resgate.
                     </p>
 
@@ -2097,7 +2095,7 @@ export function PartnerDashboard({
                         value={rewTitle}
                         onChange={(e) => setRewTitle(e.target.value)}
                         placeholder="Ex: Sobremesa Clássica da Casa ou Upgrade"
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2109,7 +2107,7 @@ export function PartnerDashboard({
                         value={rewEligibleItem}
                         onChange={(e) => setRewEligibleItem(e.target.value)}
                         placeholder="Ex: 1 Petit Gâteau ou 1 Passeio Guiado"
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2119,7 +2117,7 @@ export function PartnerDashboard({
                         <select
                           value={rewSegment}
                           onChange={(e) => setRewSegment(e.target.value as RewardSegment)}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         >
                           <option value="Gastronomia">Gastronomia</option>
                           <option value="Cultura & Museus">Cultura &amp; Museus</option>
@@ -2136,7 +2134,7 @@ export function PartnerDashboard({
                         <select
                           value={rewType}
                           onChange={(e) => setRewType(e.target.value as RewardType)}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-2.5 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         >
                           <option value="SOBREMESA">Sobremesa</option>
                           <option value="ENTRADA">Entrada</option>
@@ -2159,7 +2157,7 @@ export function PartnerDashboard({
                           step={10}
                           value={rewCost}
                           onChange={(e) => setRewCost(Number(e.target.value))}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                       <div>
@@ -2169,7 +2167,7 @@ export function PartnerDashboard({
                           min={1}
                           value={rewQty}
                           onChange={(e) => setRewQty(Number(e.target.value))}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     </div>
@@ -2182,7 +2180,7 @@ export function PartnerDashboard({
                           min={1}
                           value={rewMaxPerUser}
                           onChange={(e) => setRewMaxPerUser(Number(e.target.value))}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                       <div>
@@ -2192,7 +2190,7 @@ export function PartnerDashboard({
                           min={1}
                           value={rewValidityDays}
                           onChange={(e) => setRewValidityDays(Number(e.target.value))}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     </div>
@@ -2203,7 +2201,7 @@ export function PartnerDashboard({
                         type="text"
                         value={rewValidDaysHours}
                         onChange={(e) => setRewValidDaysHours(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2213,7 +2211,7 @@ export function PartnerDashboard({
                         rows={2}
                         value={rewRules}
                         onChange={(e) => setRewRules(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2223,7 +2221,7 @@ export function PartnerDashboard({
                         type="text"
                         value={rewRestrictions}
                         onChange={(e) => setRewRestrictions(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2244,7 +2242,7 @@ export function PartnerDashboard({
                           <Award className="h-4 w-4" />
                           Validar Voucher no Balcão (ISSUED → USED)
                         </div>
-                        <span className="rounded-full bg-[#397B68]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#397B68] dark:text-[#4CA188]">
+                        <span className="rounded-full bg-[#397B68]/15 px-2.5 py-0.5 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
                           Comissão por validação: R$ 0,00
                         </span>
                       </div>
@@ -2272,7 +2270,7 @@ export function PartnerDashboard({
 
                       {tenantVouchers.length > 0 && (
                         <div className="mt-4 space-y-2 border-t border-[var(--border-hairline)] pt-3">
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                          <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                             Vouchers deste estabelecimento ({tenantVouchers.length})
                           </p>
                           <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
@@ -2287,7 +2285,7 @@ export function PartnerDashboard({
                                       {v.voucher_code}
                                     </span>
                                     <span
-                                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                                         v.status === 'USED'
                                           ? 'bg-[#397B68]/20 text-[#397B68] dark:text-[#4CA188]'
                                           : v.status === 'CANCELLED' || v.status === 'EXPIRED'
@@ -2297,14 +2295,14 @@ export function PartnerDashboard({
                                     >
                                       {v.status}
                                     </span>
-                                    <span className="text-[10px] text-[var(--text-secondary)]">
+                                    <span className="text-xs text-[var(--text-secondary)]">
                                       Comissão: R$ 0,00
                                     </span>
                                   </div>
                                   <p className="mt-0.5 font-semibold text-[var(--text-primary)]">
                                     {v.snapshot_rules.title} — {v.snapshot_rules.eligible_item}
                                   </p>
-                                  <p className="text-[10px] text-[var(--text-secondary)]">
+                                  <p className="text-xs text-[var(--text-secondary)]">
                                     Resgatado com {v.points_spent} RP · Expira em{' '}
                                     {new Date(v.expires_at).toLocaleDateString('pt-BR')}
                                   </p>
@@ -2314,7 +2312,7 @@ export function PartnerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => handleValidateRewardVoucher(v.voucher_code)}
-                                    className="rounded-lg bg-[#397B68] px-3 py-1.5 text-[11px] font-bold text-white"
+                                    className="rounded-lg bg-[#397B68] px-3 py-1.5 text-xs font-bold text-white"
                                   >
                                     Validar agora
                                   </button>
@@ -2332,7 +2330,7 @@ export function PartnerDashboard({
                         <h2 className="font-sans text-lg font-bold">
                           Minhas Recompensas Cadastradas ({tenantRewards.length})
                         </h2>
-                        <span className="text-[11px] text-[var(--text-secondary)]">
+                        <span className="text-xs text-[var(--text-secondary)]">
                           Pausar ou encerrar bloqueia novos resgates preservando vouchers já emitidos.
                         </span>
                       </div>
@@ -2352,7 +2350,7 @@ export function PartnerDashboard({
                                 <div>
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span
-                                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                                      className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                                         rew.status === 'AVAILABLE'
                                           ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                           : rew.status === 'PAUSED'
@@ -2362,7 +2360,7 @@ export function PartnerDashboard({
                                     >
                                       {rew.status}
                                     </span>
-                                    <span className="rounded-full bg-[#123B56]/12 px-2.5 py-0.5 text-[10px] font-bold text-[#123B56] dark:bg-[#123B56]/40 dark:text-[#8DC4EA]">
+                                    <span className="rounded-full bg-[#123B56]/12 px-2.5 py-0.5 text-xs font-bold text-[#123B56] dark:bg-[#123B56]/40 dark:text-[#8DC4EA]">
                                       {rew.segment_category}
                                     </span>
                                     <span className="font-bold text-[#D49B27]">
@@ -2372,14 +2370,14 @@ export function PartnerDashboard({
                                   <h3 className="mt-1.5 text-sm font-bold text-[var(--text-primary)]">
                                     {rew.title}
                                   </h3>
-                                  <p className="text-[11px] text-[var(--text-secondary)]">
+                                  <p className="text-xs text-[var(--text-secondary)]">
                                     Item elegível: <strong>{rew.eligible_item}</strong> · Estoque:{' '}
                                     <strong>
                                       {rew.quantity_available}/{rew.quantity_total}
                                     </strong>{' '}
                                     · {rew.valid_days_hours}
                                   </p>
-                                  <p className="mt-0.5 text-[10px] text-[var(--text-secondary)]">
+                                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
                                     Limite: {rew.max_per_user} por usuário · Comissão sobre resgates: R$ 0,00 (0%)
                                   </p>
                                 </div>
@@ -2388,7 +2386,7 @@ export function PartnerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => handleStartEditReward(rew)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[11px] font-bold"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
                                   >
                                     <Edit3 className="h-3 w-3" /> Editar
                                   </button>
@@ -2403,7 +2401,7 @@ export function PartnerDashboard({
                                             rew.status === 'PAUSED' ? 'AVAILABLE' : 'PAUSED'
                                           )
                                         }
-                                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-[11px] font-bold"
+                                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
                                       >
                                         {rew.status === 'PAUSED' ? (
                                           <>
@@ -2418,7 +2416,7 @@ export function PartnerDashboard({
                                       <button
                                         type="button"
                                         onClick={() => handleSetRewardStatus(rew.id, 'CLOSED')}
-                                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-bold text-red-600 dark:text-red-300"
+                                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
                                       >
                                         <XCircle className="h-3.5 w-3.5" /> Encerrar
                                       </button>
@@ -2472,14 +2470,14 @@ export function PartnerDashboard({
                                     <button
                                       type="button"
                                       onClick={() => handleSaveEditReward(rew.id)}
-                                      className="rounded-lg bg-[#123B56] px-3 py-1.5 text-[11px] font-bold text-white"
+                                      className="rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white"
                                     >
                                       Salvar alteração
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => setEditingRewardId(null)}
-                                      className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-[11px]"
+                                      className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
                                     >
                                       Fechar
                                     </button>
@@ -2535,7 +2533,7 @@ export function PartnerDashboard({
                         <select
                           value={nlSubArea}
                           onChange={(e) => setNlSubArea(e.target.value as NightlifeSubArea)}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         >
                           {(Object.keys(NIGHTLIFE_SUBAREA_META) as NightlifeSubArea[]).map((key) => (
                             <option key={key} value={key}>
@@ -2551,7 +2549,7 @@ export function PartnerDashboard({
                           required
                           value={nlDate}
                           onChange={(e) => setNlDate(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     </div>
@@ -2565,7 +2563,7 @@ export function PartnerDashboard({
                           value={nlStartTime}
                           onChange={(e) => setNlStartTime(e.target.value)}
                           placeholder="21:00"
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                       <div>
@@ -2575,7 +2573,7 @@ export function PartnerDashboard({
                           value={nlEndTime}
                           onChange={(e) => setNlEndTime(e.target.value)}
                           placeholder="02:00"
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                       <div>
@@ -2585,7 +2583,7 @@ export function PartnerDashboard({
                           value={nlAgeRating}
                           onChange={(e) => setNlAgeRating(e.target.value)}
                           placeholder="18+"
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     </div>
@@ -2612,7 +2610,7 @@ export function PartnerDashboard({
                           value={nlIsFree ? '0' : nlPriceMin}
                           onChange={(e) => setNlPriceMin(e.target.value)}
                           placeholder="45"
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs disabled:opacity-50"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm disabled:opacity-50"
                         />
                       </div>
                     </div>
@@ -2625,7 +2623,7 @@ export function PartnerDashboard({
                           value={nlGenres}
                           onChange={(e) => setNlGenres(e.target.value)}
                           placeholder="Samba, Pagode"
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                       <div>
@@ -2635,7 +2633,7 @@ export function PartnerDashboard({
                           value={nlLineup}
                           onChange={(e) => setNlLineup(e.target.value)}
                           placeholder="Grupo da Casa, DJ Convidado"
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     </div>
@@ -2647,7 +2645,7 @@ export function PartnerDashboard({
                         value={nlTicketUrl}
                         onChange={(e) => setNlTicketUrl(e.target.value)}
                         placeholder="https://www.sympla.com.br/evento/..."
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2658,7 +2656,7 @@ export function PartnerDashboard({
                         value={nlCoverUrl}
                         onChange={(e) => setNlCoverUrl(e.target.value)}
                         placeholder="https://... (deixe vazio para arte editorial da categoria)"
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2669,7 +2667,7 @@ export function PartnerDashboard({
                         value={nlSummary}
                         onChange={(e) => setNlSummary(e.target.value)}
                         placeholder="Descreva a atmosfera, horário da atração principal e regras de entrada..."
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
 
@@ -2721,16 +2719,16 @@ export function PartnerDashboard({
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <span
-                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${st.cls}`}
+                                  className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${st.cls}`}
                                 >
                                   {st.label}
                                 </span>
-                                <span className="rounded-full bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                                <span className="rounded-full bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
                                   {NIGHTLIFE_SUBAREA_META[ev.sub_area].shortLabel}
                                 </span>
                               </div>
                               <span
-                                className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
+                                className={`inline-flex items-center gap-1 text-xs font-semibold ${
                                   comp.complete
                                     ? 'text-emerald-700 dark:text-emerald-300'
                                     : 'text-amber-700 dark:text-amber-300'
@@ -2765,7 +2763,7 @@ export function PartnerDashboard({
                               {ev.short_summary}
                             </p>
                             {ev.rejection_reason && (
-                              <p className="mt-2 rounded-xl bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-600 dark:text-red-300">
+                              <p className="mt-2 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300">
                                 Nota da curadoria: {ev.rejection_reason}
                               </p>
                             )}
@@ -2823,14 +2821,14 @@ export function PartnerDashboard({
                       {activeQr && qrRemainingSec > 0 ? (
                         <div className="space-y-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
                               <Clock className="h-3.5 w-3.5" />
                               Ativo · expira em {qrRemainingSec}s ({activeQr.consumed_count}/{activeQr.max_uses} usos)
                             </span>
                             <button
                               type="button"
                               onClick={handleRevokeQr}
-                              className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-600 dark:text-red-300"
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 dark:text-red-300"
                             >
                               <XCircle className="h-3.5 w-3.5" /> Revogar agora
                             </button>
@@ -2845,14 +2843,14 @@ export function PartnerDashboard({
                                   alt={`QR Code Dinâmico ${activeQr.token_code}`}
                                   className="h-44 w-44 rounded-xl border border-white/20 bg-white p-2 shadow-md"
                                 />
-                                <span className="mt-1.5 text-[10px] font-medium text-[var(--text-secondary)]">
+                                <span className="mt-1.5 text-xs font-medium text-[var(--text-secondary)]">
                                   Aponte a câmera no app BoraRio
                                 </span>
                               </div>
 
                               <div className="flex-1 space-y-3 text-xs">
                                 <div>
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                                     Token QR Dinâmico
                                   </span>
                                   <p className="mt-0.5 font-mono text-base font-extrabold text-[#FF6B35]">
@@ -2861,7 +2859,7 @@ export function PartnerDashboard({
                                 </div>
 
                                 <div>
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
                                     PIN de Validação Alternativo
                                   </span>
                                   <p className="mt-0.5 font-mono text-2xl font-black tracking-widest text-[var(--text-primary)]">
@@ -2881,7 +2879,7 @@ export function PartnerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => window.print()}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
                                   >
                                     <Printer className="h-3.5 w-3.5" />
                                     <span>Imprimir Display</span>
@@ -2893,7 +2891,7 @@ export function PartnerDashboard({
 
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3">
-                              <p className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                              <p className="text-xs font-bold uppercase text-[var(--text-secondary)]">
                                 Token QR
                               </p>
                               <p className="mt-1 font-mono text-sm font-extrabold text-[#FF6B35]">
@@ -2902,7 +2900,7 @@ export function PartnerDashboard({
                               <button
                                 type="button"
                                 onClick={() => copyText(activeQr.token_code)}
-                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-[var(--text-primary)] hover:text-[#FF6B35]"
+                                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[var(--text-primary)] hover:text-[#FF6B35]"
                               >
                                 {copiedCode === activeQr.token_code ? (
                                   <Check className="h-3.5 w-3.5 text-emerald-500" />
@@ -2914,7 +2912,7 @@ export function PartnerDashboard({
                             </div>
 
                             <div className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3">
-                              <p className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                              <p className="text-xs font-bold uppercase text-[var(--text-secondary)]">
                                 PIN Contingência (6 dígitos)
                               </p>
                               <p className="mt-1 font-mono text-lg font-extrabold tracking-widest text-[var(--text-primary)]">
@@ -2923,7 +2921,7 @@ export function PartnerDashboard({
                               <button
                                 type="button"
                                 onClick={() => copyText(activeQr.contingency_pin)}
-                                className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[var(--text-primary)] hover:text-[#FF6B35]"
+                                className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[var(--text-primary)] hover:text-[#FF6B35]"
                               >
                                 {copiedCode === activeQr.contingency_pin ? (
                                   <Check className="h-3.5 w-3.5 text-emerald-500" />
@@ -2959,7 +2957,7 @@ export function PartnerDashboard({
                           <select
                             value={counterResId}
                             onChange={(e) => setCounterResId(e.target.value)}
-                            className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                            className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                           >
                             <option value="">Selecione a reserva...</option>
                             {tenantReservations
@@ -3010,7 +3008,7 @@ export function PartnerDashboard({
                                 <p className="font-bold">
                                   PIN informado: <span className="font-mono">{item.contingency_pin_entered}</span> · {item.guests_count}p
                                 </p>
-                                <p className="text-[11px] text-[var(--text-secondary)]">
+                                <p className="text-xs text-[var(--text-secondary)]">
                                   Registrado em {new Date(item.queued_at).toLocaleString('pt-BR')}
                                 </p>
                               </div>
@@ -3020,7 +3018,7 @@ export function PartnerDashboard({
                                   onClick={() =>
                                     handleReconcile(item.id, item.reservation_id, 'RECONCILED')
                                   }
-                                  className="rounded-lg bg-[#397B68] px-3 py-1.5 text-[11px] font-bold text-white"
+                                  className="rounded-lg bg-[#397B68] px-3 py-1.5 text-xs font-bold text-white"
                                 >
                                   Conciliar Visita
                                 </button>
@@ -3029,7 +3027,7 @@ export function PartnerDashboard({
                                   onClick={() =>
                                     handleReconcile(item.id, item.reservation_id, 'REJECTED')
                                   }
-                                  className="rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-600"
+                                  className="rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-600"
                                 >
                                   Recusar
                                 </button>
@@ -3061,10 +3059,10 @@ export function PartnerDashboard({
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                  <span className="rounded bg-[#397B68]/15 px-2 py-0.5 text-[10px] font-bold text-[#397B68]">
+                                  <span className="rounded bg-[#397B68]/15 px-2 py-0.5 text-xs font-bold text-[#397B68]">
                                     {proof.presence_level}
                                   </span>
-                                  <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
                                     Método: {proof.evidence_method} · {proof.guests_count} pessoa(s) ·{' '}
                                     {new Date(proof.presence_verified_at).toLocaleString('pt-BR')}
                                   </p>
@@ -3093,7 +3091,7 @@ export function PartnerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => handleVerifyConsumption(proof.id)}
-                                    className="rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-purple-700"
+                                    className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-700"
                                   >
                                     Consumo Verificado
                                   </button>
@@ -3122,12 +3120,12 @@ export function PartnerDashboard({
                       {tenantAuditEvents.map((ev) => (
                         <div key={ev.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                           <div>
-                            <span className="mr-2 rounded bg-[var(--bg-canvas)] px-1.5 py-0.5 font-mono text-[10px] font-bold text-[#FF6B35]">
+                            <span className="mr-2 rounded bg-[var(--bg-canvas)] px-1.5 py-0.5 font-mono text-xs font-bold text-[#FF6B35]">
                               {ev.event_type}
                             </span>
                             <span>{ev.message}</span>
                           </div>
-                          <span className="text-[10px] text-[var(--text-secondary)]">
+                          <span className="text-xs text-[var(--text-secondary)]">
                             {ev.actor_role} · {new Date(ev.created_at).toLocaleString('pt-BR')}
                           </span>
                         </div>
@@ -3170,7 +3168,7 @@ export function PartnerDashboard({
                             },
                           })
                         }
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                       >
                         <option value="PER_ATTENDED_GUEST">
                           Taxa fixa por pessoa atendida (check-in válido)
@@ -3201,7 +3199,7 @@ export function PartnerDashboard({
                               },
                             })
                           }
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     )}
@@ -3223,7 +3221,7 @@ export function PartnerDashboard({
                               },
                             })
                           }
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     )}
@@ -3245,12 +3243,12 @@ export function PartnerDashboard({
                               },
                             })
                           }
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs"
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     )}
 
-                    <div className="space-y-1 rounded-xl bg-[var(--bg-canvas)] p-3 text-[11px] text-[var(--text-secondary)]">
+                    <div className="space-y-1 rounded-xl bg-[var(--bg-canvas)] p-3 text-xs text-[var(--text-secondary)]">
                       <p>
                         <strong>Percentual sobre a conta:</strong> 0% (não aplicável)
                       </p>
@@ -3277,15 +3275,15 @@ export function PartnerDashboard({
                   <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-[11px] text-[var(--text-secondary)]">Check-ins Apurados</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Check-ins Apurados</p>
                         <p className="mt-1 text-2xl font-extrabold">{tenantFeeLedger.length}</p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-[11px] text-[var(--text-secondary)]">Pessoas Atendidas</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Pessoas Atendidas</p>
                         <p className="mt-1 text-2xl font-extrabold">{totalGuestsBilled}</p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-[11px] text-[var(--text-secondary)]">Remuneração Fixa Devida</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Remuneração Fixa Devida</p>
                         <p className="mt-1 text-2xl font-extrabold text-[#397B68]">
                           R$ {accruedBrl.toFixed(2)}
                         </p>
@@ -3311,7 +3309,7 @@ export function PartnerDashboard({
                               <div>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span
-                                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                                       entry.status === 'DISPUTED'
                                         ? 'bg-red-500/15 text-red-600 dark:text-red-300'
                                         : entry.status === 'WAIVED'
@@ -3321,10 +3319,10 @@ export function PartnerDashboard({
                                   >
                                     {entry.status}
                                   </span>
-                                  <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] font-semibold">
+                                  <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-semibold">
                                     {entry.modality}
                                   </span>
-                                  <span className="text-[11px] text-[var(--text-secondary)]">
+                                  <span className="text-xs text-[var(--text-secondary)]">
                                     Origem: {entry.attribution_origin}
                                   </span>
                                 </div>
@@ -3332,7 +3330,7 @@ export function PartnerDashboard({
                                   R$ {entry.total_fee_brl.toFixed(2)} ({entry.attended_guests} pessoa(s) × R${' '}
                                   {entry.unit_fee_brl.toFixed(2)})
                                 </p>
-                                <p className="text-[10px] text-[var(--text-secondary)]">
+                                <p className="text-xs text-[var(--text-secondary)]">
                                   Reserva: {entry.booking_id.slice(0, 8)} ·{' '}
                                   {new Date(entry.event_timestamp).toLocaleString('pt-BR')}
                                 </p>
@@ -3347,7 +3345,7 @@ export function PartnerDashboard({
                                 <button
                                   type="button"
                                   onClick={() => setDisputeTargetId(entry.id)}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-600 dark:text-red-300"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
                                 >
                                   <ShieldAlert className="h-3.5 w-3.5" />
                                   Contestar evento
@@ -3367,14 +3365,14 @@ export function PartnerDashboard({
                                 <button
                                   type="button"
                                   onClick={() => handleDisputeFee(entry.id)}
-                                  className="rounded-lg bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white"
+                                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white"
                                 >
                                   Registrar Contestação
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setDisputeTargetId(null)}
-                                  className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-[11px]"
+                                  className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
                                 >
                                   Cancelar
                                 </button>
@@ -3395,7 +3393,7 @@ export function PartnerDashboard({
                   >
                     <div className="flex flex-col justify-between gap-3 border-b border-[var(--border-hairline)] pb-4 md:flex-row md:items-center">
                       <div>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68]/15 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#397B68] dark:text-[#4CA188]">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#397B68]/15 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-[#397B68] dark:text-[#4CA188]">
                           <Award className="h-3.5 w-3.5" />
                           Fidelidade &amp; Retorno · Economia Zero Comissão
                         </span>
@@ -3414,44 +3412,44 @@ export function PartnerDashboard({
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-[11px] text-[var(--text-secondary)]">Pontos Gerados no Local</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Pontos Gerados no Local</p>
                         <p className="mt-1 text-xl font-extrabold text-[var(--text-primary)]">
                           {loyaltyEconomics.points_awarded_at_venue} RP
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-[11px] text-[var(--text-secondary)]">Pontos Resgatados</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Pontos Resgatados</p>
                         <p className="mt-1 text-xl font-extrabold text-[#FF6B35]">
                           {loyaltyEconomics.points_redeemed_on_venue} RP
                         </p>
-                        <p className="text-[10px] text-[var(--text-secondary)]">
+                        <p className="text-xs text-[var(--text-secondary)]">
                           {loyaltyEconomics.vouchers_used_count} usados · {loyaltyEconomics.vouchers_cancelled_count} cancelados
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[#397B68]/35 bg-[#397B68]/10 p-3.5">
-                        <p className="text-[11px] text-[#397B68] dark:text-[#4CA188]">Comissão em Recompensas</p>
+                        <p className="text-xs text-[#397B68] dark:text-[#4CA188]">Comissão em Recompensas</p>
                         <p className="mt-1 text-xl font-extrabold text-[#397B68] dark:text-[#4CA188]">
                           R$ 0,00 (0%)
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-[11px] text-[var(--text-secondary)]">Retorno Pós-Resgate</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Retorno Pós-Resgate</p>
                         <p className="mt-1 text-xl font-extrabold text-[var(--text-primary)]">
                           {loyaltyEconomics.return_visits_post_redemption} visita(s)
                         </p>
-                        <p className="text-[10px] text-[var(--text-secondary)]">
+                        <p className="text-xs text-[var(--text-secondary)]">
                           {loyaltyEconomics.subsequent_bookings_post_redemption} reserva(s) posteriores
                         </p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-[11px] text-[var(--text-secondary)]">Receita Indireta (Reservas Post.)</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Receita Indireta (Reservas Post.)</p>
                         <p className="mt-1 text-xl font-extrabold text-[#123B56] dark:text-[#8DC4EA]">
                           R$ {loyaltyEconomics.indirect_booking_revenue_brl.toFixed(2).replace('.', ',')}
                         </p>
                       </div>
                     </div>
 
-                    <p className="mt-3 text-[11px] text-[var(--text-secondary)]">
+                    <p className="mt-3 text-xs text-[var(--text-secondary)]">
                       {loyaltyEconomics.attribution_disclaimer}
                     </p>
                   </section>
@@ -3498,7 +3496,7 @@ export function PartnerDashboard({
                       </p>
                     </div>
                     {coverImage && (
-                      <span className="rounded-full bg-[#4CA188]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#4CA188]">
+                      <span className="rounded-full bg-[#4CA188]/15 px-2.5 py-0.5 text-xs font-bold text-[#4CA188]">
                         Capa Ativa
                       </span>
                     )}
@@ -3535,7 +3533,7 @@ export function PartnerDashboard({
                         value={coverImage}
                         onChange={(e) => setCoverImage(e.target.value)}
                         placeholder="Ou cole a URL direta da imagem de capa..."
-                        className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                        className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -3573,12 +3571,12 @@ export function PartnerDashboard({
                       value={newGalleryUrl}
                       onChange={(e) => setNewGalleryUrl(e.target.value)}
                       placeholder="Ou cole o link de uma foto para incluir na galeria..."
-                      className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                      className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                     />
                     <button
                       type="button"
                       onClick={handleAddGalleryUrl}
-                      className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs font-bold hover:border-[#FF6B35]"
+                      className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm font-bold hover:border-[#FF6B35]"
                     >
                       Adicionar Link
                     </button>
@@ -3604,7 +3602,7 @@ export function PartnerDashboard({
                               className="h-full w-full object-cover"
                             />
                             {isCurrentCover && (
-                              <span className="absolute left-1.5 top-1.5 rounded-md bg-[#4CA188] px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
+                              <span className="absolute left-1.5 top-1.5 rounded-md bg-[#4CA188] px-1.5 py-0.5 text-[11px] font-bold text-white shadow">
                                 Capa
                               </span>
                             )}
@@ -3613,7 +3611,7 @@ export function PartnerDashboard({
                                 <button
                                   type="button"
                                   onClick={() => handleSetCoverPhoto(photoUrl)}
-                                  className="rounded-lg bg-white/90 px-2.5 py-1 text-[10px] font-bold text-[#123B56] hover:bg-white"
+                                  className="rounded-lg bg-white/90 px-2.5 py-1 text-xs font-bold text-[#123B56] hover:bg-white"
                                 >
                                   Tornar Capa
                                 </button>
@@ -3621,7 +3619,7 @@ export function PartnerDashboard({
                               <button
                                 type="button"
                                 onClick={() => handleRemoveGalleryPhoto(idx)}
-                                className="inline-flex items-center gap-1 rounded-lg bg-red-600/90 px-2 py-1 text-[10px] font-bold text-white hover:bg-red-700"
+                                className="inline-flex items-center gap-1 rounded-lg bg-red-600/90 px-2 py-1 text-xs font-bold text-white hover:bg-red-700"
                               >
                                 <Trash2 className="h-3 w-3" /> Excluir
                               </button>
@@ -3646,7 +3644,7 @@ export function PartnerDashboard({
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="(21) 99999-0000"
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div>
@@ -3656,7 +3654,7 @@ export function PartnerDashboard({
                         value={website}
                         onChange={(e) => setWebsite(e.target.value)}
                         placeholder="https://..."
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -3668,7 +3666,7 @@ export function PartnerDashboard({
                       value={openingHours}
                       onChange={(e) => setOpeningHours(e.target.value)}
                       placeholder="Terça a Domingo, 12h às 23h"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
 
@@ -3678,7 +3676,7 @@ export function PartnerDashboard({
                       rows={3}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2 text-xs"
+                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
                 </div>
@@ -3739,7 +3737,7 @@ export function PartnerDashboard({
 
             {/* PIN de Contingência */}
             <div className="mt-4 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3">
-              <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
+              <span className="text-xs font-semibold text-[var(--text-secondary)]">
                 Sem câmera? Diga ao atendente o PIN:
               </span>
               <p className="mt-1 font-mono text-2xl font-black tracking-widest text-[#FF6B35]">
