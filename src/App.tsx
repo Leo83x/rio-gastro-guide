@@ -1303,15 +1303,15 @@ export function App() {
         />
       )}
 
-      {/* Floating Active VIP Pass Badge (discreet, accessible anytime above dock) */}
+      {/* Floating Active VIP Pass Badge (discreet, accessible anytime above dock - margem segura para não colidir com o botão da Bora IA) */}
       {latestActiveReservation && !activePassReservation && !selectedRestaurant && !selectedNightlifeEvent && (
-        <div className="fixed bottom-20 left-1/2 z-30 -translate-x-1/2 px-4 w-full max-w-sm pointer-events-none">
+        <div className="fixed bottom-[5.25rem] left-3 right-[4.75rem] z-30 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-full sm:max-w-sm pointer-events-none">
           <button
             type="button"
             onClick={() => setActivePassReservation(latestActiveReservation)}
-            className="pointer-events-auto w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white shadow-xl shadow-stone-950/30 border border-amber-500/30 hover:border-amber-400/60 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="pointer-events-auto w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white shadow-xl shadow-stone-950/30 border border-amber-500/30 hover:border-amber-400/60 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               <span className="relative flex h-2.5 w-2.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>

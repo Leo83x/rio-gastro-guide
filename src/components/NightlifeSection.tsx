@@ -180,21 +180,15 @@ export function NightlifeSection({
       className="rounded-3xl border border-[#123B56]/25 bg-gradient-to-br from-[#0A1828] via-[#0E2235] to-[#123B56] p-5 text-white shadow-lg sm:p-7"
     >
       {/* Cabeçalho da vertical */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F7931E]/35 bg-[#F7931E]/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#FFB347]">
-            <MoonStar className="h-3.5 w-3.5" />
-            Programação da Noite · Sambas, Shows &amp; Festas
-          </span>
           <h2
             id="home-block-nightlife"
-            className="mt-2 font-sans text-2xl font-extrabold tracking-tight text-white sm:text-3xl"
+            className="font-sans text-2xl font-black tracking-tight text-white sm:text-3xl flex items-center gap-2.5"
           >
+            <MoonStar className="h-6 w-6 text-[#FFB347]" />
             A noite carioca
           </h2>
-          <p className="mt-0.5 text-xs text-[#F1E8D8] sm:text-sm">
-            O Rio não para quando o sol se põe.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

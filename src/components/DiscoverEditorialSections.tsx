@@ -490,17 +490,17 @@ export function DiscoverEditorialSections({
       >
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#FFB347]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
               <Award className="h-3.5 w-3.5" />
               Sua Primeira Missão
             </span>
             <h3
               id="home-block-first-mission"
-              className="mt-2 font-sans text-lg font-bold text-white sm:text-xl"
+              className="mt-2 font-sans text-xl font-black text-white sm:text-2xl"
             >
-              Seu primeiro rolê vale +100 Rio Points
+              Seu primeiro rolê vale +250 Rio Points
             </h3>
-            <p className="mt-1 max-w-xl text-xs text-[#F1E8D8]/90 leading-relaxed">
+            <p className="mt-1.5 max-w-xl text-sm font-medium text-white leading-relaxed">
               Faça sua 1ª reserva ou check-in presencial em qualquer restaurante ou evento do BoraRio e acumule pontos no Passaporte Carioca para resgatar cortesias e experiências exclusivas.
             </p>
           </div>
@@ -655,17 +655,17 @@ export function DiscoverEditorialSections({
       >
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#FFB347]">
-              <Share2 className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+              <Share2 className="h-3.5 w-3.5" />
               Indique e Ganhe Rio Points
             </span>
             <h3
               id="home-block-referral"
-              className="mt-2 font-sans text-lg font-bold text-white sm:text-xl"
+              className="mt-2 font-sans text-xl font-black text-white sm:text-2xl"
             >
               Ganhe 200 Rio Points por cada primeira visita validada
             </h3>
-            <p className="mt-1 max-w-xl text-xs text-[#F1E8D8]/85">
+            <p className="mt-1.5 max-w-xl text-sm font-medium text-white leading-relaxed">
               Convide amigos para o BoraRio. Seus pontos são creditados assim que seu amigo fizer o primeiro check-in presencial validado no parceiro.
             </p>
           </div>
@@ -674,7 +674,7 @@ export function DiscoverEditorialSections({
             <button
               type="button"
               onClick={handleCopyRef}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-white/20"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/15 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-white/25"
             >
               {copiedRef ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
               {copiedRef ? 'Link Copiado!' : 'Copiar Link'}
@@ -683,14 +683,14 @@ export function DiscoverEditorialSections({
             <button
               type="button"
               onClick={handleShareWhatsAppRef}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:brightness-105"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:brightness-105"
             >
               <Share2 className="h-3.5 w-3.5" />
               WhatsApp
             </button>
           </div>
         </div>
-        <p className="mt-3 text-[10px] text-white/60">
+        <p className="mt-3 text-xs font-medium text-white/90">
           * Benefício não conversível em dinheiro. Proteção antifraude e autoindicação ativa.
         </p>
       </section>
@@ -891,62 +891,63 @@ export function DiscoverEditorialSections({
 
           {/* 3 Indicadores Limpos e Prioritários */}
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[#E5B342]/35 bg-white/8 p-3.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#FFB347]">
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-white">
                 Rio Points disponíveis
               </p>
               <h2
                 id="home-block-benefits"
-                className="mt-1 font-sans text-2xl font-extrabold tracking-tight text-white"
+                className="mt-1 font-sans text-2xl font-black tracking-tight text-white sm:text-3xl"
               >
                 {pointsBalance.toLocaleString('pt-BR')} Rio Points
               </h2>
-              <p className="mt-0.5 text-[10px] text-white/70">
-                Pontos de fidelidade não sacáveis
+              <p className="mt-0.5 text-xs font-medium text-white">
+                Pontos de fidelidade (100 RP = R$ 1,00)
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/15 bg-white/8 p-3.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#8DC4EA]">
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-white">
                 Benefícios para resgate
               </p>
-              <p className="mt-1 font-sans text-2xl font-extrabold tracking-tight text-white">
+              <p className="mt-1 font-sans text-2xl font-black tracking-tight text-white sm:text-3xl">
                 {availableRewards.length}{' '}
-                <span className="text-sm font-semibold text-white/80">
+                <span className="text-sm font-semibold text-white">
                   {availableRewards.length === 1 ? 'disponível' : 'disponíveis'}
                 </span>
               </p>
-              <p className="mt-0.5 text-[10px] text-white/70">
+              <p className="mt-0.5 text-xs font-medium text-white">
                 {redeemableNowCount > 0
                   ? `${redeemableNowCount} ao alcance do seu saldo`
                   : 'Recompensas multi-segmento (0% comissão)'}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/12 p-3.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+            <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/20 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-white">
                 Economia Comprovada ({savings.proven_count})
               </p>
-              <p className="mt-1 font-sans text-2xl font-extrabold tracking-tight text-white">
+              <p className="mt-1 font-sans text-2xl font-black tracking-tight text-white sm:text-3xl">
                 {formatBrl(savings.proven_brl)}
               </p>
-              <p className="mt-0.5 text-[10px] text-white/75">
+              <p className="mt-0.5 text-xs font-medium text-white">
                 Validada após check-in presencial
               </p>
             </div>
           </div>
 
           {/* Detalhamento Secundário Expandível (Economia Potencial & Acumulado/Utilizado/Pendente) */}
-          <div className="mt-3">
+          {/* Detalhamento Secundário Expandível (Economia Potencial & Acumulado/Utilizado/Pendente) */}
+          <div className="mt-3.5">
             <button
               type="button"
               onClick={() => setShowWalletDetails((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/80 hover:text-white"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-white hover:underline"
             >
               {showWalletDetails ? (
-                <ChevronUp className="h-3.5 w-3.5" />
+                <ChevronUp className="h-4 w-4" />
               ) : (
-                <ChevronDown className="h-3.5 w-3.5" />
+                <ChevronDown className="h-4 w-4" />
               )}
               {showWalletDetails
                 ? 'Ocultar detalhamento de carteira e economia potencial'
@@ -954,47 +955,47 @@ export function DiscoverEditorialSections({
             </button>
 
             {showWalletDetails && (
-              <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
-                <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2">
-                  <span className="block text-[9px] uppercase tracking-wider text-white/60">
+              <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <div className="rounded-xl border border-white/20 bg-white/10 p-3">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-white">
                     Acumulado
                   </span>
-                  <strong className="text-white">
+                  <strong className="text-sm font-black text-white">
                     {wallet.total_accumulated.toLocaleString('pt-BR')} RP
                   </strong>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2">
-                  <span className="block text-[9px] uppercase tracking-wider text-white/60">
+                <div className="rounded-xl border border-white/20 bg-white/10 p-3">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-white">
                     Utilizado
                   </span>
-                  <strong className="text-white">
+                  <strong className="text-sm font-black text-white">
                     {wallet.total_spent.toLocaleString('pt-BR')} RP
                   </strong>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2">
-                  <span className="block text-[9px] uppercase tracking-wider text-amber-200/90">
+                <div className="rounded-xl border border-white/20 bg-white/10 p-3">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-white">
                     Pendente
                   </span>
-                  <strong className="text-amber-200">
+                  <strong className="text-sm font-black text-white">
                     {wallet.pending_points.toLocaleString('pt-BR')} RP
                   </strong>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-2.5 py-2">
-                  <span className="block text-[9px] uppercase tracking-wider text-[#FFB347]">
+                <div className="rounded-xl border border-white/20 bg-white/10 p-3">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-white">
                     Economia Potencial ({savings.potential_count})
                   </span>
-                  <strong className="text-white">{formatBrl(savings.potential_brl)}</strong>
+                  <strong className="text-sm font-black text-white">{formatBrl(savings.potential_brl)}</strong>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="mt-3 space-y-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-[11px] text-[#F1E8D8]">
-            <p className="flex items-start gap-1.5">
-              <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#F7931E]" />
+          <div className="mt-3.5 space-y-2 rounded-2xl border border-white/20 bg-white/10 p-3.5 text-xs text-white">
+            <p className="flex items-start gap-2 font-medium leading-relaxed text-white">
+              <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-white" />
               <span>{POINTS_PREVISIT_CHECKIN_NOTICE}</span>
             </p>
-            <p className="text-[10px] text-white/70">{WALLET_NON_MONETARY_NOTICE}</p>
+            <p className="text-xs font-medium leading-relaxed text-white">{WALLET_NON_MONETARY_NOTICE}</p>
           </div>
 
           {/* Atalhos preservados para Recompensas, Extrato, Histórico e Roteiros */}

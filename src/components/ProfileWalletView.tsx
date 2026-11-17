@@ -1575,22 +1575,22 @@ export function ProfileWalletView({
                       </div>
 
                       {!isClosed && (
-                        <div className="mt-2.5 space-y-1.5 rounded-xl bg-[var(--bg-surface)] p-2.5 text-[10px]">
-                          <p className="flex items-start gap-1.5 text-[var(--text-secondary)]">
-                            <Store className="mt-0.5 h-3 w-3 shrink-0 text-[#397B68]" />
+                        <div className="mt-3 space-y-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3.5 text-xs text-[var(--text-primary)] dark:text-white">
+                          <p className="flex items-start gap-2 text-[var(--text-primary)] dark:text-white font-medium leading-relaxed">
+                            <Store className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#397B68] dark:text-[#4CA188]" />
                             <span>{res.payment_instruction || DIRECT_PAYMENT_NOTICE}</span>
                           </p>
-                          <p className="flex items-start gap-1.5 font-semibold text-[#FF6B35]">
-                            <Award className="mt-0.5 h-3 w-3 shrink-0" />
+                          <p className="flex items-start gap-2 font-bold text-[#FF6B35] leading-relaxed">
+                            <Award className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <span>{POINTS_PREVISIT_CHECKIN_NOTICE}</span>
                           </p>
-                          <p className="flex items-start gap-1.5 font-semibold text-[#123B56] dark:text-[#F1E8D8]">
-                            <QrCode className="mt-0.5 h-3 w-3 shrink-0 text-[#FF6B35]" />
+                          <p className="flex items-start gap-2 font-bold text-[#123B56] dark:text-white leading-relaxed">
+                            <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF6B35]" />
                             <span>{MANDATORY_CHECKIN_INSTRUCTION}</span>
                           </p>
                           {res.guests > 1 && (
-                            <p className="flex items-start gap-1.5 text-[var(--text-secondary)]">
-                              <Users className="mt-0.5 h-3 w-3 shrink-0 text-[#123B56] dark:text-[#8DC4EA]" />
+                            <p className="flex items-start gap-2 text-[var(--text-secondary)] dark:text-stone-200 text-xs font-medium leading-relaxed">
+                              <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#123B56] dark:text-[#8DC4EA]" />
                               <span>
                                 <strong>Regra de Grupo ({res.guests} pessoas):</strong> o titular recebe pontos individuais 1x pelo próprio check-in (sem multiplicação por quantidade de pessoas). Cada acompanhante (#2..#{res.guests}) pode validar sua presença individualmente (0 RP ao titular).
                               </span>
