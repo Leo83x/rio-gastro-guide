@@ -8,6 +8,7 @@ import { ConciergeWidget } from './components/ConciergeWidget';
 import { IntentCaptureModal } from './components/confia/IntentCaptureModal';
 import { MeusDesejosView } from './components/wishes/MeusDesejosView';
 import { DiscoverEditorialSections } from './components/DiscoverEditorialSections';
+import { ExperiencePassModal } from './components/ExperiencePassModal';
 import { HeroSection, type FilterState } from './components/HeroSection';
 import { Navbar, type AppTab } from './components/Navbar';
 import { NightlifeEventModal } from './components/NightlifeEventModal';
@@ -36,7 +37,7 @@ import { calculateMatchScore, getMatchReasonLabel } from './services/matchServic
 import { getAllNightlifeEvents } from './services/nightlife/nightlifeStore';
 import { usePwaStatus } from './services/pwa';
 import { useAppRoute } from './services/router';
-import { captureReferralCodeFromUrl, getMyReferralCode } from './services/referralStore';
+import { captureReferralCodeFromUrl, getMyReferralLink } from './services/referralStore';
 import {
   getNotifications,
   getPointsBalance,
@@ -82,6 +83,27 @@ export function App() {
   const [pointsBalance, setPointsBalance] = useState<number>(() => getPointsBalance());
   const [reservations, setReservations] = useState<ReservationRequest[]>(() => getReservations());
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => getNotifications());
+  const [activePassReservation, setActivePassReservation] = useState<ReservationRequest | null>(null);
+
+  const latestActiveReservation = useMemo(() => {
+    return reservations.find(
+      (r) =>
+        r.stage !== 'CANCELLED' &&
+        r.stage !== 'NO_SHOW' &&
+        r.stage !== 'ENDED_WITHOUT_GOAL'
+    );
+  }, [reservations]);
+
+  const activePassRestaurant = useMemo(() => {
+    if (!activePassReservation) return null;
+    return (
+      restaurants.find(
+        (r) =>
+          r.id === activePassReservation.experience_id ||
+          r.name.toLowerCase() === activePassReservation.experience_name.toLowerCase()
+      ) || null
+    );
+  }, [activePassReservation, restaurants]);
 
   // Optional Location & Home Catalog Controls
   const [userCoords, setUserCoords] = useState<GeoCoords | null>(null);
@@ -527,12 +549,12 @@ export function App() {
   };
 
   const handleShareVenueToConfia = (venue: Restaurant) => {
-    setSelectedRestaurant(null);
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://borario.app';
-    const myCode = getMyReferralCode();
-    const venueLink = `${origin}/app?venue=${venue.id}&ref=${myCode}`;
+    const venueLink = getMyReferralLink(venue.id);
     const text = `Olha esse lugar no BoraRio: *${venue.name}* (${venue.neighborhood})!\nConfira as vantagens exclusivas e venha comigo:\n${venueLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+    setToast({
+      text: `Link de indicação com vantagens gerado para ${venue.name}!`,
+    });
   };
 
   const openVaultHub = () => {
@@ -1065,8 +1087,9 @@ export function App() {
           onReservationCreated={(req) => {
             setReservations((prev) => [req, ...prev]);
             setNotifications(getNotifications());
+            setActivePassReservation(req);
             setToast({
-              text: `Solicitação individual registrada em ${req.experience_name} (pagamento direto no local).`,
+              text: `Passe VIP gerado para ${req.experience_name}!`,
             });
           }}
           onConfiaPostCreated={() => {
@@ -1105,6 +1128,7 @@ export function App() {
           onReservationCreated={(req) => {
             setReservations((prev) => [req, ...prev]);
             setNotifications(getNotifications());
+            setActivePassReservation(req);
           }}
           onPointsChanged={() => {
             setPointsBalance(getPointsBalance());
@@ -1267,6 +1291,54 @@ export function App() {
           onRestaurantClaimed={handleRestaurantClaimed}
           onReservationCreated={(req) => {
             setReservations((prev) => [req, ...prev]);
+            setNotifications(getNotifications());
+            setSelectedRestaurant(null);
+            setActivePassReservation(req);
+          }}
+        />
+      )}
+
+      {/* Floating Active VIP Pass Badge (discreet, accessible anytime above dock) */}
+      {latestActiveReservation && !activePassReservation && !selectedRestaurant && !selectedNightlifeEvent && (
+        <div className="fixed bottom-20 left-1/2 z-30 -translate-x-1/2 px-4 w-full max-w-sm pointer-events-none">
+          <button
+            type="button"
+            onClick={() => setActivePassReservation(latestActiveReservation)}
+            className="pointer-events-auto w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white shadow-xl shadow-stone-950/30 border border-amber-500/30 hover:border-amber-400/60 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <div className="text-left truncate">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Passe VIP Ativo</p>
+                <p className="text-xs font-bold text-white truncate">{latestActiveReservation.experience_name}</p>
+              </div>
+            </div>
+            <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40">
+              Ver Passe 🎟️
+            </span>
+          </button>
+        </div>
+      )}
+
+      {activePassReservation && (
+        <ExperiencePassModal
+          reservation={activePassReservation}
+          restaurant={activePassRestaurant}
+          onClose={() => setActivePassReservation(null)}
+          onCheckinSuccess={(updatedRes) => {
+            setReservations((prev) =>
+              prev.map((r) => (r.id === updatedRes.id ? updatedRes : r))
+            );
+            setActivePassReservation(updatedRes);
+            setPointsBalance(getPointsBalance());
+            setNotifications(getNotifications());
+          }}
+          onReservationsUpdated={(all) => {
+            setReservations(all);
+            setPointsBalance(getPointsBalance());
             setNotifications(getNotifications());
           }}
         />

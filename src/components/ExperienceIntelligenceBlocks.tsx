@@ -7,7 +7,6 @@ import {
   ExternalLink,
   ParkingCircle,
   QrCode,
-  Store,
   TrainFront,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -355,25 +354,30 @@ export function ExperienceIntelligenceBlocks({
         </div>
 
         {resSaved ? (
-          <div className="mt-3 space-y-2 rounded-xl bg-emerald-500/15 px-3.5 py-3 text-xs text-emerald-800 dark:text-emerald-200">
-            <p className="flex items-center gap-2 font-bold">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>
-                Solicitação registrada para {resDate} às {resTime} ({resGuests} pessoas) — aguardando confirmação do estabelecimento.
-              </span>
-            </p>
-            <p className="flex items-start gap-1.5 text-[11px]">
-              <Store className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{DIRECT_PAYMENT_NOTICE}</span>
-            </p>
-            <p className="flex items-start gap-1.5 rounded-lg bg-[#FF6B35]/15 p-2 text-[11px] font-semibold text-[#123B56] dark:text-[#F1E8D8]">
-              <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF6B35]" />
-              <span>{POINTS_PREVISIT_CHECKIN_NOTICE}</span>
-            </p>
-            <p className="flex items-start gap-1.5 rounded-lg bg-white/75 p-2 text-[11px] font-semibold text-[#123B56] dark:bg-black/25 dark:text-[#F1E8D8]">
-              <QrCode className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF6B35]" />
-              <span>{MANDATORY_CHECKIN_INSTRUCTION}</span>
-            </p>
+          <div className="mt-3 space-y-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-xs text-emerald-900 dark:text-emerald-100">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-bold text-sm text-[var(--text-primary)]">
+                  Mesa Solicitada com Sucesso!
+                </p>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {resDate} às {resTime} · {resGuests} {resGuests === 1 ? 'pessoa' : 'pessoas'} · Pagamento direto no local
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-white/70 dark:bg-black/30 p-3 text-xs text-[var(--text-secondary)] space-y-1">
+              <p className="flex items-center gap-1.5 font-semibold text-[var(--text-primary)]">
+                <QrCode className="h-4 w-4 text-[#FF6B35]" />
+                <span>Faça o check-in no balcão ao chegar para validar e ganhar +50 RP.</span>
+              </p>
+              <p className="text-xs text-[var(--text-tertiary)]">
+                Seu Passe VIP já está ativo no seu perfil e disponível para consulta.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="mt-3 space-y-3">

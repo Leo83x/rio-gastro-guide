@@ -2,21 +2,25 @@ import {
   BadgeCheck,
   Bookmark,
   Camera,
+  Check,
   Clock,
+  Copy,
   ExternalLink,
   Globe,
-  HeartHandshake,
   MapPin,
   MessageCircle,
   Navigation,
   Phone,
+  Share2,
   ShieldCheck,
   Star,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
+import { getMyReferralCode, getMyReferralLink } from '../services/referralStore';
 import type { ReservationRequest } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
+import { buildGoogleMapsUrl, buildUberUrl, launchNineNineRide } from '../utils/mobility';
 import { ClaimModal } from './ClaimModal';
 import { ExperienceIntelligenceBlocks } from './ExperienceIntelligenceBlocks';
 import { LeafletMap } from './LeafletMap';
@@ -62,10 +66,32 @@ export function RestaurantDetailModal({
   const setActivePhotoIdx = (idx: number) =>
     setPhotoState({ restaurantId: restaurant.id, idx });
   const [showClaimModal, setShowClaimModal] = useState(false);
+  const [showMobilityOptions, setShowMobilityOptions] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${restaurant.name} ${restaurant.address}`
-  )}`;
+  const rideCoords = {
+    latitude: restaurant.latitude,
+    longitude: restaurant.longitude,
+    name: restaurant.name,
+  };
+  const uberUrl = buildUberUrl(rideCoords);
+  const googleMapsUrl = buildGoogleMapsUrl(restaurant.latitude, restaurant.longitude);
+
+  const handleShareApp = () => {
+    const venueLink = getMyReferralLink(restaurant.id);
+    const myCode = getMyReferralCode();
+    const text = `Olha esse lugar incrível no BoraRio: *${restaurant.name}* (${restaurant.neighborhood})!\nConfira as vantagens exclusivas e venha comigo:\n${venueLink}\n\nCódigo de indicação: *${myCode}*`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+    onShareToConfia?.(restaurant);
+  };
+
+  const handleCopyLink = () => {
+    const venueLink = getMyReferralLink(restaurant.id);
+    navigator.clipboard.writeText(venueLink).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    });
+  };
 
   const whatsappUrl = restaurant.whatsapp
     ? `https://wa.me/${restaurant.whatsapp.replace(/\D/g, '')}`
@@ -214,91 +240,147 @@ export function RestaurantDetailModal({
               </p>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2.5">
-              {onSaveToVault && (
+            {/* Action Buttons: Clean & Premium Hierarchy */}
+            <div className="space-y-3.5">
+              {/* Primary Action Row */}
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={() => onSaveToVault(restaurant)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-colors sm:text-sm ${
-                    inVault
-                      ? 'bg-[#FF6B35] text-white'
-                      : 'border border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white'
-                  }`}
+                  onClick={handleShareApp}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 sm:text-sm"
+                  title="Convidar amigos no WhatsApp com link oficial do app"
                 >
-                  <Bookmark className={`h-4 w-4 ${inVault ? 'fill-current' : ''}`} />
-                  {inVault ? 'Salvo em Meus Desejos' : 'Salvar em Desejos'}
+                  <Share2 className="h-4 w-4" />
+                  <span>Indicar no WhatsApp</span>
                 </button>
-              )}
 
-              {onShareToConfia && (
                 <button
                   type="button"
-                  onClick={() => onShareToConfia(restaurant)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#397B68]/40 bg-[#397B68]/10 px-4 py-2.5 text-xs font-semibold text-[#397B68] transition-colors hover:bg-[#397B68] hover:text-white sm:text-sm"
-                  title="Compartilhar link oficial deste local no WhatsApp"
+                  onClick={handleCopyLink}
+                  className="inline-flex items-center gap-1.5 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
                 >
-                  <HeartHandshake className="h-4 w-4" />
-                  Indicar a Amigos
+                  {copiedLink ? (
+                    <>
+                      <Check className="h-4 w-4 text-emerald-500" />
+                      <span>Link Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span>Copiar Link do App</span>
+                    </>
+                  )}
                 </button>
-              )}
 
-              <a
-                href={googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1C1917] px-4 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-[#E05A47] dark:bg-[#F5F2EB] dark:text-[#0F1115] dark:hover:bg-[#E05A47] dark:hover:text-white sm:text-sm"
-              >
-                <Navigation className="h-4 w-4" />
-                Abrir no Google Maps
-                <ExternalLink className="h-3.5 w-3.5 opacity-70" />
-              </a>
+                {onSaveToVault && (
+                  <button
+                    type="button"
+                    onClick={() => onSaveToVault(restaurant)}
+                    className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-semibold transition sm:text-sm ${
+                      inVault
+                        ? 'bg-[#FF6B35] text-white shadow-sm'
+                        : 'border border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35] hover:text-white'
+                    }`}
+                  >
+                    <Bookmark className={`h-4 w-4 ${inVault ? 'fill-current' : ''}`} />
+                    <span>{inVault ? 'Salvo em Desejos' : 'Salvar em Desejos'}</span>
+                  </button>
+                )}
 
-              {whatsappUrl && (
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400 sm:text-sm"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  WhatsApp
-                </a>
-              )}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobilityOptions((prev) => !prev)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] transition hover:border-[#FF6B35] sm:text-sm"
+                  >
+                    <Navigation className="h-4 w-4 text-[#0077B6]" />
+                    <span>Como Chegar</span>
+                  </button>
 
-              {instagramUrl && (
-                <a
-                  href={instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:border-[#E05A47]/50 sm:text-sm"
-                >
-                  <Camera className="h-4 w-4 text-[#E05A47]" />
-                  @{restaurant.instagram?.replace(/^@/, '')}
-                </a>
-              )}
+                  {showMobilityOptions && (
+                    <div className="absolute left-0 mt-2 z-30 w-52 overflow-hidden rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-1.5 shadow-xl backdrop-blur-xl">
+                      <a
+                        href={uberUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                      >
+                        <span>🚗 Pedir Uber</span>
+                        <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMobilityOptions(false);
+                          launchNineNineRide(rideCoords);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                      >
+                        <span>🚕 Pedir 99</span>
+                        <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+                      </button>
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+                      >
+                        <span>🗺️ Google Maps</span>
+                        <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-              {restaurant.website && (
-                <a
-                  href={restaurant.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] transition-colors hover:border-[#E05A47]/50 sm:text-sm"
-                >
-                  <Globe className="h-4 w-4 text-[var(--text-secondary)]" />
-                  Site Oficial
-                </a>
-              )}
-
-              {restaurant.phone && (
-                <a
-                  href={`tel:${restaurant.phone}`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-4 py-2.5 text-xs font-semibold text-[var(--text-primary)] sm:text-sm"
-                >
-                  <Phone className="h-4 w-4 text-[var(--text-secondary)]" />
-                  {restaurant.phone}
-                </a>
-              )}
+              {/* Secondary Discreet Channels Row */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-[var(--text-secondary)]">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                  Canais da casa:
+                </span>
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-2.5 py-1 text-xs font-semibold text-emerald-600 hover:border-emerald-500/50"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+                {instagramUrl && (
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]/50"
+                  >
+                    <Camera className="h-3.5 w-3.5 text-[#FF6B35]" />
+                    <span>@{restaurant.instagram?.replace(/^@/, '')}</span>
+                  </a>
+                )}
+                {restaurant.phone && (
+                  <a
+                    href={`tel:${restaurant.phone}`}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]/50"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>{restaurant.phone}</span>
+                  </a>
+                )}
+                {restaurant.website && (
+                  <a
+                    href={restaurant.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]/50"
+                  >
+                    <Globe className="h-3.5 w-3.5" />
+                    <span>Site</span>
+                  </a>
+                )}
+              </div>
             </div>
 
             <ExperienceIntelligenceBlocks

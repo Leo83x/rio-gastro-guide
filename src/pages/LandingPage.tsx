@@ -122,9 +122,15 @@ export function LandingPage({
           <button
             type="button"
             onClick={() => onNavigate('/')}
-            className="flex items-center gap-2 text-left"
+            className={`flex items-center gap-2 text-left rounded-2xl transition-all ${
+              isOverLightHero
+                ? 'bg-white/90 border border-white/60 shadow-[0_4px_16px_rgba(0,0,0,0.08)] backdrop-blur-md px-3.5 py-1.5'
+                : isOverDarkHero
+                  ? 'bg-black/40 border border-white/20 shadow-[0_4px_16px_rgba(0,0,0,0.25)] backdrop-blur-md px-3.5 py-1.5'
+                  : 'p-1'
+            }`}
           >
-            <BrandLogo variant="horizontal" size="md" onDark={isDark} />
+            <BrandLogo variant="horizontal" size="md" onDark={isOverDarkHero || (isScrolled && isDark)} />
           </button>
 
           <nav
@@ -254,29 +260,29 @@ export function LandingPage({
           <>
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0A1826]/40 via-transparent to-[#0A1826]/85"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0A1826]/70 via-[#0A1826]/35 to-[#0A1826]/90"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0A1826]/55 via-[#0A1826]/20 to-transparent sm:from-transparent"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0A1826]/75 via-[#0A1826]/30 to-transparent sm:from-transparent"
             />
           </>
         )}
         <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-28 sm:px-6 sm:pt-32 lg:grid-cols-12 lg:px-8 lg:pb-24 lg:pt-36">
           <div className="lg:col-span-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_4px_16px_rgba(0,0,0,0.12)] backdrop-blur-md [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-black/35 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg backdrop-blur-md">
               <Sparkles className="h-3.5 w-3.5 text-[#FFB347]" />
               Superapp de Experiências, Noite &amp; Concierge do Rio de Janeiro
             </div>
 
-            <h1 className="font-sans mt-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              <span className="[text-shadow:0_2px_14px_rgba(5,14,24,0.75)]">A cidade acontece.</span>{' '}
-              <span className="bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
+            <h1 className="font-sans mt-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl text-white">
+              <span className="drop-shadow-[0_2px_14px_rgba(0,0,0,0.9)]">A cidade acontece.</span>{' '}
+              <span className="bg-gradient-to-r from-[#FF5E36] via-[#FFA048] to-[#FFD166] bg-clip-text text-transparent drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
                 Você aproveita.
               </span>
             </h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#F7F1E7] [text-shadow:0_1px_8px_rgba(5,14,24,0.75)] sm:text-lg">
+            <p className="mt-5 max-w-2xl text-base leading-relaxed text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] font-medium sm:text-lg">
               Comer, curtir a noite ou passear: o BoraRio reúne gastronomia premiada, radar de festas e shows em tempo real, passeios adaptáveis ao clima e inteligência com IA para você não perder nada.
             </p>
 
@@ -311,7 +317,7 @@ export function LandingPage({
               )}
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs font-medium text-[#F7F1E7] [text-shadow:0_1px_6px_rgba(5,14,24,0.8)]">
+            <div className="mt-8 flex flex-wrap items-center gap-6 text-xs font-semibold text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
               <span className="inline-flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-[#4CA188]" />
                 {totalExperiences}+ experiências curadas no catálogo

@@ -42,12 +42,23 @@ export function getMyReferralCode(): string {
   }
 }
 
-export function getMyReferralLink(): string {
-  const code = getMyReferralCode();
-  if (typeof window === 'undefined') {
-    return `https://borario.app/app?ref=${code}`;
+export function getCanonicalAppBaseUrl(): string {
+  if (typeof window === 'undefined') return 'https://borario.app';
+  const host = window.location.hostname;
+  // Se estiver em ambiente local ou de desenvolvimento, usa o domínio público oficial para compartilhamento externo
+  if (host === 'localhost' || host === '127.0.0.1' || host.includes('webcontainer') || host.includes('local')) {
+    return 'https://borario.app';
   }
-  return `${window.location.origin}/app?ref=${code}`;
+  return window.location.origin;
+}
+
+export function getMyReferralLink(venueId?: string): string {
+  const code = getMyReferralCode();
+  const base = getCanonicalAppBaseUrl();
+  if (venueId) {
+    return `${base}/app?venue=${encodeURIComponent(venueId)}&ref=${encodeURIComponent(code)}`;
+  }
+  return `${base}/app?ref=${encodeURIComponent(code)}`;
 }
 
 export function captureReferralCodeFromUrl(): string | null {
