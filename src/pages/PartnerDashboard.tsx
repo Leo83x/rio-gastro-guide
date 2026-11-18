@@ -106,7 +106,6 @@ import {
   type NightlifeSubArea,
 } from '../types/nightlife';
 import type {
-  PartnerBillingModel,
   PartnerCommercialPlan,
   PartnerMonthlyInvoice,
 } from '../types/partnerCommercial';
@@ -367,7 +366,7 @@ export function PartnerDashboard({
   const [consumptionRefs, setConsumptionRefs] = useState<Record<string, string>>({});
 
   // Tab 6: Billing & Disputes
-  const [planOverride, setPlanOverride] = useState<{
+  const [planOverride] = useState<{
     tenantId: string;
     plan: PartnerCommercialPlan;
   } | null>(null);
@@ -1067,26 +1066,6 @@ export function PartnerDashboard({
       setConsumptionRefs((prev) => ({ ...prev, [visitProofId]: '' }));
     }
     bumpStore(true);
-  };
-
-  const handleSavePlan = (e: FormEvent) => {
-    e.preventDefault();
-    if (!activeTenant || !currentPlan) return;
-    const saved = savePartnerCommercialPlan(activeTenant.id, {
-      plan_name: currentPlan.plan_name,
-      billing_model: currentPlan.billing_model,
-      fixed_fee_per_guest_brl: currentPlan.fixed_fee_per_guest_brl,
-      fixed_fee_per_booking_brl: currentPlan.fixed_fee_per_booking_brl,
-      max_billable_guests_per_booking: currentPlan.max_billable_guests_per_booking ?? null,
-      monthly_subscription_brl: currentPlan.monthly_subscription_brl,
-      requires_monthly_fee: currentPlan.billing_model === 'PRO_SUBSCRIPTION',
-    });
-    setPlanOverride({ tenantId: activeTenant.id, plan: saved });
-    setOpFeedback({
-      ok: true,
-      msg: 'Condição comercial por participante elegível salva para este estabelecimento (0% sobre consumo).',
-    });
-    bumpStore();
   };
 
   const handleDisputeFee = (entryId: string) => {
@@ -4613,155 +4592,90 @@ export function PartnerDashboard({
                 </section>
 
                 <div className="grid gap-8 lg:grid-cols-12">
-                  <form
-                    onSubmit={handleSavePlan}
-                    className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 lg:col-span-5"
-                  >
+                  <section className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 lg:col-span-5">
                     <div className="flex items-center gap-2.5">
                       <ReceiptText className="h-6 w-6 text-[#397B68]" />
                       <h2 className="font-sans text-xl font-bold">
-                        Condição Comercial
+                        Condição Comercial Vigente
                       </h2>
                     </div>
                     <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                      Modelo fixo por presença validada.{' '}
+                      Modelo fixo por presença validada definido pelo BoraRio.{' '}
                       <strong>Zero % sobre o valor da conta</strong> e zero cobrança em cancelamentos ou no-shows.
                     </p>
 
-                    <div>
-                      <label className="block text-sm font-bold text-[var(--text-primary)]">
-                        Modelo de remuneração
-                      </label>
-                      <select
-                        value={currentPlan.billing_model}
-                        onChange={(e) =>
-                          setPlanOverride({
-                            tenantId: activeTenant.id,
-                            plan: {
-                              ...currentPlan,
-                              billing_model: e.target.value as PartnerBillingModel,
-                            },
-                          })
-                        }
-                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
-                      >
-                        <option value="PER_ATTENDED_GUEST">
-                          Taxa fixa por pessoa atendida (check-in válido)
-                        </option>
-                        <option value="PER_COMPLETED_BOOKING">
-                          Taxa fixa por reserva comparecida
-                        </option>
-                        <option value="PRO_SUBSCRIPTION">
-                          Assinatura fixa recorrente (R$ 0 por check-in)
-                        </option>
-                      </select>
+                    <div className="space-y-3">
+                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                        <span className="block text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                          Modelo de Remuneração
+                        </span>
+                        <p className="mt-1 text-base font-bold text-[var(--text-primary)]">
+                          {currentPlan.billing_model === 'PER_ATTENDED_GUEST'
+                            ? 'Taxa fixa por participante validado (QR Code)'
+                            : currentPlan.billing_model === 'PER_COMPLETED_BOOKING'
+                              ? 'Taxa fixa por reserva comparecida'
+                              : 'Assinatura fixa recorrente'}
+                        </p>
+                      </div>
+
+                      {currentPlan.billing_model === 'PER_ATTENDED_GUEST' && (
+                        <div className="rounded-2xl border border-[#397B68]/30 bg-[#397B68]/10 p-4">
+                          <span className="block text-xs font-bold uppercase tracking-wider text-[#397B68] dark:text-[#4CA188]">
+                            Tarifa por Participante Validado
+                          </span>
+                          <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                            <p className="text-2xl font-black text-[var(--text-primary)]">
+                              R${' '}
+                              {(currentPlan.launch_promo_active
+                                ? currentPlan.launch_promo_fee_per_guest_brl || 5
+                                : currentPlan.fixed_fee_per_guest_brl || 10
+                              )
+                                .toFixed(2)
+                                .replace('.', ',')}
+                            </p>
+                            {currentPlan.launch_promo_active ? (
+                              <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-xs font-bold text-[#FF6B35]">
+                                Condição de Lançamento (50% OFF)
+                              </span>
+                            ) : (
+                              <span className="text-xs text-[var(--text-secondary)]">
+                                Tarifa padrão BoraRio
+                              </span>
+                            )}
+                          </div>
+                          {currentPlan.max_billable_guests_per_booking ? (
+                            <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
+                              Teto por reserva: até{' '}
+                              <strong>{currentPlan.max_billable_guests_per_booking} participantes</strong> faturáveis.
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+
+                      {currentPlan.billing_model === 'PER_COMPLETED_BOOKING' && (
+                        <div className="rounded-2xl border border-[#397B68]/30 bg-[#397B68]/10 p-4">
+                          <span className="block text-xs font-bold uppercase tracking-wider text-[#397B68] dark:text-[#4CA188]">
+                            Taxa por Reserva Atendida
+                          </span>
+                          <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                            R$ {currentPlan.fixed_fee_per_booking_brl.toFixed(2).replace('.', ',')}
+                          </p>
+                        </div>
+                      )}
+
+                      {currentPlan.billing_model === 'PRO_SUBSCRIPTION' && (
+                        <div className="rounded-2xl border border-[#397B68]/30 bg-[#397B68]/10 p-4">
+                          <span className="block text-xs font-bold uppercase tracking-wider text-[#397B68] dark:text-[#4CA188]">
+                            Mensalidade Fixa
+                          </span>
+                          <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                            R$ {currentPlan.monthly_subscription_brl.toFixed(2).replace('.', ',')}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    {currentPlan.billing_model === 'PER_ATTENDED_GUEST' && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-bold text-[var(--text-primary)]">
-                            Tarifa por participante validado (R$)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.50"
-                            min={0}
-                            value={currentPlan.fixed_fee_per_guest_brl}
-                            onChange={(e) =>
-                              setPlanOverride({
-                                tenantId: activeTenant.id,
-                                plan: {
-                                  ...currentPlan,
-                                  fixed_fee_per_guest_brl: Number(e.target.value),
-                                },
-                              })
-                            }
-                            className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base font-bold"
-                          />
-                          <span className="mt-1 block text-xs text-[var(--text-secondary)]">
-                            Referência: R$ 10,00 padrão · R$ 5,00 condição especial de lançamento
-                          </span>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-[var(--text-primary)]">
-                            Teto opcional de participantes faturáveis por reserva
-                          </label>
-                          <input
-                            type="number"
-                            min={0}
-                            placeholder="Sem teto (cobra cada participante validado)"
-                            value={currentPlan.max_billable_guests_per_booking ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value.trim();
-                              setPlanOverride({
-                                tenantId: activeTenant.id,
-                                plan: {
-                                  ...currentPlan,
-                                  max_billable_guests_per_booking:
-                                    val && Number(val) > 0 ? Number(val) : null,
-                                },
-                              });
-                            }}
-                            className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
-                          />
-                          <span className="mt-1 block text-xs text-[var(--text-secondary)]">
-                            Proteção comercial opcional para grupos maiores.
-                          </span>
-                        </div>
-                      </>
-                    )}
-
-                    {currentPlan.billing_model === 'PER_COMPLETED_BOOKING' && (
-                      <div>
-                        <label className="block text-sm font-bold text-[var(--text-primary)]">
-                          Taxa fixa por reserva atendida (R$)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.50"
-                          min={0}
-                          value={currentPlan.fixed_fee_per_booking_brl}
-                          onChange={(e) =>
-                            setPlanOverride({
-                              tenantId: activeTenant.id,
-                              plan: {
-                                ...currentPlan,
-                                fixed_fee_per_booking_brl: Number(e.target.value),
-                              },
-                            })
-                          }
-                          className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
-                        />
-                      </div>
-                    )}
-
-                    {currentPlan.billing_model === 'PRO_SUBSCRIPTION' && (
-                      <div>
-                        <label className="block text-sm font-bold text-[var(--text-primary)]">
-                          Mensalidade fixa (R$)
-                        </label>
-                        <input
-                          type="number"
-                          step="10"
-                          min={0}
-                          value={currentPlan.monthly_subscription_brl}
-                          onChange={(e) =>
-                            setPlanOverride({
-                              tenantId: activeTenant.id,
-                              plan: {
-                                ...currentPlan,
-                                monthly_subscription_brl: Number(e.target.value),
-                              },
-                            })
-                          }
-                          className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
-                        />
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5 rounded-2xl bg-[var(--bg-canvas)] p-4 text-sm text-[var(--text-secondary)]">
+                    <div className="space-y-2 rounded-2xl bg-[var(--bg-canvas)] p-4 text-sm text-[var(--text-secondary)]">
                       <p>
                         <strong>Unidade faturável:</strong> Participante com presença validada por QR Code (1x por visita)
                       </p>
@@ -4776,13 +4690,10 @@ export function PartnerDashboard({
                       </p>
                     </div>
 
-                    <button
-                      type="submit"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#123B56] py-3.5 text-base font-bold text-white hover:bg-[#102F46]"
-                    >
-                      <Save className="h-5 w-5" /> Salvar Configuração
-                    </button>
-                  </form>
+                    <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                      Condição definida em contrato com o BoraRio. Para revisões comerciais, fale com o suporte de parceiros.
+                    </p>
+                  </section>
 
                   {/* Audit Ledger & Contest */}
                   <section className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 lg:col-span-7">
