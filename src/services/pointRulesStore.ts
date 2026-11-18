@@ -281,3 +281,92 @@ export function getCompanionGroupCredits(reservationId?: string): CompanionGroup
   if (!reservationId) return list;
   return list.filter((c) => c.reservation_id === reservationId);
 }
+
+// --- Regras configuráveis do Programa de Indicação (sincronizadas com /api/referrals/rules) ---
+import type { ReferralProgramRule } from '../types/growth';
+import { supabase } from './supabaseClient';
+
+const REFERRAL_RULE_CACHE_KEY = 'borario_referral_program_rule_v1';
+
+export const DEFAULT_REFERRAL_PROGRAM_RULE: ReferralProgramRule = {
+  rule_code: 'DEFAULT_REFERRAL_V1',
+  referrer_points: 300,
+  referred_points: 250,
+  host_table_bonus_points: 100,
+  max_host_bonus_slots_per_booking: 3,
+  first_visit_bonus_points: 0,
+  trigger_event: 'FIRST_VERIFIED_CHECKIN',
+  max_rewards_per_user_total: 50,
+  max_rewards_per_user_period: 10,
+  period_days: 30,
+  validation_window_days: 30,
+  require_contact_verified: false,
+  active: true,
+  notes:
+    'Regra padrão: indicador recebe 300 RP e convidado recebe 250 RP após o 1º check-in presencial validado.',
+};
+
+export function getActiveReferralProgramRule(): ReferralProgramRule {
+  const cached = readJson<ReferralProgramRule | null>(REFERRAL_RULE_CACHE_KEY, null);
+  return cached || DEFAULT_REFERRAL_PROGRAM_RULE;
+}
+
+export async function fetchActiveReferralProgramRule(): Promise<ReferralProgramRule> {
+  try {
+    const res = await fetch('/api/referrals/rules');
+    if (res.ok) {
+      const json = (await res.json()) as { ok?: boolean; referralRule?: ReferralProgramRule | null };
+      if (json.ok && json.referralRule) {
+        writeJson(REFERRAL_RULE_CACHE_KEY, json.referralRule);
+        return json.referralRule;
+      }
+    }
+  } catch {
+    // Fallback silencioso para cache local
+  }
+  return getActiveReferralProgramRule();
+}
+
+export async function saveReferralProgramRuleOnServer(
+  rule: Partial<ReferralProgramRule>
+): Promise<{ ok: boolean; rule?: ReferralProgramRule; message: string }> {
+  try {
+    const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+    if (!session?.access_token) {
+      return {
+        ok: false,
+        message: 'Sessão administrativa autenticada obrigatória para alterar regras no servidor.',
+      };
+    }
+
+    const res = await fetch('/api/referrals/rules', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(rule),
+    });
+
+    const json = (await res.json()) as {
+      ok?: boolean;
+      referralRule?: ReferralProgramRule;
+      message?: string;
+    };
+    if (!res.ok || !json.ok || !json.referralRule) {
+      return {
+        ok: false,
+        message: json.message || 'Falha ao salvar regra de indicação no servidor.',
+      };
+    }
+
+    writeJson(REFERRAL_RULE_CACHE_KEY, json.referralRule);
+    return { ok: true, rule: json.referralRule, message: 'Regra salva no servidor com sucesso.' };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : 'Erro de rede ao salvar regra no servidor.',
+    };
+  }
+}
+

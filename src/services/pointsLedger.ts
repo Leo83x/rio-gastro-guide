@@ -135,3 +135,19 @@ export function appendLedgerTransaction(
   localStorage.setItem(POINTS_STORAGE_KEY, JSON.stringify([tx, ...txs]));
   return tx;
 }
+
+const SERVER_LEDGER_SYNC_KEY = 'borario_points_server_synced_v1';
+
+export function isServerAuthoritativeLedger(): boolean {
+  try {
+    return localStorage.getItem(SERVER_LEDGER_SYNC_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function replaceLedgerFromServer(serverTxs: PointTransaction[]): void {
+  localStorage.setItem(POINTS_STORAGE_KEY, JSON.stringify(serverTxs));
+  localStorage.setItem(SERVER_LEDGER_SYNC_KEY, 'true');
+}
+

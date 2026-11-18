@@ -14,7 +14,11 @@ import {
 } from '../types/verification';
 import { generateUUID } from '../utils/slug';
 import { accruePartnerFeeFromCheckin } from './partnerCommercialStore';
-import { evaluateCheckinPointCredit, recordCompanionSlotCredit } from './pointRulesStore';
+import {
+  evaluateCheckinPointCredit,
+  getActiveReferralProgramRule,
+  recordCompanionSlotCredit,
+} from './pointRulesStore';
 import {
   appendLedgerTransaction,
   getPointsBalance,
@@ -26,6 +30,7 @@ import {
   getIncomingReferralCode,
   reverseReferralForBooking,
 } from './referralStore';
+import { isValidUuid, supabase } from './supabaseClient';
 import {
   getRewardVouchers,
   recordPostRewardReturnIfApplicable,
@@ -271,6 +276,27 @@ export function completeReservationCheckin(params: {
         : ''),
   });
 
+  if (supabase && isValidUuid(updatedReservation.id)) {
+    void supabase.auth.getSession().then(({ data }) => {
+      const token = data.session?.access_token;
+      if (!token) return;
+      void fetch('/api/referrals/process-checkin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reservationId: updatedReservation.id,
+          scannedCodeOrPin: res.proof?.qr_code_used || params.scannedCodeOrPin,
+          participantSlot: 1,
+          participantLabel: 'Titular da Reserva',
+          hasGeolocationEvidence: Boolean(params.hasGeolocationEvidence),
+        }),
+      }).catch(() => undefined);
+    });
+  }
+
   return {
     ok: true,
     message: pointRes.tx
@@ -294,6 +320,7 @@ export function validateGroupCompanionCheckin(params: {
   scannedCodeOrPin: string;
   participantSlot: number;
   participantLabel?: string;
+  companionUserId?: string;
 }): {
   ok: boolean;
   message: string;
@@ -323,7 +350,12 @@ export function validateGroupCompanionCheckin(params: {
     };
   }
 
-  const companionUserId = `guest-slot-${slot}-${target.id}`;
+  const hasRealCompanionAccount = Boolean(
+    params.companionUserId && isValidUuid(params.companionUserId)
+  );
+  const companionUserId = hasRealCompanionAccount
+    ? (params.companionUserId as string)
+    : `guest-slot-${slot}-${target.id}`;
   const cleanLabel = params.participantLabel?.trim() || `Acompanhante #${slot}`;
 
   const res = validateReservationDynamicCheckin({
@@ -343,22 +375,6 @@ export function validateGroupCompanionCheckin(params: {
       ownerPointsAwarded: 0,
     };
   }
-
-  const evalResult = evaluateCheckinPointCredit({
-    restaurantId: target.experience_id,
-    participantSlot: slot,
-    existingTransactions: getPointTransactions(),
-  });
-
-  const companionPoints = evalResult.pointsAmount;
-  recordCompanionSlotCredit({
-    reservationId: target.id,
-    restaurantId: target.experience_id,
-    participantSlot: slot,
-    participantLabel: cleanLabel,
-    pointsAmount: companionPoints,
-    ruleCode: evalResult.rule.rule_code,
-  });
 
   const existingSlots = target.group_validated_slots || [];
   const wasSlotAlreadyValidated = existingSlots.some((s) => s.slot === slot);
@@ -384,45 +400,69 @@ export function validateGroupCompanionCheckin(params: {
     JSON.stringify(all.map((r) => (r.id === updatedReservation.id ? updatedReservation : r)))
   );
 
-  // Registra a visita faturável individual deste participante elegível (slot 2..N)
-  accruePartnerFeeFromCheckin({
-    reservation: updatedReservation,
-    visitProof: res.proof,
-    participantSlot: slot,
-    participantLabel: cleanLabel,
-  });
-
-  // Bônus Anfitrião de Mesa (+100 RP para o criador da reserva até o 3º acompanhante validado: slots 2, 3 e 4)
+  // Regra 4: Acompanhante sem conta real registra apenas presença física (0 pontos e 0 cobrança B2B)
+  let companionPoints = 0;
   let hostBonusAwarded = 0;
-  if (!wasSlotAlreadyValidated && slot >= 2 && slot <= 4) {
-    hostBonusAwarded = 100;
-    appendLedgerTransaction({
-      type: 'CREDIT',
-      amount: hostBonusAwarded,
-      origin: 'referral',
-      description: `Bônus Anfitrião de Mesa: ${cleanLabel} validou check-in individual em ${target.experience_name}`,
-      experience_id: target.experience_id,
-      experience_name: target.experience_name,
-      validation_status: 'RELEASED',
+
+  if (hasRealCompanionAccount) {
+    const evalResult = evaluateCheckinPointCredit({
+      restaurantId: target.experience_id,
+      participantSlot: slot,
+      existingTransactions: getPointTransactions(),
     });
+
+    companionPoints = evalResult.pointsAmount;
+    recordCompanionSlotCredit({
+      reservationId: target.id,
+      restaurantId: target.experience_id,
+      participantSlot: slot,
+      participantLabel: cleanLabel,
+      pointsAmount: companionPoints,
+      ruleCode: evalResult.rule.rule_code,
+    });
+
+    // Registra a visita faturável individual apenas para participante elegível com conta real
+    accruePartnerFeeFromCheckin({
+      reservation: updatedReservation,
+      visitProof: res.proof,
+      participantSlot: slot,
+      participantLabel: cleanLabel,
+    });
+
+    const refRule = getActiveReferralProgramRule();
+    const maxHostSlots = Math.max(0, refRule.max_host_bonus_slots_per_booking);
+    if (!wasSlotAlreadyValidated && slot >= 2 && slot <= 1 + maxHostSlots && refRule.host_table_bonus_points > 0) {
+      hostBonusAwarded = refRule.host_table_bonus_points;
+      appendLedgerTransaction({
+        type: 'CREDIT',
+        amount: hostBonusAwarded,
+        origin: 'referral',
+        description: `Bônus Anfitrião de Mesa: ${cleanLabel} validou check-in individual em ${target.experience_name}`,
+        experience_id: target.experience_id,
+        experience_name: target.experience_name,
+        validation_status: 'RELEASED',
+      });
+    }
   }
 
   addNotification({
     channel: 'internal',
     type: 'reward',
     title: `Participante #${slot} validado em ${target.experience_name}`,
-    message:
-      `Presença individual de ${cleanLabel} confirmada (+${companionPoints} RP na carteira de ${cleanLabel})` +
-      (hostBonusAwarded > 0
-        ? ` e +${hostBonusAwarded} RP de Bônus Anfitrião creditados para você!`
-        : '.'),
+    message: hasRealCompanionAccount
+      ? `Presença individual de ${cleanLabel} confirmada (+${companionPoints} RP na conta do participante)` +
+        (hostBonusAwarded > 0
+          ? ` e +${hostBonusAwarded} RP de Bônus Anfitrião creditados.`
+          : '.')
+      : `Presença física de ${cleanLabel} registrada sem conta BoraRio vinculada (0 RP e sem cobrança automática).`,
   });
 
   return {
     ok: true,
-    message:
-      `Presença individual de ${cleanLabel} (slot #${slot}) validada! (+${companionPoints} RP para ${cleanLabel}` +
-      (hostBonusAwarded > 0 ? ` · +${hostBonusAwarded} RP Bônus Anfitrião para você!` : ')'),
+    message: hasRealCompanionAccount
+      ? `Presença individual de ${cleanLabel} (slot #${slot}) validada! (+${companionPoints} RP` +
+        (hostBonusAwarded > 0 ? ` · +${hostBonusAwarded} RP Bônus Anfitrião)` : ')')
+      : `Presença física de ${cleanLabel} (slot #${slot}) registrada. Para ganhar pontos, o acompanhante precisa ativar seu próprio passe com conta BoraRio.`,
     proof: res.proof,
     reservation: updatedReservation,
     companionPointsAwarded: companionPoints,
@@ -664,6 +704,22 @@ export function updateReservationStage(
   return next;
 }
 
+function dispatchServerReverseTx(reservationId: string, reason: string): void {
+  if (!supabase || !isValidUuid(reservationId)) return;
+  void supabase.auth.getSession().then(({ data }) => {
+    const token = data.session?.access_token;
+    if (!token) return;
+    void fetch('/api/referrals/reverse', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reservationId, reason }),
+    }).catch(() => undefined);
+  });
+}
+
 export function cancelReservation(id: string): ReservationRequest[] {
   const next = getReservations().map((r) =>
     r.id === id
@@ -676,6 +732,7 @@ export function cancelReservation(id: string): ReservationRequest[] {
   );
   localStorage.setItem(KEYS.RESERVATIONS, JSON.stringify(next));
   reverseReferralForBooking(id, 'Reserva cancelada pelo usuário ou estabelecimento');
+  dispatchServerReverseTx(id, 'CANCELLED');
   return next;
 }
 
@@ -691,6 +748,7 @@ export function markReservationNoShow(id: string): ReservationRequest[] {
   );
   localStorage.setItem(KEYS.RESERVATIONS, JSON.stringify(next));
   reverseReferralForBooking(id, 'Não comparecimento (No-Show) registrado pelo parceiro');
+  dispatchServerReverseTx(id, 'NO_SHOW');
   return next;
 }
 

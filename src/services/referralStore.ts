@@ -4,7 +4,7 @@ import type { VisitProofRecord } from '../types/verification';
 import { generateUUID } from '../utils/slug';
 import { getUserProfileIdentity } from './authService';
 import { appendLedgerTransaction } from './pointsLedger';
-import { isValidUuid, supabase } from './supabaseClient';
+import { supabase } from './supabaseClient';
 import { getVisitProofForReservation } from './visitProofStore';
 
 const KEYS = {
@@ -187,6 +187,9 @@ export function registerReferralInvitation(params: {
     };
   }
 
+  const activeRule = getActiveReferralProgramRule();
+  const rewardPoints = activeRule.referrer_points;
+
   const attribution: ReferralAttribution = {
     id: generateUUID(),
     referral_code: myCode,
@@ -196,8 +199,11 @@ export function registerReferralInvitation(params: {
     booking_id: params.bookingId,
     experience_id: params.experienceId,
     experience_name: params.experienceName,
-    reward_points: DEFAULT_REFERRAL_REWARD_POINTS,
+    reward_points: rewardPoints,
+    referrer_points: rewardPoints,
+    referred_points: activeRule.referred_points,
     status: 'PENDING_CONVERSION',
+    current_stage: 'INVITE_CREATED',
     created_at: new Date().toISOString(),
     is_demonstrative: false,
   };
@@ -205,33 +211,16 @@ export function registerReferralInvitation(params: {
   const next = [attribution, ...currentList];
   writeJson(KEYS.ATTRIBUTIONS, next);
 
-  if (supabase && isValidUuid(me.id)) {
-    void supabase
-      .from('referral_attributions')
-      .insert({
-        id: attribution.id,
-        referrer_user_id: me.id,
-        referral_code: attribution.referral_code,
-        referred_label: attribution.referred_label,
-        referred_identifier: attribution.referred_identifier || null,
-        booking_id:
-          attribution.booking_id && isValidUuid(attribution.booking_id)
-            ? attribution.booking_id
-            : null,
-        restaurant_id:
-          attribution.experience_id && isValidUuid(attribution.experience_id)
-            ? attribution.experience_id
-            : null,
-        reward_points: attribution.reward_points,
-        status: 'PENDING_CONVERSION',
-      })
-      .then(() => undefined, () => undefined);
-  }
+  void trackReferralEventOnServer({
+    referralCode: myCode,
+    eventType: 'INVITE_CREATED',
+    source: 'wallet_manual',
+    idempotencyKey: `invite:${attribution.id}`,
+  });
 
   return {
     ok: true,
-    message:
-      'Convite registrado como Pendente (0 pontos no cadastro). Os +300 RP só serão liberados após o 1º check-in validado do convidado em qualquer parceiro BoraRio.',
+    message: `Convite registrado como Pendente (0 pontos no cadastro). Os +${rewardPoints} RP só serão liberados após o 1º check-in validado do convidado.`,
     attribution,
     attributions: next,
   };
@@ -544,3 +533,81 @@ export function reverseReferralForBooking(
   }
   return reversedAny;
 }
+
+// --- Integração autoritativa com /api/referrals ---
+import type { PointTransaction } from '../types/experience';
+import type { VipInviteRecord } from '../types/growth';
+import { getActiveReferralProgramRule } from './pointRulesStore';
+import { replaceLedgerFromServer } from './pointsLedger';
+
+export async function trackReferralEventOnServer(params: {
+  referralCode: string;
+  eventType:
+    | 'INVITE_CREATED'
+    | 'LINK_VISITED'
+    | 'SIGNUP_COMPLETED'
+    | 'CONTACT_VERIFIED'
+    | 'FIRST_VALID_ACTION';
+  source?: string;
+  idempotencyKey?: string;
+}): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+    if (!session?.access_token) {
+      return { ok: false, message: 'Sessão não autenticada.' };
+    }
+    const res = await fetch('/api/referrals/track', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(params),
+    });
+    const json = (await res.json()) as { ok?: boolean; message?: string };
+    return { ok: Boolean(res.ok && json.ok), message: json.message };
+  } catch {
+    return { ok: false, message: 'Erro de rede ao registrar evento de indicação.' };
+  }
+}
+
+export async function fetchReferralSummaryFromServer(): Promise<{
+  ok: boolean;
+  attributions?: ReferralAttribution[];
+  vipInvites?: VipInviteRecord[];
+}> {
+  try {
+    const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+    if (!session?.access_token) return { ok: false };
+
+    const res = await fetch('/api/referrals/summary', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) return { ok: false };
+
+    const json = (await res.json()) as {
+      ok?: boolean;
+      transactions?: PointTransaction[];
+      attributions?: ReferralAttribution[];
+      vipInvites?: VipInviteRecord[];
+    };
+
+    if (!json.ok) return { ok: false };
+
+    if (Array.isArray(json.transactions)) {
+      replaceLedgerFromServer(json.transactions);
+    }
+    if (Array.isArray(json.attributions)) {
+      writeJson(KEYS.ATTRIBUTIONS, json.attributions);
+    }
+
+    return {
+      ok: true,
+      attributions: json.attributions || [],
+      vipInvites: json.vipInvites || [],
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
