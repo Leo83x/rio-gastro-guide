@@ -2,7 +2,6 @@ import {
   Award,
   BarChart3,
   Building2,
-  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +17,6 @@ import {
   QrCode,
   RotateCcw,
   ScrollText,
-  Share2,
   ShieldCheck,
   Sparkles,
   Sun,
@@ -145,9 +143,9 @@ const SLIDES: SlideData[] = [
 export function PitchDeckPage({ isDark, onToggleTheme, onNavigate }: PitchDeckPageProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [viewMode, setViewMode] = useState<'slides' | 'scroll'>('slides');
-  const [copiedLink, setCopiedLink] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const downloadPptxUrl = '/BoraRio_Pitch_Deck_Investidores_Familiares.pptx';
 
   // Keyboard navigation for presentation mode
   const nextSlide = useCallback(() => {
@@ -187,16 +185,6 @@ export function PitchDeckPage({ isDark, onToggleTheme, onNavigate }: PitchDeckPa
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
     }
   };
-
-  const copyShareLink = () => {
-    const canonicalUrl = `${window.location.origin}/pitch`;
-    navigator.clipboard.writeText(canonicalUrl).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2400);
-    });
-  };
-
-  const downloadPptxUrl = '/BoraRio_Pitch_Deck_Investidores_Familiares.pptx';
 
   return (
     <div
@@ -300,56 +288,6 @@ export function PitchDeckPage({ isDark, onToggleTheme, onNavigate }: PitchDeckPa
                 <span className="hidden sm:inline">Documento</span>
               </button>
             </div>
-
-            {/* Download PPTX */}
-            <a
-              href={downloadPptxUrl}
-              download="BoraRio_Pitch_Deck_Investidores_Familiares.pptx"
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                isDark
-                  ? 'border-[#0077B6]/40 bg-[#0077B6]/15 text-[#38BDF8] hover:bg-[#0077B6]/25'
-                  : 'border-[#0077B6]/40 bg-[#0077B6]/10 text-[#0077B6] hover:bg-[#0077B6]/20'
-              }`}
-              title="Baixar arquivo original editável (.pptx)"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span className="hidden md:inline">Baixar PPTX</span>
-            </a>
-
-            {/* Copy Share Link */}
-            <button
-              type="button"
-              onClick={copyShareLink}
-              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
-                isDark
-                  ? 'border-white/10 bg-slate-800/80 text-slate-300 hover:text-white'
-                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-              title="Copiar link exclusivo do deck"
-            >
-              {copiedLink ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-[#0077B6]" />
-                  <span className="hidden sm:inline text-[#0077B6] font-semibold">Copiado!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Compartilhar</span>
-                </>
-              )}
-            </button>
-
-            {/* Test Superapp */}
-            <button
-              type="button"
-              onClick={() => onNavigate('/app')}
-              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#FF6B35] to-[#F7931E] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:brightness-110"
-              title="Abrir e testar o app em tempo real"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              <span>Ver App</span>
-            </button>
 
             {/* Theme Toggle */}
             <button
