@@ -21,6 +21,7 @@ import {
   cancelReservation,
   completeReservationCheckin,
   getReservations,
+  isReservationExpired,
   validateGroupCompanionCheckin,
 } from '../services/superappStore';
 import { getActiveVenueQrToken, issueDynamicVenueQrToken } from '../services/visitProofStore';
@@ -56,6 +57,15 @@ export function ExperiencePassModal({
     currentRes.stage === 'CHECKED_IN' ||
     currentRes.stage === 'VERIFIED_VISIT' ||
     currentRes.stage === 'VERIFIED_CONSUMPTION';
+
+  const isExpired =
+    !isCheckedIn &&
+    (currentRes.stage === 'EXPIRED' || isReservationExpired(currentRes));
+  const isCancelled =
+    currentRes.stage === 'CANCELLED' ||
+    currentRes.stage === 'NO_SHOW' ||
+    currentRes.stage === 'ENDED_WITHOUT_GOAL';
+  const isClosedPass = isExpired || isCancelled;
 
   const isTraditionalBooking = currentRes.modality === 'TRADITIONAL_BOOKING';
   const venueId = currentRes.experience_id || restaurant?.id || '';
@@ -338,7 +348,18 @@ export function ExperiencePassModal({
           </div>
 
           {/* 4. AÇÃO PRINCIPAL ÚNICA: LER QR CODE DO ESTABELECIMENTO */}
-          {!isCheckedIn ? (
+          {isClosedPass ? (
+            <div className="rounded-2xl border border-zinc-500/30 bg-zinc-500/10 p-4 text-sm text-[var(--text-secondary)]">
+              <p className="font-bold text-[var(--text-primary)]">
+                {isExpired ? 'Este Passe VIP expirou' : 'Este Passe VIP não está mais ativo'}
+              </p>
+              <p className="mt-1">
+                {isExpired
+                  ? 'A data e a janela desta reserva já passaram. Nenhuma cobrança ou pontuação foi gerada.'
+                  : 'Esta reserva foi encerrada. Você pode fazer uma nova reserva a qualquer momento no app.'}
+              </p>
+            </div>
+          ) : !isCheckedIn ? (
             <div className="space-y-3">
               <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-4 text-xs text-[var(--text-secondary)]">
                 <p className="font-bold text-[var(--text-primary)]">Quando chegar ao local:</p>
@@ -592,7 +613,7 @@ export function ExperiencePassModal({
           </div>
 
           {/* 7. CANCELAR IDA */}
-          {!isCheckedIn && currentRes.stage !== 'CANCELLED' && (
+          {!isCheckedIn && !isClosedPass && (
             <div className="border-t border-[var(--border-hairline)] pt-4">
               {!confirmingCancel ? (
                 <button

@@ -366,25 +366,46 @@ export function getPartnerOfferings(filters?: {
   restaurantId?: string;
   modality?: CommercialModality | 'ALL';
   includeDrafts?: boolean;
+  includeExpired?: boolean;
 }): PartnerOffering[] {
   let list = readJson<PartnerOffering[]>(KEYS.OFFERINGS, []);
   if (list.length === 0) {
     list = buildStarterOfferings();
     writeJson(KEYS.OFFERINGS, list);
   } else {
-    // Auditoria e enriquecimento automático: nenhuma oferta do sistema pode ter data no passado
     const today = getTodayIsoDate();
-    const nowIso = new Date().toISOString();
+    const nowMs = Date.now();
+    const nowIso = new Date(nowMs).toISOString();
     let updated = false;
 
     list = list.map((item) => {
       let itemChanged = false;
       let targetDate = item.service_date;
+      let nextStatus = item.status;
 
-      // Se a data estiver vencida (< today), rola para a data de hoje para manter ativa e consistente
-      if (!targetDate || targetDate < today) {
-        targetDate = today;
-        itemChanged = true;
+      const isPastDate = Boolean(!targetDate || targetDate < today);
+      const endsMs = item.ends_at ? new Date(item.ends_at).getTime() : NaN;
+      const isPastEndsAt = Boolean(!Number.isNaN(endsMs) && endsMs <= nowMs);
+
+      if (item.is_demonstrative) {
+        // Ofertas demonstrativas rolam para hoje para manter a vitrine de demonstração sempre ativa
+        if (isPastDate) {
+          targetDate = today;
+          itemChanged = true;
+        }
+      } else {
+        // Ofertas reais de parceiros vencidas expiram automaticamente e saem da vitrine pública
+        const activeStatuses: PartnerOfferingStatus[] = [
+          'PUBLISHED',
+          'CAPTURING',
+          'GOAL_REACHED',
+          'CONFIRMED',
+          'SOLD_OUT',
+        ];
+        if (activeStatuses.includes(item.status) && (isPastDate || isPastEndsAt)) {
+          nextStatus = 'EXPIRED';
+          itemChanged = true;
+        }
       }
 
       const enrichment = STARTER_ENRICHMENT_MAP[item.id];
@@ -402,9 +423,11 @@ export function getPartnerOfferings(filters?: {
         return {
           ...item,
           ...(enrichment || {}),
+          status: nextStatus,
           service_date: targetDate,
           starts_at: item.starts_at && item.starts_at >= nowIso ? item.starts_at : nowIso,
-          ends_at: getFutureIso(72),
+          ends_at: item.is_demonstrative ? getFutureIso(72) : item.ends_at,
+          updated_at: item.is_demonstrative ? item.updated_at : nowIso,
         };
       }
       return item;
@@ -426,6 +449,7 @@ export function getPartnerOfferings(filters?: {
   }
   return list.filter((o) => {
     if (!filters?.includeDrafts && o.status === 'DRAFT') return false;
+    if (!filters?.includeExpired && o.status === 'EXPIRED') return false;
     if (filters?.restaurantId && o.restaurant_id !== filters.restaurantId) return false;
     if (filters?.modality && filters.modality !== 'ALL' && o.modality !== filters.modality) {
       return false;

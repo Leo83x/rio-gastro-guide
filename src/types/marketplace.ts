@@ -13,6 +13,7 @@ export type PartnerOfferingStatus =
   | 'SOLD_OUT'
   | 'ENDED_WITHOUT_GOAL'
   | 'CANCELLED'
+  | 'EXPIRED'
   | 'COMPLETED';
 
 export type OfferingDistributionMode = 'INDIVIDUAL' | 'COLLECTIVE_MISSION';

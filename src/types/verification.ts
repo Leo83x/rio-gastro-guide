@@ -10,6 +10,7 @@ export type ReservationLifecycleStage =
   | 'VERIFIED_CONSUMPTION'
   | 'CANCELLED'
   | 'NO_SHOW'
+  | 'EXPIRED'
   | 'ENDED_WITHOUT_GOAL';
 
 /**

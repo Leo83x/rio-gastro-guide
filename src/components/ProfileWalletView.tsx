@@ -183,6 +183,10 @@ const STAGE_BADGE: Record<ReservationLifecycleStage, { label: string; cls: strin
     label: 'Não compareceu',
     cls: 'bg-red-500/15 text-red-600 dark:text-red-300',
   },
+  EXPIRED: {
+    label: 'Expirado',
+    cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
+  },
   ENDED_WITHOUT_GOAL: {
     label: 'Encerrada sem meta',
     cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
@@ -364,7 +368,9 @@ export function ProfileWalletView({
       reservations
         .filter((r) => {
           const st = getEffectiveStage(r);
-          if (!showClosedReservations && st === 'CANCELLED') return false;
+          if (!showClosedReservations && (st === 'CANCELLED' || st === 'EXPIRED' || st === 'NO_SHOW' || st === 'ENDED_WITHOUT_GOAL')) {
+            return false;
+          }
           return true;
         })
         .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)),
@@ -375,7 +381,12 @@ export function ProfileWalletView({
     () =>
       reservations.filter((r) => {
         const st = getEffectiveStage(r);
-        return st !== 'CANCELLED' && st !== 'NO_SHOW' && st !== 'ENDED_WITHOUT_GOAL';
+        return (
+          st !== 'CANCELLED' &&
+          st !== 'NO_SHOW' &&
+          st !== 'EXPIRED' &&
+          st !== 'ENDED_WITHOUT_GOAL'
+        );
       }).length,
     [reservations]
   );
@@ -383,7 +394,12 @@ export function ProfileWalletView({
   const conflictIds = useMemo(() => {
     const activeOnly = visibleReservations.filter((r) => {
       const st = getEffectiveStage(r);
-      return st !== 'CANCELLED' && st !== 'NO_SHOW' && st !== 'ENDED_WITHOUT_GOAL';
+      return (
+        st !== 'CANCELLED' &&
+        st !== 'NO_SHOW' &&
+        st !== 'EXPIRED' &&
+        st !== 'ENDED_WITHOUT_GOAL'
+      );
     });
     const set = new Set<string>();
     for (let i = 0; i < activeOnly.length - 1; i++) {

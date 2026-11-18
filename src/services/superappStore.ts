@@ -541,10 +541,73 @@ export function redeemReward(rewardTitle: string, cost: number): { ok: boolean; 
 }
 
 // --- Reservations ---
+function getRioTodayIso(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+export function isReservationExpired(r: ReservationRequest): boolean {
+  const stage =
+    r.stage ||
+    (r.status === 'CONFIRMED'
+      ? 'CONFIRMED'
+      : r.status === 'CANCELLED'
+        ? 'CANCELLED'
+        : 'REQUESTED');
+
+  if (stage === 'EXPIRED') return true;
+  if (
+    stage === 'CHECKED_IN' ||
+    stage === 'VERIFIED_VISIT' ||
+    stage === 'VERIFIED_CONSUMPTION' ||
+    stage === 'CANCELLED' ||
+    stage === 'NO_SHOW' ||
+    stage === 'ENDED_WITHOUT_GOAL'
+  ) {
+    return false;
+  }
+
+  if (!r.date || !/^\d{4}-\d{2}-\d{2}$/.test(r.date)) return false;
+
+  const todayRio = getRioTodayIso();
+  const timeMatch = (r.time || '').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (timeMatch) {
+    const hh = timeMatch[1].padStart(2, '0');
+    const mm = timeMatch[2];
+    const startMs = new Date(`${r.date}T${hh}:${mm}:00-03:00`).getTime();
+    if (!Number.isNaN(startMs)) {
+      const graceMs = 4 * 60 * 60 * 1000; // 4h de tolerância após o horário reservado
+      return Date.now() > startMs + graceMs;
+    }
+  }
+
+  return r.date < todayRio;
+}
+
 export function getReservations(): ReservationRequest[] {
   try {
     const raw = localStorage.getItem(KEYS.RESERVATIONS);
-    return raw ? (JSON.parse(raw) as ReservationRequest[]) : [];
+    const parsed = raw ? (JSON.parse(raw) as ReservationRequest[]) : [];
+    let changed = false;
+    const swept = parsed.map((r) => {
+      if (r.stage !== 'EXPIRED' && isReservationExpired(r)) {
+        changed = true;
+        return {
+          ...r,
+          status: 'CANCELLED' as const,
+          stage: 'EXPIRED' as const,
+        };
+      }
+      return r;
+    });
+    if (changed) {
+      localStorage.setItem(KEYS.RESERVATIONS, JSON.stringify(swept));
+    }
+    return swept;
   } catch {
     return [];
   }

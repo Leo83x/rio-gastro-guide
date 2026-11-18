@@ -46,6 +46,7 @@ import {
   getPointsBalance,
   getReservations,
   getUserPreferences,
+  isReservationExpired,
   markAllNotificationsRead,
   saveUserPreferences,
 } from './services/superappStore';
@@ -91,12 +92,36 @@ export function App() {
   const [vipPassBarHidden, setVipPassBarHidden] = useState(false);
 
   const latestActiveReservation = useMemo(() => {
-    return reservations.find(
-      (r) =>
-        r.stage !== 'CANCELLED' &&
-        r.stage !== 'NO_SHOW' &&
-        r.stage !== 'ENDED_WITHOUT_GOAL'
-    );
+    const todayRio = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+
+    return reservations.find((r) => {
+      const st =
+        r.stage ||
+        (r.status === 'CONFIRMED'
+          ? 'CONFIRMED'
+          : r.status === 'CANCELLED'
+            ? 'CANCELLED'
+            : 'REQUESTED');
+      if (
+        st === 'CANCELLED' ||
+        st === 'NO_SHOW' ||
+        st === 'ENDED_WITHOUT_GOAL' ||
+        st === 'EXPIRED' ||
+        st === 'VERIFIED_CONSUMPTION' ||
+        isReservationExpired(r)
+      ) {
+        return false;
+      }
+      if ((st === 'CHECKED_IN' || st === 'VERIFIED_VISIT') && r.date && r.date < todayRio) {
+        return false;
+      }
+      return true;
+    });
   }, [reservations]);
 
   const activePassRestaurant = useMemo(() => {

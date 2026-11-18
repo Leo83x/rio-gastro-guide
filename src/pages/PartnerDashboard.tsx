@@ -177,6 +177,10 @@ const STAGE_BADGE: Record<ReservationLifecycleStage, { label: string; cls: strin
     label: 'No-Show',
     cls: 'bg-red-500/15 text-red-600 dark:text-red-300',
   },
+  EXPIRED: {
+    label: 'Expirada',
+    cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
+  },
   ENDED_WITHOUT_GOAL: {
     label: 'Encerrada sem meta',
     cls: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300',
@@ -2232,6 +2236,7 @@ export function PartnerDashboard({
                           (r) =>
                             r.offering_id === off.id &&
                             getEffectiveStage(r) !== 'CANCELLED' &&
+                            getEffectiveStage(r) !== 'EXPIRED' &&
                             getEffectiveStage(r) !== 'ENDED_WITHOUT_GOAL'
                         ).length;
                         const attendedCount = tenantFeeLedger
