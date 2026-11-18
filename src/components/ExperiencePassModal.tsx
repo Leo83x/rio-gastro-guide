@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { formatOfferingSchedule } from '../services/opportunityStore';
 import { getMyReferralCode, getMyReferralLink } from '../services/referralStore';
 import {
+  cancelReservation,
   completeReservationCheckin,
   getReservations,
   validateGroupCompanionCheckin,
@@ -49,6 +50,7 @@ export function ExperiencePassModal({
   const [checkinFeedback, setCheckinFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isCelebrationActive, setIsCelebrationActive] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const isCheckedIn =
     currentRes.stage === 'CHECKED_IN' ||
@@ -442,35 +444,34 @@ export function ExperiencePassModal({
             </div>
           )}
 
-          {/* 4. SEU GRUPO, VALIDAÇÃO INDIVIDUAL POR PARTICIPANTE & BÔNUS ANFITRIÃO */}
+          {/* 4. SEU GRUPO */}
           {totalGuests > 1 && (
-            <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+            <div className="space-y-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
                   <Users className="h-4 w-4 text-[#FF6B35]" />
                   Participantes da Mesa (
-                  {(currentRes.group_validated_slots?.length || (isCheckedIn ? 1 : 0))} de {totalGuests}{' '}
-                  validados)
+                  {currentRes.group_validated_slots?.length || (isCheckedIn ? 1 : 0)} de {totalGuests})
                 </span>
-                <span className="text-[10px] font-bold uppercase rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 px-2.5 py-0.5">
-                  +100 RP Bônus Anfitrião / amigo
+                <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">
+                  +100 RP por amigo
                 </span>
               </div>
 
-              <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                <strong>Validação individual por participante:</strong> cada acompanhante que aderir e validar o QR Code no balcão ganha <strong>+250 RP</strong> na própria conta, e você recebe <strong>+100 RP de Bônus Anfitrião</strong> (até 3 amigos por mesa). Acompanhantes sem check-in não geram cobrança ao restaurante.
+              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                Cada amigo que validar o QR no local ganha <strong>+250 RP</strong> e você ganha <strong>+100 RP</strong>.
               </p>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-xs border border-[var(--border-hairline)]">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm">
                   <span className="font-semibold text-[var(--text-primary)]">1. Você (Anfitrião)</span>
                   {isCheckedIn ? (
-                    <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Presença validada (+250 RP)
+                    <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-4 w-4" /> Validado (+250 RP)
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 font-semibold text-amber-500">
-                      <Clock className="h-3.5 w-3.5" /> Aguardando check-in
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-amber-500">
+                      <Clock className="h-4 w-4" /> Aguardando check-in
                     </span>
                   )}
                 </div>
@@ -483,29 +484,22 @@ export function ExperiencePassModal({
                   return (
                     <div
                       key={slotNumber}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-xs border border-[var(--border-hairline)]"
+                      className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                     >
-                      <div>
-                        <span className="font-semibold text-[var(--text-primary)]">
-                          {slotNumber}. {validatedSlot?.participant_label || `Participante #${slotNumber}`}
-                        </span>
-                        <span className="ml-2 text-[10px] text-[var(--text-secondary)]">
-                          {validatedSlot
-                            ? 'Atendido · +250 RP (amigo) · +100 RP (você)'
-                            : 'Gera visita somente se validar QR'}
-                        </span>
-                      </div>
+                      <span className="font-semibold text-[var(--text-primary)]">
+                        {slotNumber}. {validatedSlot?.participant_label || 'Acompanhante'}
+                      </span>
 
                       {validatedSlot ? (
-                        <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Validado
+                        <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="h-4 w-4" /> Validado
                         </span>
                       ) : (
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
                             onClick={handleShareWhatsApp}
-                            className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20"
+                            className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-300"
                           >
                             Convidar no WhatsApp
                           </button>
@@ -513,7 +507,7 @@ export function ExperiencePassModal({
                             type="button"
                             disabled={checkinLoading}
                             onClick={() => handleValidateCompanionSlot(slotNumber)}
-                            className="rounded-lg bg-[#123B56] px-2.5 py-1 text-[10px] font-bold text-white hover:bg-[#0077B6] disabled:opacity-50"
+                            className="rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#0077B6] disabled:opacity-50"
                           >
                             Validar QR Individual
                           </button>
@@ -526,33 +520,33 @@ export function ExperiencePassModal({
             </div>
           )}
 
-          {/* 5. ÁREA DE COMPARTILHAMENTO VIRAL (MESMA MESA OU QUALQUER LUGAR DO RIO) */}
-          <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-[var(--bg-subtle)] to-transparent p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+          {/* 5. CONVIDAR AMIGO */}
+          <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-[var(--bg-subtle)] to-transparent p-4 sm:p-5">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div className="space-y-1">
+                <p className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
                   <Gift className="h-4 w-4 text-emerald-500" />
-                  Presentear amigo com Convite VIP (+300 RP para você)
+                  Convite VIP (+300 RP para você)
                 </p>
-                <p className="mt-0.5 text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                  Chame para ir junto nesta mesa (<strong>+100 RP</strong>) ou indique para qualquer experiência no Rio: quando seu amigo fizer o 1º check-in validado dele, ele ganha <strong>+250 RP</strong> e você destrava <strong>+300 RP</strong>!
+                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                  No 1º check-in do seu amigo, ele ganha <strong>+250 RP</strong> e você <strong>+300 RP</strong>.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700"
                 >
-                  <Share2 className="h-3.5 w-3.5" />
-                  Enviar Convite VIP
+                  <Share2 className="h-4 w-4" />
+                  Enviar Convite
                 </button>
                 <button
                   type="button"
                   onClick={handleCopyShareLink}
-                  className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
-                  title="Copiar link com seu código de indicação"
+                  className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2.5 text-sm font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                  title="Copiar link de convite"
                 >
                   {copiedLink ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
                 </button>
@@ -560,42 +554,83 @@ export function ExperiencePassModal({
             </div>
           </div>
 
-          {/* 6. COMO CHEGAR (ATALHOS COMPACTOS DE MOBILIDADE) */}
+          {/* 6. COMO CHEGAR */}
           <div className="pt-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
               Como Chegar
             </span>
-            <div className="mt-1.5 grid grid-cols-3 gap-2">
+            <div className="mt-2 grid grid-cols-3 gap-2.5">
               <a
                 href={uberUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] py-2 text-xs font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] py-2.5 text-sm font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
               >
                 <span>🚗 Uber</span>
-                <ExternalLink className="h-3 w-3 text-[var(--text-tertiary)]" />
+                <ExternalLink className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
               </a>
 
               <button
                 type="button"
                 onClick={() => launchNineNineRide(rideCoords)}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] py-2 text-xs font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] py-2.5 text-sm font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
               >
                 <span>🟡 99</span>
-                <ExternalLink className="h-3 w-3 text-[var(--text-tertiary)]" />
+                <ExternalLink className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
               </button>
 
               <a
                 href={googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] py-2 text-xs font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] py-2.5 text-sm font-bold text-[var(--text-primary)] transition hover:border-[#FF6B35]"
               >
                 <span>🗺️ Maps</span>
-                <ExternalLink className="h-3 w-3 text-[var(--text-tertiary)]" />
+                <ExternalLink className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
               </a>
             </div>
           </div>
+
+          {/* 7. CANCELAR IDA */}
+          {!isCheckedIn && currentRes.stage !== 'CANCELLED' && (
+            <div className="border-t border-[var(--border-hairline)] pt-4">
+              {!confirmingCancel ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingCancel(true)}
+                  className="w-full rounded-xl border border-red-500/30 bg-red-500/5 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-500/15"
+                >
+                  Não vou mais · Cancelar ida
+                </button>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-red-500/35 bg-red-500/10 p-3.5">
+                  <span className="text-sm font-semibold text-red-600 dark:text-red-300">
+                    Cancelar este passe sem custo?
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingCancel(false)}
+                      className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-bold"
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        cancelReservation(currentRes.id);
+                        onReservationsUpdated?.(getReservations());
+                        onClose();
+                      }}
+                      className="rounded-lg bg-red-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+                    >
+                      Confirmar Cancelamento
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

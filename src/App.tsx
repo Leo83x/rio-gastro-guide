@@ -88,6 +88,7 @@ export function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => getNotifications());
   const [activePassReservation, setActivePassReservation] = useState<ReservationRequest | null>(null);
   const [activeOfferingForActivation, setActiveOfferingForActivation] = useState<PartnerOffering | null>(null);
+  const [vipPassBarHidden, setVipPassBarHidden] = useState(false);
 
   const latestActiveReservation = useMemo(() => {
     return reservations.find(
@@ -1310,35 +1311,55 @@ export function App() {
             setReservations((prev) => [req, ...prev]);
             setNotifications(getNotifications());
             setSelectedRestaurant(null);
+            setVipPassBarHidden(false);
             setActivePassReservation(req);
           }}
         />
       )}
 
-      {/* Floating Active VIP Pass Badge (discreet, accessible anytime above dock - margem segura para não colidir com o botão da Bora IA) */}
-      {latestActiveReservation && !activePassReservation && !selectedRestaurant && !selectedNightlifeEvent && (
-        <div className="fixed bottom-[5.25rem] left-3 right-[4.75rem] z-30 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-full sm:max-w-sm pointer-events-none">
-          <button
-            type="button"
-            onClick={() => setActivePassReservation(latestActiveReservation)}
-            className="pointer-events-auto w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white shadow-xl shadow-stone-950/30 border border-amber-500/30 hover:border-amber-400/60 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <div className="text-left truncate">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Passe VIP Ativo</p>
-                <p className="text-xs font-bold text-white truncate">{latestActiveReservation.experience_name}</p>
-              </div>
+      {/* Floating Active VIP Pass Badge */}
+      {latestActiveReservation &&
+        !vipPassBarHidden &&
+        !activePassReservation &&
+        !selectedRestaurant &&
+        !selectedNightlifeEvent && (
+          <div className="fixed bottom-[5.25rem] left-3 right-[4.75rem] z-30 sm:bottom-6 sm:left-6 sm:right-auto sm:w-auto sm:min-w-[320px] sm:max-w-sm pointer-events-none">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-2xl border border-amber-500/35 bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 p-2 pl-3.5 text-white shadow-xl shadow-stone-950/35 transition-all hover:border-amber-400/60">
+              <button
+                type="button"
+                onClick={() => setActivePassReservation(latestActiveReservation)}
+                className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="relative flex h-2.5 w-2.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                  </span>
+                  <div className="min-w-0 truncate">
+                    <p className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                      Passe VIP Ativo
+                    </p>
+                    <p className="truncate text-sm font-bold text-white">
+                      {latestActiveReservation.experience_name}
+                    </p>
+                  </div>
+                </div>
+                <span className="shrink-0 rounded-xl border border-amber-500/40 bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-300">
+                  Ver Passe 🎟️
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVipPassBarHidden(true)}
+                aria-label="Ocultar Passe VIP"
+                title="Ocultar barra (acesse depois em Perfil)"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-stone-400 transition hover:bg-white/10 hover:text-white"
+              >
+                ×
+              </button>
             </div>
-            <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40">
-              Ver Passe 🎟️
-            </span>
-          </button>
-        </div>
-      )}
+          </div>
+        )}
 
       {activeOfferingForActivation && (
         <BenefitActivationModal
@@ -1351,6 +1372,7 @@ export function App() {
             setActiveOfferingForActivation(null);
             setReservations((prev) => [newRes, ...prev]);
             setNotifications(getNotifications());
+            setVipPassBarHidden(false);
             setActivePassReservation(newRes);
             setToast({
               text: `Benefício ativado com sucesso em ${newRes.experience_name}!`,
