@@ -59,6 +59,8 @@ import {
   updatePartnerOffering,
 } from '../services/opportunityStore';
 import {
+  attachGatewayCheckoutToInvoice,
+  confirmGatewayInvoicePayment,
   createPartnerSponsoredCampaign,
   disputePartnerFeeEntry,
   getPartnerAcquisitionCreditLedger,
@@ -67,10 +69,14 @@ import {
   getPartnerFeeLedger,
   getPartnerMonthlyInvoices,
   getPartnerSponsoredCampaigns,
-  payPartnerInvoice,
   savePartnerCommercialPlan,
   setPartnerSponsoredCampaignStatus,
 } from '../services/partnerCommercialStore';
+import {
+  checkInvoicePaymentStatus,
+  createInvoiceCheckoutSession,
+  type GatewayPaymentMethod,
+} from '../services/billingGateway';
 import {
   createPartnerReward,
   getPartnerLoyaltyEconomics,
@@ -374,9 +380,13 @@ export function PartnerDashboard({
   const [disputeReason, setDisputeReason] = useState('');
   const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] =
     useState<PartnerMonthlyInvoice | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'BOLETO'>('PIX');
+  const [paymentMethod, setPaymentMethod] = useState<GatewayPaymentMethod>('PIX');
+  const [billingEmail, setBillingEmail] = useState('');
+  const [billingDocument, setBillingDocument] = useState('');
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [checkingPaymentStatus, setCheckingPaymentStatus] = useState(false);
   const [paymentFeedback, setPaymentFeedback] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const bumpStore = (syncReservations = false) => {
     setStoreVersion((v) => v + 1);
@@ -1083,21 +1093,101 @@ export function PartnerDashboard({
     bumpStore();
   };
 
-  const handlePayInvoice = (invoiceId: string) => {
+  const handleGenerateInvoiceCharge = async (invoice: PartnerMonthlyInvoice) => {
     if (!activeTenant) return;
+    setPaymentError(null);
+    setPaymentFeedback(null);
+
+    const emailToUse = (billingEmail || partnerEmail || '').trim();
+    if (!emailToUse) {
+      setPaymentError('Informe o e-mail financeiro para emissão da cobrança.');
+      return;
+    }
+
     setPaymentProcessing(true);
-    setTimeout(() => {
-      const res = payPartnerInvoice(activeTenant.id, invoiceId, paymentMethod);
-      setPaymentProcessing(false);
-      if (res.ok) {
-        setPaymentFeedback(res.message);
-        bumpStore();
-        setTimeout(() => {
-          setSelectedInvoiceForPayment(null);
-          setPaymentFeedback(null);
-        }, 2200);
+    try {
+      const result = await createInvoiceCheckoutSession({
+        invoiceId: invoice.id,
+        restaurantId: activeTenant.id,
+        restaurantName: activeTenant.name,
+        periodLabel: invoice.period_label,
+        amountBrl: invoice.total_brl,
+        method: paymentMethod,
+        dueDate: invoice.due_date,
+        returnUrl: window.location.href,
+        customer: {
+          name: responsibleName || activeTenant.name,
+          email: emailToUse,
+          document: billingDocument.trim(),
+        },
+      });
+
+      if (!result.ok || !result.order_id || !result.provider) {
+        setPaymentError(
+          result.message ||
+            'Não foi possível gerar a cobrança. Verifique a chave de integração do gateway.'
+        );
+        return;
       }
-    }, 800);
+
+      const updated = attachGatewayCheckoutToInvoice(activeTenant.id, invoice.id, {
+        provider: result.provider,
+        method: result.method || paymentMethod,
+        order_id: result.order_id,
+        charge_id: result.charge_id,
+        pix_copy_paste_key: result.pix_copy_paste_key,
+        pix_qr_code_url: result.pix_qr_code_url,
+        bank_slip_barcode: result.bank_slip_barcode,
+        boleto_pdf_url: result.boleto_pdf_url,
+        checkout_url: result.checkout_url,
+        expires_at: result.expires_at,
+      });
+
+      if (updated) {
+        setSelectedInvoiceForPayment(updated);
+      }
+      setPaymentFeedback(
+        `Cobrança emitida via ${result.provider === 'PAGARME' ? 'Pagar.me' : 'Stripe'}. Conclua o pagamento e clique em verificar.`
+      );
+      bumpStore();
+    } finally {
+      setPaymentProcessing(false);
+    }
+  };
+
+  const handleCheckInvoicePayment = async (invoice: PartnerMonthlyInvoice) => {
+    if (!activeTenant || !invoice.gateway_order_id) return;
+    setPaymentError(null);
+    setCheckingPaymentStatus(true);
+    try {
+      const statusRes = await checkInvoicePaymentStatus(
+        invoice.gateway_order_id,
+        invoice.gateway_provider
+      );
+      if (!statusRes.ok) {
+        setPaymentError(statusRes.message || 'Não foi possível consultar o status no gateway.');
+        return;
+      }
+      if (statusRes.paid) {
+        const res = confirmGatewayInvoicePayment(activeTenant.id, invoice.id, {
+          paymentMethod: invoice.payment_method || paymentMethod,
+          provider: statusRes.provider || invoice.gateway_provider,
+          orderId: invoice.gateway_order_id,
+          paidAt: statusRes.paid_at,
+        });
+        if (res.ok && res.invoice) {
+          setSelectedInvoiceForPayment(res.invoice);
+          setPaymentFeedback(res.message);
+          bumpStore();
+        }
+      } else {
+        setPaymentFeedback(
+          `Status atual no gateway: ${statusRes.status || 'aguardando pagamento'}. Assim que compensar, a fatura será baixada.`
+        );
+      }
+    } finally {
+      setCheckingPaymentStatus(false);
+    }
   };
 
   const copyText = (txt: string) => {
@@ -1134,7 +1224,7 @@ export function PartnerDashboard({
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-[var(--border-hairline)] bg-[var(--bg-surface)]/95 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex w-full max-w-[1680px] items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => onNavigate('/parceiros')}>
               <BrandLogo variant="horizontal" size="sm" onDark={isDark} />
@@ -1172,7 +1262,7 @@ export function PartnerDashboard({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-[1680px] px-4 py-8 sm:px-6 lg:px-10">
         {!activeTenant ? (
           <div className="mx-auto max-w-lg rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-8 shadow-md">
             <div className="flex items-center gap-3">
@@ -4934,113 +5024,225 @@ export function PartnerDashboard({
                         </p>
                       </div>
 
-                      {/* Seletor PIX vs Boleto */}
-                      <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)]">
+                      {/* Seletor de Meio de Pagamento */}
+                      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-1">
                         <button
                           type="button"
-                          onClick={() => setPaymentMethod('PIX')}
-                          className={`py-2 text-xs font-bold rounded-xl transition ${
+                          onClick={() => {
+                            setPaymentMethod('PIX');
+                            setPaymentError(null);
+                          }}
+                          className={`rounded-xl py-2.5 text-xs font-bold transition ${
                             paymentMethod === 'PIX'
                               ? 'bg-[#123B56] text-white shadow-xs'
                               : 'text-[var(--text-secondary)]'
                           }`}
                         >
-                          ⚡ PIX Instantâneo
+                          ⚡ PIX
                         </button>
                         <button
                           type="button"
-                          onClick={() => setPaymentMethod('BOLETO')}
-                          className={`py-2 text-xs font-bold rounded-xl transition ${
+                          onClick={() => {
+                            setPaymentMethod('BOLETO');
+                            setPaymentError(null);
+                          }}
+                          className={`rounded-xl py-2.5 text-xs font-bold transition ${
                             paymentMethod === 'BOLETO'
                               ? 'bg-[#123B56] text-white shadow-xs'
                               : 'text-[var(--text-secondary)]'
                           }`}
                         >
-                          📄 Boleto Bancário
+                          📄 Boleto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaymentMethod('CARD');
+                            setPaymentError(null);
+                          }}
+                          className={`rounded-xl py-2.5 text-xs font-bold transition ${
+                            paymentMethod === 'CARD'
+                              ? 'bg-[#123B56] text-white shadow-xs'
+                              : 'text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          💳 Cartão
                         </button>
                       </div>
 
-                      {/* Conteúdo PIX */}
-                      {paymentMethod === 'PIX' && (
+                      {/* Dados Fiscais para Emissão */}
+                      {!selectedInvoiceForPayment.gateway_order_id && (
                         <div className="space-y-3">
-                          <p className="text-xs text-[var(--text-secondary)] text-center">
-                            Copie a chave Pix abaixo ou pague pelo aplicativo do seu banco:
-                          </p>
-                          <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-canvas)] p-2.5 border border-[var(--border-hairline)]">
+                          <div>
+                            <label className="block text-xs font-bold text-[var(--text-primary)]">
+                              E-mail financeiro (para recibo/boleto)
+                            </label>
+                            <input
+                              type="email"
+                              value={billingEmail || partnerEmail}
+                              onChange={(e) => setBillingEmail(e.target.value)}
+                              placeholder="financeiro@estabelecimento.com.br"
+                              className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-[var(--text-primary)]">
+                              CNPJ ou CPF do pagador (obrigatório p/ PIX e Boleto no Pagar.me)
+                            </label>
                             <input
                               type="text"
-                              readOnly
-                              value={selectedInvoiceForPayment.pix_copy_paste_key || 'borario-pix-chave'}
-                              className="w-full bg-transparent font-mono text-[11px] text-[var(--text-secondary)] outline-hidden truncate"
+                              value={billingDocument}
+                              onChange={(e) => setBillingDocument(e.target.value)}
+                              placeholder="00.000.000/0001-00"
+                              className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                             />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                copyText(
-                                  selectedInvoiceForPayment.pix_copy_paste_key || 'borario-pix-chave'
-                                )
-                              }
-                              className="shrink-0 rounded-lg bg-[#FF6B35] px-3 py-1.5 text-xs font-bold text-white"
-                            >
-                              Copiar
-                            </button>
                           </div>
                         </div>
                       )}
 
-                      {/* Conteúdo Boleto */}
-                      {paymentMethod === 'BOLETO' && (
-                        <div className="space-y-3">
-                          <p className="text-xs text-[var(--text-secondary)] text-center">
-                            Linha digitável do boleto para pagamento:
-                          </p>
-                          <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-canvas)] p-2.5 border border-[var(--border-hairline)]">
-                            <input
-                              type="text"
-                              readOnly
-                              value={
-                                selectedInvoiceForPayment.bank_slip_barcode ||
-                                '23793.38128 60000.123456 78000.987654 1 95400000025000'
-                              }
-                              className="w-full bg-transparent font-mono text-[11px] text-[var(--text-secondary)] outline-hidden truncate"
-                            />
-                            <button
-                              type="button"
-                              onClick={() =>
-                                copyText(
-                                  selectedInvoiceForPayment.bank_slip_barcode ||
-                                    '23793.38128 60000.123456 78000.987654 1 95400000025000'
-                                )
-                              }
-                              className="shrink-0 rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white"
-                            >
-                              Copiar
-                            </button>
+                      {/* Dados Reais Emitidos pelo Gateway (PIX / Boleto / Checkout) */}
+                      {selectedInvoiceForPayment.gateway_order_id && (
+                        <div className="space-y-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-[var(--text-secondary)]">
+                              Cobrança {selectedInvoiceForPayment.gateway_provider}
+                            </span>
+                            <span className="font-mono text-[11px] text-[var(--text-secondary)]">
+                              {selectedInvoiceForPayment.gateway_order_id}
+                            </span>
                           </div>
+
+                          {selectedInvoiceForPayment.gateway_pix_qr_code_url && (
+                            <div className="flex justify-center rounded-xl bg-white p-3">
+                              <img
+                                src={selectedInvoiceForPayment.gateway_pix_qr_code_url}
+                                alt="QR Code PIX oficial"
+                                className="h-44 w-44 object-contain"
+                              />
+                            </div>
+                          )}
+
+                          {selectedInvoiceForPayment.pix_copy_paste_key && (
+                            <div className="space-y-1.5">
+                              <p className="text-xs font-bold text-[var(--text-primary)]">
+                                PIX Copia e Cola oficial:
+                              </p>
+                              <div className="flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2.5">
+                                <input
+                                  type="text"
+                                  readOnly
+                                  value={selectedInvoiceForPayment.pix_copy_paste_key}
+                                  className="w-full truncate bg-transparent font-mono text-xs text-[var(--text-secondary)] outline-hidden"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => copyText(selectedInvoiceForPayment.pix_copy_paste_key!)}
+                                  className="shrink-0 rounded-lg bg-[#FF6B35] px-3 py-1.5 text-xs font-bold text-white"
+                                >
+                                  Copiar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedInvoiceForPayment.bank_slip_barcode && (
+                            <div className="space-y-1.5">
+                              <p className="text-xs font-bold text-[var(--text-primary)]">
+                                Linha digitável oficial do boleto:
+                              </p>
+                              <div className="flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2.5">
+                                <input
+                                  type="text"
+                                  readOnly
+                                  value={selectedInvoiceForPayment.bank_slip_barcode}
+                                  className="w-full truncate bg-transparent font-mono text-xs text-[var(--text-secondary)] outline-hidden"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => copyText(selectedInvoiceForPayment.bank_slip_barcode!)}
+                                  className="shrink-0 rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white"
+                                >
+                                  Copiar
+                                </button>
+                              </div>
+                              {selectedInvoiceForPayment.gateway_boleto_pdf_url && (
+                                <a
+                                  href={selectedInvoiceForPayment.gateway_boleto_pdf_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-block text-xs font-bold text-[#FF6B35] hover:underline"
+                                >
+                                  Abrir PDF do Boleto →
+                                </a>
+                              )}
+                            </div>
+                          )}
+
+                          {selectedInvoiceForPayment.gateway_checkout_url && (
+                            <a
+                              href={selectedInvoiceForPayment.gateway_checkout_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#123B56] py-3 text-sm font-bold text-white hover:bg-[#102F46]"
+                            >
+                              Abrir Checkout Seguro ({selectedInvoiceForPayment.gateway_provider}) →
+                            </a>
+                          )}
+                        </div>
+                      )}
+
+                      {paymentError && (
+                        <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-3.5 text-xs font-semibold leading-relaxed text-amber-800 dark:text-amber-200">
+                          {paymentError}
                         </div>
                       )}
 
                       {paymentFeedback && (
-                        <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/30 p-3 text-xs text-emerald-800 dark:text-emerald-300 font-bold text-center">
+                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 p-3.5 text-center text-xs font-bold text-emerald-800 dark:text-emerald-300">
                           {paymentFeedback}
                         </div>
                       )}
 
-                      {/* Botão de Confirmação */}
-                      <button
-                        type="button"
-                        disabled={paymentProcessing}
-                        onClick={() => handlePayInvoice(selectedInvoiceForPayment.id)}
-                        className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-[#397B68] py-3.5 text-sm font-bold text-white shadow-lg hover:brightness-105 active:scale-95 transition disabled:opacity-50"
-                      >
-                        {paymentProcessing ? (
-                          <span className="flex items-center justify-center gap-2">
-                            <RefreshCw className="h-4 w-4 animate-spin" /> Processando baixa...
-                          </span>
-                        ) : (
-                          `Confirmar Pagamento (${paymentMethod === 'PIX' ? 'PIX Instantâneo' : 'Boleto'})`
-                        )}
-                      </button>
+                      {/* Ações Reais do Gateway */}
+                      {selectedInvoiceForPayment.status !== 'PAID' && (
+                        <div className="space-y-2.5">
+                          {!selectedInvoiceForPayment.gateway_order_id ? (
+                            <button
+                              type="button"
+                              disabled={paymentProcessing}
+                              onClick={() => void handleGenerateInvoiceCharge(selectedInvoiceForPayment)}
+                              className="w-full rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-3.5 text-sm font-bold text-white shadow-lg transition hover:brightness-105 active:scale-95 disabled:opacity-50"
+                            >
+                              {paymentProcessing ? (
+                                <span className="flex items-center justify-center gap-2">
+                                  <RefreshCw className="h-4 w-4 animate-spin" /> Gerando cobrança no gateway...
+                                </span>
+                              ) : (
+                                `Gerar Cobrança Oficial (${paymentMethod === 'PIX' ? 'PIX' : paymentMethod === 'BOLETO' ? 'Boleto' : 'Cartão'})`
+                              )}
+                            </button>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              <button
+                                type="button"
+                                disabled={checkingPaymentStatus}
+                                onClick={() => void handleCheckInvoicePayment(selectedInvoiceForPayment)}
+                                className="rounded-2xl bg-emerald-600 py-3 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                              >
+                                {checkingPaymentStatus ? 'Consultando gateway...' : 'Verificar Pagamento'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={paymentProcessing}
+                                onClick={() => void handleGenerateInvoiceCharge(selectedInvoiceForPayment)}
+                                className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] py-3 text-xs font-bold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                              >
+                                Reemitir Cobrança
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

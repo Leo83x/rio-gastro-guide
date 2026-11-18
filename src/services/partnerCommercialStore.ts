@@ -626,10 +626,6 @@ export function getPartnerMonthlyInvoices(restaurantId: string): PartnerMonthlyI
     credits_abated_brl: creditsAbated,
     total_brl: totalBrl,
     is_launch_promo: plan.launch_promo_active,
-    pix_copy_paste_key: `00020126580014br.gov.bcb.pix0136borario-financeiro-${restaurantId.slice(0, 8)}520400005303986540${totalBrl.toFixed(2)}5802BR5915BoraRio Gastronomia6009Rio de Janeiro62070503***6304`,
-    bank_slip_barcode:
-      '23793.38128 60000.123456 78000.987654 1 95400000' +
-      String(Math.round(totalBrl * 100)).padStart(6, '0'),
     due_date: '2026-12-05',
   };
 
@@ -658,10 +654,56 @@ export function getPartnerMonthlyInvoices(restaurantId: string): PartnerMonthlyI
   return initialList;
 }
 
-export function payPartnerInvoice(
+export function attachGatewayCheckoutToInvoice(
   restaurantId: string,
   invoiceId: string,
-  paymentMethod: 'PIX' | 'BOLETO'
+  checkout: {
+    provider: 'PAGARME' | 'STRIPE';
+    method: 'PIX' | 'BOLETO' | 'CARD';
+    order_id: string;
+    charge_id?: string;
+    pix_copy_paste_key?: string;
+    pix_qr_code_url?: string;
+    bank_slip_barcode?: string;
+    boleto_pdf_url?: string;
+    checkout_url?: string;
+    expires_at?: string;
+  }
+): PartnerMonthlyInvoice | undefined {
+  const all = readJson<Record<string, PartnerMonthlyInvoice[]>>(KEYS.INVOICES, {});
+  const list = all[restaurantId] || getPartnerMonthlyInvoices(restaurantId);
+  const targetIndex = list.findIndex((inv) => inv.id === invoiceId);
+  if (targetIndex === -1) return undefined;
+
+  const updatedInvoice: PartnerMonthlyInvoice = {
+    ...list[targetIndex],
+    payment_method: checkout.method,
+    gateway_provider: checkout.provider,
+    gateway_order_id: checkout.order_id,
+    gateway_charge_id: checkout.charge_id,
+    pix_copy_paste_key: checkout.pix_copy_paste_key,
+    gateway_pix_qr_code_url: checkout.pix_qr_code_url,
+    bank_slip_barcode: checkout.bank_slip_barcode,
+    gateway_boleto_pdf_url: checkout.boleto_pdf_url,
+    gateway_checkout_url: checkout.checkout_url,
+    gateway_expires_at: checkout.expires_at,
+  };
+
+  list[targetIndex] = updatedInvoice;
+  all[restaurantId] = list;
+  writeJson(KEYS.INVOICES, all);
+  return updatedInvoice;
+}
+
+export function confirmGatewayInvoicePayment(
+  restaurantId: string,
+  invoiceId: string,
+  params: {
+    paymentMethod: 'PIX' | 'BOLETO' | 'CARD';
+    provider?: 'PAGARME' | 'STRIPE';
+    orderId?: string;
+    paidAt?: string;
+  }
 ): { ok: boolean; message: string; invoice?: PartnerMonthlyInvoice } {
   const all = readJson<Record<string, PartnerMonthlyInvoice[]>>(KEYS.INVOICES, {});
   const list = all[restaurantId] || getPartnerMonthlyInvoices(restaurantId);
@@ -674,8 +716,10 @@ export function payPartnerInvoice(
   const updatedInvoice: PartnerMonthlyInvoice = {
     ...list[targetIndex],
     status: 'PAID',
-    paid_at: new Date().toISOString(),
-    payment_method: paymentMethod,
+    paid_at: params.paidAt || new Date().toISOString(),
+    payment_method: params.paymentMethod,
+    gateway_provider: params.provider || list[targetIndex].gateway_provider,
+    gateway_order_id: params.orderId || list[targetIndex].gateway_order_id,
   };
 
   list[targetIndex] = updatedInvoice;
@@ -684,7 +728,7 @@ export function payPartnerInvoice(
 
   return {
     ok: true,
-    message: `Fatura de R$ ${updatedInvoice.total_brl.toFixed(2)} liquidada com sucesso via ${paymentMethod === 'PIX' ? 'PIX Instantâneo' : 'Boleto Bancário'}. Comprovante emitido!`,
+    message: `Pagamento de R$ ${updatedInvoice.total_brl.toFixed(2).replace('.', ',')} confirmado pelo gateway!`,
     invoice: updatedInvoice,
   };
 }

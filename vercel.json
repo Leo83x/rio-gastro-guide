@@ -29,6 +29,10 @@
       "destination": "/api/nightlife?__action=:action*"
     },
     {
+      "source": "/api/billing/:action*",
+      "destination": "/api/billing?__action=:action*"
+    },
+    {
       "source": "/((?!api/|assets/|brand/|sw\\.js$|manifest\\.webmanifest$|favicon\\.svg$|icons\\.svg$|robots\\.txt$).*)",
       "destination": "/index.html"
     }

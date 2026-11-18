@@ -151,6 +151,13 @@ export interface PartnerMonthlyInvoice {
   bank_slip_barcode?: string;
   due_date: string;
   paid_at?: string;
-  payment_method?: 'PIX' | 'BOLETO';
+  payment_method?: 'PIX' | 'BOLETO' | 'CARD';
+  gateway_provider?: 'PAGARME' | 'STRIPE';
+  gateway_order_id?: string;
+  gateway_charge_id?: string;
+  gateway_checkout_url?: string;
+  gateway_pix_qr_code_url?: string;
+  gateway_boleto_pdf_url?: string;
+  gateway_expires_at?: string;
 }
 
