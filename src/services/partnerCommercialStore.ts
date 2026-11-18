@@ -1,9 +1,12 @@
 import type { ReservationRequest } from '../types/experience';
 import type {
   CommercialModality,
+  PartnerAcquisitionCreditEntry,
   PartnerCommercialPlan,
   PartnerFeeLedgerEntry,
   PartnerMonthlyInvoice,
+  PartnerSponsoredCampaign,
+  SponsoredCampaignStatus,
 } from '../types/partnerCommercial';
 import type { VisitProofRecord } from '../types/verification';
 import { generateUUID } from '../utils/slug';
@@ -13,6 +16,8 @@ const KEYS = {
   PLANS: 'borario_partner_commercial_plans_v1',
   FEE_LEDGER: 'borario_partner_fee_ledger_v1',
   INVOICES: 'borario_partner_monthly_invoices_v1',
+  SPONSORED_CAMPAIGNS: 'borario_partner_sponsored_campaigns_v1',
+  ACQUISITION_CREDIT_LEDGER: 'borario_partner_acq_credit_ledger_v1',
 };
 
 function readJson<T>(key: string, fallback: T): T {
@@ -35,7 +40,7 @@ export function getDefaultConfigurablePilotPlan(restaurantId: string): PartnerCo
   return {
     id: `plan-${restaurantId}`,
     restaurant_id: restaurantId,
-    plan_name: 'Plano Parceiro Fundador — Remuneração por Presença Individual Validada',
+    plan_name: 'Plano Parceiro Fundador — Remuneração por Participante Elegível Validado',
     billing_model: 'PER_ATTENDED_GUEST',
     fixed_fee_per_guest_brl: 10.0, // Tarifa padrão
     fixed_fee_per_booking_brl: 0,
@@ -45,11 +50,14 @@ export function getDefaultConfigurablePilotPlan(restaurantId: string): PartnerCo
     charge_on_no_show: false,
     currency: 'BRL',
     policy_summary:
-      'Condição Especial de Lançamento: R$ 5,00 por pessoa com check-in individual validado (50% OFF nos primeiros 30 dias de adesão). Após o término da promoção, vigora a tarifa padrão de R$ 10,00 por pessoa atendida. Zero mensalidade obrigatória, zero percentual sobre a conta e zero cobrança em cancelamentos ou no-shows.',
+      'Regra Oficial BoraRio: R$ 5,00 na condição especial de lançamento (50% OFF) e R$ 10,00 na tarifa padrão por participante elegível, individualmente validado no check-in presencial e atribuído ao BoraRio. Acompanhantes sem adesão/check-in individual não geram cobrança automática. Zero mensalidade, zero comissão sobre a conta e zero cobrança em cancelamentos ou no-shows.',
     is_configurable_pilot_default: true,
     launch_promo_active: true,
     launch_promo_fee_per_guest_brl: 5.0,
     launch_promo_valid_until: validUntil,
+    max_billable_guests_per_booking: null,
+    onboarding_mode: 'SELF_SERVE',
+    onboarding_stage: 'PUBLISHED',
     effective_from: now.toISOString(),
     updated_at: now.toISOString(),
   };
@@ -75,6 +83,11 @@ export function savePartnerCommercialPlan(
       | 'launch_promo_active'
       | 'launch_promo_fee_per_guest_brl'
       | 'launch_promo_valid_until'
+      | 'max_billable_guests_per_booking'
+      | 'onboarding_mode'
+      | 'onboarding_stage'
+      | 'responsible_name'
+      | 'responsible_role'
     >
   >
 ): PartnerCommercialPlan {
@@ -82,10 +95,28 @@ export function savePartnerCommercialPlan(
   const next: PartnerCommercialPlan = {
     ...current,
     ...patch,
-    fixed_fee_per_guest_brl: Math.max(0, Number(patch.fixed_fee_per_guest_brl ?? current.fixed_fee_per_guest_brl)),
-    fixed_fee_per_booking_brl: Math.max(0, Number(patch.fixed_fee_per_booking_brl ?? current.fixed_fee_per_booking_brl)),
-    monthly_subscription_brl: Math.max(0, Number(patch.monthly_subscription_brl ?? current.monthly_subscription_brl)),
-    launch_promo_fee_per_guest_brl: Math.max(0, Number(patch.launch_promo_fee_per_guest_brl ?? current.launch_promo_fee_per_guest_brl ?? 5.0)),
+    fixed_fee_per_guest_brl: Math.max(
+      0,
+      Number(patch.fixed_fee_per_guest_brl ?? current.fixed_fee_per_guest_brl)
+    ),
+    fixed_fee_per_booking_brl: Math.max(
+      0,
+      Number(patch.fixed_fee_per_booking_brl ?? current.fixed_fee_per_booking_brl)
+    ),
+    monthly_subscription_brl: Math.max(
+      0,
+      Number(patch.monthly_subscription_brl ?? current.monthly_subscription_brl)
+    ),
+    launch_promo_fee_per_guest_brl: Math.max(
+      0,
+      Number(patch.launch_promo_fee_per_guest_brl ?? current.launch_promo_fee_per_guest_brl ?? 5.0)
+    ),
+    max_billable_guests_per_booking:
+      patch.max_billable_guests_per_booking !== undefined
+        ? patch.max_billable_guests_per_booking && patch.max_billable_guests_per_booking > 0
+          ? Math.round(patch.max_billable_guests_per_booking)
+          : null
+        : current.max_billable_guests_per_booking ?? null,
     charge_on_cancelled: false,
     charge_on_no_show: false,
     is_configurable_pilot_default: false,
@@ -104,20 +135,235 @@ export function getPartnerFeeLedger(restaurantId?: string): PartnerFeeLedgerEntr
   return entries.filter((e) => e.restaurant_id === restaurantId);
 }
 
+// ============================================================================
+// CAMPANHAS PATROCINADAS & CRÉDITO COMERCIAL DE AQUISIÇÃO
+// ============================================================================
+
+export function getPartnerSponsoredCampaigns(restaurantId?: string): PartnerSponsoredCampaign[] {
+  const all = readJson<PartnerSponsoredCampaign[]>(KEYS.SPONSORED_CAMPAIGNS, []);
+  // Verifica expiração automática de créditos vencidos
+  const nowIso = new Date().toISOString();
+  let changed = false;
+  const creditLedger = readJson<PartnerAcquisitionCreditEntry[]>(KEYS.ACQUISITION_CREDIT_LEDGER, []);
+
+  const updated = all.map((camp) => {
+    if (
+      camp.status === 'ACTIVE' &&
+      camp.remaining_acquisition_credit_brl > 0 &&
+      camp.credits_expire_at < nowIso
+    ) {
+      changed = true;
+      const expiredAmount = camp.remaining_acquisition_credit_brl;
+      creditLedger.unshift({
+        id: generateUUID(),
+        campaign_id: camp.id,
+        restaurant_id: camp.restaurant_id,
+        entry_type: 'CREDIT_EXPIRED',
+        amount_brl: expiredAmount,
+        balance_after_brl: 0,
+        description: `Expiração contratual de saldo remanescente da campanha "${camp.campaign_name}"`,
+        created_at: nowIso,
+      });
+      return {
+        ...camp,
+        status: 'EXPIRED' as const,
+        remaining_acquisition_credit_brl: 0,
+        updated_at: nowIso,
+      };
+    }
+    return camp;
+  });
+
+  if (changed) {
+    writeJson(KEYS.SPONSORED_CAMPAIGNS, updated);
+    writeJson(KEYS.ACQUISITION_CREDIT_LEDGER, creditLedger);
+  }
+
+  if (!restaurantId) return updated;
+  return updated.filter((c) => c.restaurant_id === restaurantId);
+}
+
+export function getPartnerAcquisitionCreditLedger(
+  restaurantId?: string
+): PartnerAcquisitionCreditEntry[] {
+  const list = readJson<PartnerAcquisitionCreditEntry[]>(KEYS.ACQUISITION_CREDIT_LEDGER, []);
+  if (!restaurantId) return list;
+  return list.filter((e) => e.restaurant_id === restaurantId);
+}
+
+export function getPartnerAcquisitionCreditSummary(restaurantId: string): {
+  totalInitialCreditBrl: number;
+  totalUsedCreditBrl: number;
+  totalRemainingCreditBrl: number;
+  totalInvestmentBrl: number;
+  totalNetAdRevenueBrl: number;
+  activeCampaignsCount: number;
+} {
+  const campaigns = getPartnerSponsoredCampaigns(restaurantId);
+  return campaigns.reduce(
+    (acc, c) => {
+      acc.totalInitialCreditBrl = Number(
+        (acc.totalInitialCreditBrl + c.initial_acquisition_credit_brl).toFixed(2)
+      );
+      acc.totalUsedCreditBrl = Number(
+        (acc.totalUsedCreditBrl + c.used_acquisition_credit_brl).toFixed(2)
+      );
+      if (c.status === 'ACTIVE') {
+        acc.totalRemainingCreditBrl = Number(
+          (acc.totalRemainingCreditBrl + c.remaining_acquisition_credit_brl).toFixed(2)
+        );
+        acc.activeCampaignsCount += 1;
+      }
+      acc.totalInvestmentBrl = Number((acc.totalInvestmentBrl + c.investment_brl).toFixed(2));
+      acc.totalNetAdRevenueBrl = Number(
+        (acc.totalNetAdRevenueBrl + c.net_ad_revenue_brl).toFixed(2)
+      );
+      return acc;
+    },
+    {
+      totalInitialCreditBrl: 0,
+      totalUsedCreditBrl: 0,
+      totalRemainingCreditBrl: 0,
+      totalInvestmentBrl: 0,
+      totalNetAdRevenueBrl: 0,
+      activeCampaignsCount: 0,
+    }
+  );
+}
+
+export function createPartnerSponsoredCampaign(params: {
+  restaurantId: string;
+  restaurantName: string;
+  offeringId: string;
+  offeringTitle: string;
+  campaignName?: string;
+  investmentBrl: number;
+  creditConversionPct?: number; // Padrão configurável: 50%
+  durationDays?: number;
+  targetNeighborhoods?: string[];
+  targetCategories?: string[];
+}): {
+  ok: boolean;
+  message: string;
+  campaign?: PartnerSponsoredCampaign;
+  campaigns: PartnerSponsoredCampaign[];
+} {
+  const investment = Math.max(0, Number(params.investmentBrl));
+  if (investment < 50) {
+    return {
+      ok: false,
+      message: 'O investimento mínimo para campanha patrocinada com crédito de aquisição é R$ 50,00.',
+      campaigns: getPartnerSponsoredCampaigns(params.restaurantId),
+    };
+  }
+  if (!params.offeringId) {
+    return {
+      ok: false,
+      message: 'Selecione uma oferta já existente para impulsionar.',
+      campaigns: getPartnerSponsoredCampaigns(params.restaurantId),
+    };
+  }
+
+  const conversionPct = Math.min(100, Math.max(0, Number(params.creditConversionPct ?? 50)));
+  const initialCredit = Number(((investment * conversionPct) / 100).toFixed(2));
+  const netAdRevenue = Number((investment - initialCredit).toFixed(2));
+  const durationDays = Math.max(1, Math.round(params.durationDays ?? 14));
+  const now = new Date();
+  const endsAt = new Date(now.getTime() + durationDays * 86400 * 1000).toISOString();
+  const creditsExpireAt = new Date(now.getTime() + Math.max(30, durationDays) * 86400 * 1000).toISOString();
+
+  const campaign: PartnerSponsoredCampaign = {
+    id: generateUUID(),
+    restaurant_id: params.restaurantId,
+    restaurant_name: params.restaurantName,
+    offering_id: params.offeringId,
+    offering_title: params.offeringTitle,
+    campaign_name:
+      params.campaignName?.trim() || `Impulsionamento · ${params.offeringTitle}`,
+    status: 'ACTIVE',
+    investment_brl: investment,
+    credit_conversion_pct: conversionPct,
+    initial_acquisition_credit_brl: initialCredit,
+    used_acquisition_credit_brl: 0,
+    remaining_acquisition_credit_brl: initialCredit,
+    net_ad_revenue_brl: netAdRevenue,
+    target_neighborhoods: params.targetNeighborhoods || [],
+    target_categories: params.targetCategories || [],
+    duration_days: durationDays,
+    impressions_count: 140,
+    clicks_count: 28,
+    attributed_adhesions_count: 0,
+    attributed_billable_visits_count: 0,
+    starts_at: now.toISOString(),
+    ends_at: endsAt,
+    credits_expire_at: creditsExpireAt,
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  };
+
+  const all = getPartnerSponsoredCampaigns();
+  const next = [campaign, ...all];
+  writeJson(KEYS.SPONSORED_CAMPAIGNS, next);
+
+  if (initialCredit > 0) {
+    const creditLedger = readJson<PartnerAcquisitionCreditEntry[]>(
+      KEYS.ACQUISITION_CREDIT_LEDGER,
+      []
+    );
+    creditLedger.unshift({
+      id: generateUUID(),
+      campaign_id: campaign.id,
+      restaurant_id: params.restaurantId,
+      entry_type: 'CREDIT_GRANTED',
+      amount_brl: initialCredit,
+      balance_after_brl: initialCredit,
+      description: `Crédito comercial de aquisição (${conversionPct}% de R$ ${investment.toFixed(2)}) liberado para abater visitas faturáveis`,
+      created_at: now.toISOString(),
+    });
+    writeJson(KEYS.ACQUISITION_CREDIT_LEDGER, creditLedger);
+  }
+
+  return {
+    ok: true,
+    message: `Campanha publicada! R$ ${initialCredit.toFixed(2)} em Crédito de Aquisição liberados automaticamente para abater seus próximos check-ins verificados.`,
+    campaign,
+    campaigns: next.filter((c) => c.restaurant_id === params.restaurantId),
+  };
+}
+
+export function setPartnerSponsoredCampaignStatus(
+  campaignId: string,
+  status: SponsoredCampaignStatus
+): PartnerSponsoredCampaign[] {
+  const all = getPartnerSponsoredCampaigns();
+  const next = all.map((c) =>
+    c.id === campaignId ? { ...c, status, updated_at: new Date().toISOString() } : c
+  );
+  writeJson(KEYS.SPONSORED_CAMPAIGNS, next);
+  return next;
+}
+
 /**
- * Calcula e registra a remuneração fixa devida ao BoraRio somente após check-in/visita validada.
- * - Tarifa Padrão: R$ 10,00 por check-in individual validado.
- * - Condição Especial de Lançamento: R$ 5,00 por check-in individual validado (50% OFF).
- * - Zero percentual sobre valor da conta consumida.
- * - Zero cobrança em cancelamentos, no-shows, cliques, visualizações ou manifestações de interesse.
- * - Impede duplicidade para o mesmo booking_id.
+ * Calcula e registra a remuneração fixa devida ao BoraRio somente após check-in/visita validada
+ * de CADA PARTICIPANTE ELEGÍVEL INDIVIDUALMENTE (1 pessoa por slot validado).
+ *
+ * Regras estruturais:
+ * - Unidade faturável: Participante elegível atendido, com presença validada no BoraRio (slot 1..N).
+ * - Uma reserva para 4 pessoas NÃO gera 4 cobranças automáticas quando apenas 1 pessoa faz check-in.
+ * - Cada participante só pode gerar 1 cobrança por visita: chave única (booking_id, participant_slot).
+ * - Acompanhantes não cadastrados ou que não validaram presença não geram cobrança.
+ * - Respeita teto comercial opcional por reserva (`max_billable_guests_per_booking`) caso parametrizado.
+ * - Abate automaticamente eventual saldo de Crédito Comercial de Aquisição de campanha patrocinada ativa.
  */
 export function accruePartnerFeeFromCheckin(params: {
   reservation: ReservationRequest;
   visitProof: VisitProofRecord;
+  participantSlot?: number;
+  participantLabel?: string;
   attributedFromRewardVoucherId?: string;
 }): { created: boolean; entry?: PartnerFeeLedgerEntry; reason?: string } {
   const { reservation, visitProof } = params;
+  const slot = Math.max(1, Math.round(params.participantSlot ?? visitProof.participant_slot ?? 1));
 
   if (
     reservation.status === 'CANCELLED' ||
@@ -127,36 +373,137 @@ export function accruePartnerFeeFromCheckin(params: {
   ) {
     return {
       created: false,
-      reason: 'Reservas canceladas, não utilizadas ou sem meta atingida nunca geram remuneração.',
+      reason: 'Reservas canceladas, não utilizadas ou encerradas nunca geram remuneração.',
     };
   }
 
   const ledger = readJson<PartnerFeeLedgerEntry[]>(KEYS.FEE_LEDGER, []);
-  const existing = ledger.find((e) => e.booking_id === reservation.id);
-  if (existing) {
-    return { created: false, entry: existing, reason: 'Evento já apurado para esta reserva.' };
+
+  // Proteção anti-duplicidade individual por (booking_id, participant_slot)
+  const existingForSlot = ledger.find(
+    (e) => e.booking_id === reservation.id && (e.participant_slot ?? 1) === slot
+  );
+  if (existingForSlot) {
+    return {
+      created: false,
+      entry: existingForSlot,
+      reason: `Visita faturável já apurada para o participante #${slot} desta reserva (bloqueio de duplicidade).`,
+    };
   }
 
   const plan = getPartnerCommercialPlan(reservation.experience_id);
-  const attendedGuests = Math.max(1, visitProof.guests_count || reservation.guests || 1);
   const modality: CommercialModality = reservation.modality || 'TRADITIONAL_BOOKING';
+
+  // Verifica teto comercial opcional por reserva (ex: proteger grupos grandes se configurado no plano)
+  const existingBillableSlotsForBooking = ledger.filter(
+    (e) => e.booking_id === reservation.id && e.status !== 'WAIVED' && e.total_fee_brl > 0
+  ).length;
+
+  const isCappedByBookingLimit =
+    plan.max_billable_guests_per_booking != null &&
+    plan.max_billable_guests_per_booking > 0 &&
+    existingBillableSlotsForBooking >= plan.max_billable_guests_per_booking;
+
+  // Para PER_COMPLETED_BOOKING, apenas o 1º participante gera a taxa da reserva
+  const isCompletedBookingModelAlreadyCharged =
+    plan.billing_model === 'PER_COMPLETED_BOOKING' && existingBillableSlotsForBooking >= 1;
 
   const isPromoActive =
     Boolean(plan.launch_promo_active) &&
     (!plan.launch_promo_valid_until || new Date() <= new Date(plan.launch_promo_valid_until));
 
+  // Cada validação de check-in corresponde a exatamente 1 participante elegível atendido
+  const attendedGuests = 1;
   let unitFee = 0;
-  let totalFee = 0;
+  let grossFee = 0;
 
-  if (plan.billing_model === 'PER_ATTENDED_GUEST') {
+  if (isCappedByBookingLimit || isCompletedBookingModelAlreadyCharged) {
+    unitFee = 0;
+    grossFee = 0;
+  } else if (plan.billing_model === 'PER_ATTENDED_GUEST') {
     unitFee = isPromoActive
       ? (plan.launch_promo_fee_per_guest_brl ?? 5.0)
       : (plan.fixed_fee_per_guest_brl ?? 10.0);
-    totalFee = Number((unitFee * attendedGuests).toFixed(2));
+    grossFee = Number((unitFee * attendedGuests).toFixed(2));
   } else if (plan.billing_model === 'PER_COMPLETED_BOOKING') {
     unitFee = plan.fixed_fee_per_booking_brl;
-    totalFee = Number(unitFee.toFixed(2));
+    grossFee = Number(unitFee.toFixed(2));
   }
+
+  // Verifica se há Crédito de Aquisição ativo de Campanha Patrocinada para abater automaticamente
+  let creditAbated = 0;
+  let appliedCampaignId: string | undefined;
+
+  if (grossFee > 0) {
+    const allCampaigns = getPartnerSponsoredCampaigns();
+    const nowIso = new Date().toISOString();
+    // Prioriza campanha vinculada à oferta da reserva, ou qualquer campanha ativa do estabelecimento com saldo
+    const candidateCampaign =
+      allCampaigns.find(
+        (c) =>
+          c.restaurant_id === reservation.experience_id &&
+          c.status === 'ACTIVE' &&
+          c.remaining_acquisition_credit_brl > 0 &&
+          c.credits_expire_at >= nowIso &&
+          reservation.offering_id &&
+          c.offering_id === reservation.offering_id
+      ) ||
+      allCampaigns.find(
+        (c) =>
+          c.restaurant_id === reservation.experience_id &&
+          c.status === 'ACTIVE' &&
+          c.remaining_acquisition_credit_brl > 0 &&
+          c.credits_expire_at >= nowIso
+      );
+
+    if (candidateCampaign) {
+      creditAbated = Math.min(grossFee, candidateCampaign.remaining_acquisition_credit_brl);
+      creditAbated = Number(creditAbated.toFixed(2));
+      appliedCampaignId = candidateCampaign.id;
+
+      const nextRemaining = Number(
+        (candidateCampaign.remaining_acquisition_credit_brl - creditAbated).toFixed(2)
+      );
+      const nextUsed = Number(
+        (candidateCampaign.used_acquisition_credit_brl + creditAbated).toFixed(2)
+      );
+
+      const updatedCampaigns = allCampaigns.map((c) =>
+        c.id === candidateCampaign.id
+          ? {
+              ...c,
+              remaining_acquisition_credit_brl: nextRemaining,
+              used_acquisition_credit_brl: nextUsed,
+              attributed_billable_visits_count: c.attributed_billable_visits_count + 1,
+              status: nextRemaining === 0 ? ('COMPLETED' as const) : c.status,
+              updated_at: nowIso,
+            }
+          : c
+      );
+      writeJson(KEYS.SPONSORED_CAMPAIGNS, updatedCampaigns);
+
+      const creditLedger = readJson<PartnerAcquisitionCreditEntry[]>(
+        KEYS.ACQUISITION_CREDIT_LEDGER,
+        []
+      );
+      creditLedger.unshift({
+        id: generateUUID(),
+        campaign_id: candidateCampaign.id,
+        restaurant_id: reservation.experience_id,
+        entry_type: 'ABATED_ON_CHECKIN',
+        amount_brl: creditAbated,
+        balance_after_brl: nextRemaining,
+        booking_id: reservation.id,
+        participant_slot: slot,
+        visit_proof_id: visitProof.id,
+        description: `Abatimento automático de R$ ${creditAbated.toFixed(2)} em visita verificada (Participante #${slot} · Reserva #${reservation.id.slice(0, 6).toUpperCase()})`,
+        created_at: nowIso,
+      });
+      writeJson(KEYS.ACQUISITION_CREDIT_LEDGER, creditLedger);
+    }
+  }
+
+  const netFee = Number(Math.max(0, grossFee - creditAbated).toFixed(2));
 
   const entry: PartnerFeeLedgerEntry = {
     id: generateUUID(),
@@ -167,14 +514,27 @@ export function accruePartnerFeeFromCheckin(params: {
     plan_id: plan.id,
     billing_model: plan.billing_model,
     modality,
+    participant_slot: slot,
+    participant_id: visitProof.user_id,
+    participant_label:
+      params.participantLabel ||
+      visitProof.participant_label ||
+      (slot === 1 ? 'Titular da Reserva' : `Participante #${slot}`),
     attended_guests: attendedGuests,
     unit_fee_brl: unitFee,
-    total_fee_brl: totalFee,
+    gross_fee_brl: grossFee,
+    credit_abated_brl: creditAbated,
+    net_fee_brl: netFee,
+    total_fee_brl: netFee,
+    sponsored_campaign_id: appliedCampaignId,
     is_launch_promo_applied: isPromoActive,
     attribution_origin: reservation.attribution_origin || 'catalog',
     fee_source_type: 'ATTENDED_BOOKING',
     attributed_from_reward_voucher_id: params.attributedFromRewardVoucherId,
-    status: 'ACCRUED',
+    status: isCappedByBookingLimit ? 'WAIVED' : 'ACCRUED',
+    dispute_reason: isCappedByBookingLimit
+      ? `Isento automaticamente pelo teto comercial de ${plan.max_billable_guests_per_booking} participantes faturáveis por reserva.`
+      : undefined,
     event_timestamp: visitProof.presence_verified_at,
     is_demonstrative: visitProof.is_demonstrative,
   };
@@ -230,9 +590,6 @@ export function waivePartnerFeeEntry(entryId: string, reason?: string): PartnerF
 
 /**
  * Retorna as faturas mensais consolidadas do parceiro.
- * Inicializa com:
- * 1. Fatura aberta do mês corrente (Novembro/2026), calculando os check-ins acumulados
- * 2. Exemplo de fechamento anterior quitado para conferência de histórico.
  */
 export function getPartnerMonthlyInvoices(restaurantId: string): PartnerMonthlyInvoice[] {
   const all = readJson<Record<string, PartnerMonthlyInvoice[]>>(KEYS.INVOICES, {});
@@ -240,17 +597,20 @@ export function getPartnerMonthlyInvoices(restaurantId: string): PartnerMonthlyI
     return all[restaurantId];
   }
 
-  // Inicializa faturas padrão demonstrativas alinhadas à regra de lançamento:
-  // Fatura atual em aberto: 50 check-ins x R$ 5,00 = R$ 250,00 (conforme o modelo oficial)
   const plan = getPartnerCommercialPlan(restaurantId);
   const ledger = getPartnerFeeLedger(restaurantId);
   const validCheckinsCount = ledger.filter((e) => e.status !== 'WAIVED').length || 50;
   const unitFee = plan.launch_promo_active ? 5.0 : 10.0;
   const totalAttendedGuests =
     ledger.reduce((acc, e) => (e.status !== 'WAIVED' ? acc + e.attended_guests : acc), 0) || 50;
+  const creditsAbated = ledger.reduce(
+    (acc, e) => (e.status !== 'WAIVED' ? acc + (e.credit_abated_brl || 0) : acc),
+    0
+  );
   const subtotal = totalAttendedGuests * 10.0;
-  const totalBrl = totalAttendedGuests * unitFee;
-  const discountBrl = subtotal - totalBrl;
+  const grossAfterPromo = totalAttendedGuests * unitFee;
+  const totalBrl = Math.max(0, Number((grossAfterPromo - creditsAbated).toFixed(2)));
+  const discountBrl = subtotal - grossAfterPromo;
 
   const currentInvoice: PartnerMonthlyInvoice = {
     id: `inv-${restaurantId}-2026-11`,
@@ -263,6 +623,7 @@ export function getPartnerMonthlyInvoices(restaurantId: string): PartnerMonthlyI
     effective_fee_per_guest_brl: unitFee,
     subtotal_brl: subtotal,
     discount_brl: discountBrl,
+    credits_abated_brl: creditsAbated,
     total_brl: totalBrl,
     is_launch_promo: plan.launch_promo_active,
     pix_copy_paste_key: `00020126580014br.gov.bcb.pix0136borario-financeiro-${restaurantId.slice(0, 8)}520400005303986540${totalBrl.toFixed(2)}5802BR5915BoraRio Gastronomia6009Rio de Janeiro62070503***6304`,
@@ -283,6 +644,7 @@ export function getPartnerMonthlyInvoices(restaurantId: string): PartnerMonthlyI
     effective_fee_per_guest_brl: 5.0,
     subtotal_brl: 240.0,
     discount_brl: 120.0,
+    credits_abated_brl: 0,
     total_brl: 120.0,
     is_launch_promo: true,
     paid_at: '2026-11-04T14:32:00Z',

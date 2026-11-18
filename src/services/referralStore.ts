@@ -13,7 +13,8 @@ const KEYS = {
   ATTRIBUTIONS: 'borario_referral_attributions_v1',
 };
 
-export const DEFAULT_REFERRAL_REWARD_POINTS = 200;
+export const DEFAULT_REFERRAL_REWARD_POINTS = 300;
+export const HOST_TABLE_BONUS_POINTS = 100;
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -230,7 +231,7 @@ export function registerReferralInvitation(params: {
   return {
     ok: true,
     message:
-      'Convite registrado como Pendente (0 pontos no cadastro). Os +200 RP só serão liberados após reserva elegível + check-in validado no estabelecimento.',
+      'Convite registrado como Pendente (0 pontos no cadastro). Os +300 RP só serão liberados após o 1º check-in validado do convidado em qualquer parceiro BoraRio.',
     attribution,
     attributions: next,
   };

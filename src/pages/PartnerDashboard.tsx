@@ -48,21 +48,28 @@ import { upsertRestaurants } from '../services/database';
 import { checkNightlifeCompleteness, getRioTodayIso } from '../services/nightlife/nightlifeDedup';
 import { submitPartnerNightlifeEvent } from '../services/nightlife/nightlifeStore';
 import {
+  computeActiveProgressiveTier,
   createPartnerOffering,
   getDemandParticipations,
   getPartnerOfferings,
+  markOfferingAsSponsored,
   partnerConfirmDemandOffering,
   partnerConfirmSingleReservation,
   partnerEndDemandWithoutGoal,
   updatePartnerOffering,
 } from '../services/opportunityStore';
 import {
+  createPartnerSponsoredCampaign,
   disputePartnerFeeEntry,
+  getPartnerAcquisitionCreditLedger,
+  getPartnerAcquisitionCreditSummary,
   getPartnerCommercialPlan,
   getPartnerFeeLedger,
   getPartnerMonthlyInvoices,
+  getPartnerSponsoredCampaigns,
   payPartnerInvoice,
   savePartnerCommercialPlan,
+  setPartnerSponsoredCampaignStatus,
 } from '../services/partnerCommercialStore';
 import {
   createPartnerReward,
@@ -128,6 +135,7 @@ type PartnerTab =
   | 'offers'
   | 'demand'
   | 'rewards'
+  | 'campaigns'
   | 'nightlife'
   | 'checkin'
   | 'billing'
@@ -263,10 +271,18 @@ export function PartnerDashboard({
   const [tradTime, setTradTime] = useState('20:00');
   const [tradCapacity, setTradCapacity] = useState(16);
 
-  // Tab 2: Individual / Last Minute offer form (Condição 1)
+  // Tab 2: Unified Offer Form (Uma Oferta, Duas Modalidades: Individual ou Missão Coletiva Progressiva)
   const [offModality, setOffModality] = useState<'INDIVIDUAL_OFFER' | 'LAST_MINUTE'>('INDIVIDUAL_OFFER');
+  const [offDistributionMode, setOffDistributionMode] = useState<'INDIVIDUAL' | 'COLLECTIVE_MISSION'>('INDIVIDUAL');
   const [offTitle, setOffTitle] = useState('');
   const [offBenefit, setOffBenefit] = useState('');
+  const [offInitialGuaranteedBenefit, setOffInitialGuaranteedBenefit] = useState('');
+  const [offTier1Goal, setOffTier1Goal] = useState(5);
+  const [offTier2Goal, setOffTier2Goal] = useState(15);
+  const [offTier2Benefit, setOffTier2Benefit] = useState('');
+  const [offTier3Goal, setOffTier3Goal] = useState(25);
+  const [offTier3Benefit, setOffTier3Benefit] = useState('');
+  const [offSaveAsDraft, setOffSaveAsDraft] = useState(false);
   const [offEligibleItem, setOffEligibleItem] = useState('');
   const [offValidDaysHours, setOffValidDaysHours] = useState('Terça a Quinta · 19h às 22h');
   const [offRules, setOffRules] = useState('Condição válida dentro da janela escolhida; acerto direto no local.');
@@ -274,9 +290,22 @@ export function PartnerDashboard({
   const [offCondPrice, setOffCondPrice] = useState('135');
   const [offDate, setOffDate] = useState(todayDate);
   const [offTime, setOffTime] = useState('19:30');
-  const [offCapacity, setOffCapacity] = useState(12);
+  const [offCapacity, setOffCapacity] = useState(15);
   const [editingOfferingId, setEditingOfferingId] = useState<string | null>(null);
   const [editBenefitDraft, setEditBenefitDraft] = useState('');
+
+  // Assisted Onboarding & Responsible Contact
+  const [responsibleName, setResponsibleName] = useState('Gerência / Sócio Responsável');
+  const [responsibleRole, setResponsibleRole] = useState('Gestor do Estabelecimento');
+  const [onboardingMode, setOnboardingMode] = useState<'SELF_SERVE' | 'ASSISTED_BY_BORARIO'>('SELF_SERVE');
+
+  // Momento 4: Campanhas Patrocinadas com Crédito Comercial de Aquisição
+  const [campOfferingId, setCampOfferingId] = useState('');
+  const [campName, setCampName] = useState('');
+  const [campInvestmentBrl, setCampInvestmentBrl] = useState(200);
+  const [campConversionPct] = useState(50);
+  const [campDurationDays, setCampDurationDays] = useState(14);
+  const [campNeighborhoods, setCampNeighborhoods] = useState('Zona Sul, Barra da Tijuca, Centro');
 
   // Tab 3: Demand offer form
   const [demTitle, setDemTitle] = useState('');
@@ -431,8 +460,6 @@ export function PartnerDashboard({
     (o) => o.modality !== 'TRADITIONAL_BOOKING' && o.status !== 'CANCELLED' && o.status !== 'DRAFT'
   );
   const hasCondition2Configured = tenantRewards.some((r) => r.status !== 'CLOSED');
-  const configuredConditionsCount =
-    (hasCondition1Configured ? 1 : 0) + (hasCondition2Configured ? 1 : 0);
 
   const activeQr =
     activeTenant && storeVersion >= 0 ? getActiveVenueQrToken(activeTenant.id) : null;
@@ -474,6 +501,30 @@ export function PartnerDashboard({
 
   const tenantFeeLedger =
     activeTenant && storeVersion >= 0 ? getPartnerFeeLedger(activeTenant.id) : [];
+
+  const tenantSponsoredCampaigns = useMemo(() => {
+    if (!activeTenant || storeVersion < 0) return [];
+    return getPartnerSponsoredCampaigns(activeTenant.id);
+  }, [activeTenant, storeVersion]);
+
+  const tenantCreditSummary = useMemo(() => {
+    if (!activeTenant || storeVersion < 0) {
+      return {
+        totalInitialCreditBrl: 0,
+        totalUsedCreditBrl: 0,
+        totalRemainingCreditBrl: 0,
+        totalInvestmentBrl: 0,
+        totalNetAdRevenueBrl: 0,
+        activeCampaignsCount: 0,
+      };
+    }
+    return getPartnerAcquisitionCreditSummary(activeTenant.id);
+  }, [activeTenant, storeVersion]);
+
+  const tenantCreditLedger = useMemo(() => {
+    if (!activeTenant || storeVersion < 0) return [];
+    return getPartnerAcquisitionCreditLedger(activeTenant.id);
+  }, [activeTenant, storeVersion]);
 
   const tenantInvoices = useMemo(() => {
     if (!activeTenant || storeVersion < 0) return [];
@@ -600,10 +651,20 @@ export function PartnerDashboard({
         last_verified_at: new Date().toISOString(),
       },
     ]);
+    savePartnerCommercialPlan(activeTenant.id, {
+      onboarding_mode: onboardingMode,
+      onboarding_stage: hasCondition1Configured ? 'PUBLISHED' : 'DRAFT',
+      responsible_name: responsibleName.trim() || undefined,
+      responsible_role: responsibleRole.trim() || undefined,
+    });
     await onDatabaseUpdated();
+    bumpStore();
     setOpFeedback({
       ok: true,
-      msg: 'Dados oficiais e fotos do estabelecimento salvos com sucesso!',
+      msg:
+        onboardingMode === 'ASSISTED_BY_BORARIO'
+          ? 'Perfil salvo no modo Cadastro Assistido pelo BoraRio! Agora aprove ou publique sua 1ª oferta.'
+          : 'Dados oficiais e fotos do estabelecimento salvos com sucesso!',
     });
   };
 
@@ -645,37 +706,77 @@ export function PartnerDashboard({
     const cond = Number(offCondPrice) || undefined;
     const estSavings = base && cond && base > cond ? Number((base - cond).toFixed(2)) : 0;
 
+    const isCollective = offDistributionMode === 'COLLECTIVE_MISSION';
+    const initialGuarantee =
+      offInitialGuaranteedBenefit.trim() ||
+      offBenefit.trim() ||
+      'Benefício inicial garantido desde a ativação';
+
+    const progressiveTiers = isCollective
+      ? [
+          {
+            tier_level: 1 as const,
+            min_adhesions: Math.max(1, offTier1Goal),
+            benefit_label: initialGuarantee,
+            benefit_description: 'Benefício base garantido para qualquer participante desde a primeira adesão.',
+          },
+          {
+            tier_level: 2 as const,
+            min_adhesions: Math.max(2, offTier2Goal),
+            benefit_label: offTier2Benefit.trim() || '+ Sobremesa ou drink cortesia desbloqueado',
+            benefit_description: 'Bônus adicional liberado para todos os participantes quando a meta da Faixa 2 é atingida.',
+          },
+          {
+            tier_level: 3 as const,
+            min_adhesions: Math.max(3, offTier3Goal),
+            benefit_label: offTier3Benefit.trim() || 'Benefício máximo + +50 Rio Points extras',
+            benefit_description: 'Nível máximo da missão coletiva com benefício completo para todos os participantes.',
+          },
+        ]
+      : undefined;
+
     const res = createPartnerOffering({
       restaurant_id: activeTenant.id,
       restaurant_name: activeTenant.name,
       neighborhood: activeTenant.neighborhood,
       category: activeTenant.category,
       price_range: activeTenant.price_range,
-      modality: offModality,
-      status: 'PUBLISHED',
+      modality: isCollective ? 'DEMAND_OFFER' : offModality,
+      distribution_mode: offDistributionMode,
+      status: offSaveAsDraft ? 'DRAFT' : 'PUBLISHED',
       title: offTitle.trim(),
-      description:
-        offModality === 'LAST_MINUTE'
+      description: isCollective
+        ? 'Missão coletiva com benefício inicial garantido e faixas progressivas destravadas conforme novas adesões — uso 100% individual.'
+        : offModality === 'LAST_MINUTE'
           ? 'Oportunidade de última hora aberta pelo estabelecimento para janela imediata.'
           : 'Oferta individual definida pelo parceiro sem necessidade de quórum coletivo.',
-      benefit_summary: offBenefit.trim() || 'Condição especial definida pelo parceiro',
+      benefit_summary: isCollective
+        ? initialGuarantee
+        : offBenefit.trim() || 'Condição especial definida pelo parceiro',
+      initial_guaranteed_benefit: isCollective ? initialGuarantee : undefined,
+      progressive_tiers: progressiveTiers,
+      min_demand_goal: isCollective ? Math.max(2, offTier2Goal) : undefined,
       eligible_item: offEligibleItem.trim() || offBenefit.trim() || offTitle.trim(),
       offer_category: activeTenant.macro_category || activeTenant.category,
       valid_days_hours: offValidDaysHours.trim() || `${offDate} · ${offTime}`,
       rules_summary: offRules.trim(),
-      eligibility_rules: 'Uso individual ou em grupo independente.',
+      eligibility_rules: 'Uso 100% individual ou em mesa própria. Cobrança apenas por participante validado.',
       cancellation_policy: 'Alteração ou cancelamento gratuito até 2 horas antes.',
       has_discount: estSavings > 0,
-      condition_badge: offModality === 'LAST_MINUTE' ? 'Última Hora' : 'Oferta Individual',
+      condition_badge: isCollective
+        ? 'Missão Coletiva Progressiva'
+        : offModality === 'LAST_MINUTE'
+          ? 'Última Hora'
+          : 'Oferta Individual',
       base_price_brl: base,
       partner_condition_price_brl: cond,
       estimated_savings_brl: estSavings,
       service_date: offDate,
       time_slot_label: offTime,
       starts_at: new Date().toISOString(),
-      ends_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+      ends_at: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
       capacity_total: Math.max(1, offCapacity),
-      partner_managed_active: true,
+      partner_managed_active: !offSaveAsDraft,
       image_url: offImage.trim() || undefined,
     });
     setOpFeedback({ ok: res.ok, msg: res.message });
@@ -684,6 +785,7 @@ export function PartnerDashboard({
       setOffBenefit('');
       setOffEligibleItem('');
       setOffImage('');
+      setOffSaveAsDraft(false);
     }
     bumpStore();
   };
@@ -702,17 +804,39 @@ export function PartnerDashboard({
       category: activeTenant.category,
       price_range: activeTenant.price_range,
       modality: 'DEMAND_OFFER',
-      status: 'CAPTURING',
+      distribution_mode: 'COLLECTIVE_MISSION',
+      status: 'PUBLISHED',
       title: demTitle.trim(),
       description:
-        'Agregação de manifestações individuais independentes para a mesma janela de data e horário. Participantes não dividem mesa.',
-      benefit_summary: demBenefit.trim() || 'Condição especial confirmada ao atingir a meta',
+        'Missão coletiva progressiva com benefício inicial garantido e evolução automática por faixa de adesão. Uso individual sem dividir mesa.',
+      benefit_summary: demBenefit.trim() || 'Benefício inicial garantido + evolução por adesões',
+      initial_guaranteed_benefit: demBenefit.trim() || 'Benefício inicial garantido desde a publicação',
+      progressive_tiers: [
+        {
+          tier_level: 1 as const,
+          min_adhesions: 1,
+          benefit_label: 'Benefício inicial garantido ativo',
+          benefit_description: 'Garantido desde a primeira adesão sem risco de cancelamento.',
+        },
+        {
+          tier_level: 2 as const,
+          min_adhesions: Math.max(2, Math.floor(demGoal / 2)),
+          benefit_label: demBenefit.trim() || 'Faixa intermediária desbloqueada',
+          benefit_description: 'Benefício ampliado para todos os participantes.',
+        },
+        {
+          tier_level: 3 as const,
+          min_adhesions: Math.max(3, demGoal),
+          benefit_label: `${demBenefit.trim()} + Bônus VIP`,
+          benefit_description: 'Benefício máximo da missão coletiva destravado.',
+        },
+      ],
       rules_summary:
-        'Nenhuma manifestação se torna reserva confirmada antes do alcance da meta e confirmação do estabelecimento.',
-      eligibility_rules: 'Solicitações individuais independentes.',
-      cancellation_policy: 'Sem cobrança no app; encerramento sem ônus caso não atinja meta.',
+        'Benefício inicial garantido desde a ativação. Uso individual na janela escolhida.',
+      eligibility_rules: 'Participações individuais independentes.',
+      cancellation_policy: 'Sem cobrança no app; pagamento apenas por participante validado.',
       has_discount: estSavings > 0,
-      condition_badge: 'Reserva por Demanda',
+      condition_badge: 'Missão Coletiva Progressiva',
       base_price_brl: base,
       partner_condition_price_brl: cond,
       estimated_savings_brl: estSavings,
@@ -729,6 +853,44 @@ export function PartnerDashboard({
       setDemTitle('');
       setDemBenefit('');
     }
+    bumpStore();
+  };
+
+  const handleCreateSponsoredCampaign = (e: FormEvent) => {
+    e.preventDefault();
+    if (!activeTenant) return;
+    const targetOffering =
+      tenantOfferings.find((o) => o.id === campOfferingId) ||
+      tenantOfferings.find((o) => o.modality !== 'TRADITIONAL_BOOKING');
+    if (!targetOffering) {
+      setOpFeedback({
+        ok: false,
+        msg: 'Publique ao menos uma oferta antes de ativar uma campanha patrocinada.',
+      });
+      return;
+    }
+    const neighborhoods = campNeighborhoods
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean);
+
+    const res = createPartnerSponsoredCampaign({
+      restaurantId: activeTenant.id,
+      restaurantName: activeTenant.name,
+      offeringId: targetOffering.id,
+      offeringTitle: targetOffering.title,
+      campaignName: campName.trim() || `Impulsionamento · ${targetOffering.title}`,
+      targetNeighborhoods: neighborhoods.length > 0 ? neighborhoods : [activeTenant.neighborhood],
+      targetCategories: [activeTenant.category],
+      durationDays: campDurationDays,
+      investmentBrl: campInvestmentBrl,
+      creditConversionPct: campConversionPct,
+    });
+    if (res.ok && res.campaign) {
+      markOfferingAsSponsored(targetOffering.id, res.campaign.id, true);
+      setCampName('');
+    }
+    setOpFeedback({ ok: res.ok, msg: res.message });
     bumpStore();
   };
 
@@ -915,13 +1077,14 @@ export function PartnerDashboard({
       billing_model: currentPlan.billing_model,
       fixed_fee_per_guest_brl: currentPlan.fixed_fee_per_guest_brl,
       fixed_fee_per_booking_brl: currentPlan.fixed_fee_per_booking_brl,
+      max_billable_guests_per_booking: currentPlan.max_billable_guests_per_booking ?? null,
       monthly_subscription_brl: currentPlan.monthly_subscription_brl,
       requires_monthly_fee: currentPlan.billing_model === 'PRO_SUBSCRIPTION',
     });
     setPlanOverride({ tenantId: activeTenant.id, plan: saved });
     setOpFeedback({
       ok: true,
-      msg: 'Condição comercial configurável salva para este estabelecimento (0% sobre consumo).',
+      msg: 'Condição comercial por participante elegível salva para este estabelecimento (0% sobre consumo).',
     });
     bumpStore();
   };
@@ -964,12 +1127,29 @@ export function PartnerDashboard({
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const accruedBrl = tenantFeeLedger
-    .filter((f) => f.status === 'ACCRUED' || f.status === 'INVOICED')
-    .reduce((acc, f) => acc + f.total_fee_brl, 0);
-  const totalGuestsBilled = tenantFeeLedger
-    .filter((f) => f.status === 'ACCRUED' || f.status === 'INVOICED')
-    .reduce((acc, f) => acc + f.attended_guests, 0);
+  const activeLedgerEntries = tenantFeeLedger.filter(
+    (f) => f.status === 'ACCRUED' || f.status === 'INVOICED'
+  );
+  const grossAccruedBrl = activeLedgerEntries.reduce(
+    (acc, f) => acc + (f.gross_fee_brl ?? f.total_fee_brl),
+    0
+  );
+  const creditsAbatedBrl = activeLedgerEntries.reduce(
+    (acc, f) => acc + (f.credit_abated_brl ?? 0),
+    0
+  );
+  const accruedBrl = activeLedgerEntries.reduce((acc, f) => acc + f.total_fee_brl, 0);
+  const totalGuestsBilled = activeLedgerEntries.reduce((acc, f) => acc + f.attended_guests, 0);
+
+  const totalViews = tenantOfferings.reduce((acc, o) => acc + (o.views_count || 0), 0);
+  const totalValidAdhesions = tenantOfferings.reduce(
+    (acc, o) => acc + (o.valid_adhesions_count ?? o.reserved_count ?? 0),
+    0
+  );
+  const totalActiveReservations = tenantReservations.filter((r) => {
+    const st = getEffectiveStage(r);
+    return st !== 'CANCELLED' && st !== 'ENDED_WITHOUT_GOAL';
+  }).length;
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
@@ -1094,81 +1274,206 @@ export function PartnerDashboard({
               </button>
             </div>
 
-            {/* Dual Commercial Conditions Onboarding Banner (Incentivado, não bloqueante) */}
-            <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
-              <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-                <div className="space-y-1.5">
+            {/* Jornada Simplificada em 3 Etapas + 4 Momentos Progressivos */}
+            <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
+              <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/15 px-3 py-1 text-xs font-bold text-[#FF6B35]">
                       <Sparkles className="h-3.5 w-3.5" />
-                      Vantagens do Estabelecimento ({configuredConditionsCount}/2 ativas)
+                      Entrada Simplificada em 3 Etapas · Sem Fricção
                     </span>
                     <span className="rounded-full bg-[#397B68]/15 px-3 py-1 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
-                      Taxa sobre consumo: 0%
+                      R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2).replace('.', ',')} por participante validado · 0% sobre a conta
                     </span>
+                    {currentPlan?.onboarding_mode === 'ASSISTED_BY_BORARIO' && (
+                      <span className="rounded-full bg-[#123B56]/15 px-3 py-1 text-xs font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                        🤝 Cadastro Assistido BoraRio
+                      </span>
+                    )}
                   </div>
                   <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                    Atraia e fidelize clientes com condições sob seu controle
+                    Comece apenas com seu perfil e sua primeira oferta. Evolua no seu ritmo.
                   </h2>
-                  <p className="text-sm text-[var(--text-secondary)] max-w-2xl">
-                    Crie ofertas pontuais para ocupar mesas ociosas ou disponibilize cortesias para acúmulo de pontos.
+                  <p className="text-xs text-[var(--text-secondary)] max-w-3xl">
+                    Você não precisa cadastrar recompensa de fidelidade nem campanha patrocinada para entrar no BoraRio. Só paga quando um participante identificado valida presença por QR Code no seu balcão.
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('offers');
-                      setOpFeedback(null);
-                    }}
-                    className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
-                      hasCondition1Configured
-                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                        : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]'
-                    }`}
-                  >
-                    <Gift className="h-4 w-4 text-[#FF6B35]" />
-                    {hasCondition1Configured ? 'Ofertas Ativas' : '+ Nova Oferta com Foto'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('profile');
-                      setOpFeedback(null);
-                    }}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
-                  >
-                    <ImagePlus className="h-4 w-4 text-[#0077B6]" />
-                    Fotos &amp; Galeria ({gallery.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('checkin');
-                      setOpFeedback(null);
-                    }}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
-                  >
-                    <QrCode className="h-4 w-4 text-[#397B68]" />
-                    QR Code do Balcão
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('rewards');
-                      setOpFeedback(null);
-                    }}
-                    className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
-                      hasCondition2Configured
-                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                        : 'border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35] hover:bg-[#FF6B35]/20'
-                    }`}
-                  >
-                    <Ticket className="h-4 w-4" />
-                    {hasCondition2Configured ? 'Recompensas Ativas' : '+ Nova Recompensa'}
-                  </button>
+                {/* Funil Resumido Etapa 3 */}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 shrink-0">
+                  <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-center">
+                    <span className="block text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                      Visualizações
+                    </span>
+                    <span className="text-base font-black text-[var(--text-primary)]">{totalViews}</span>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-center">
+                    <span className="block text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                      Adesões / Reservas
+                    </span>
+                    <span className="text-base font-black text-[#123B56] dark:text-[#8DC4EA]">
+                      {Math.max(totalValidAdhesions, totalActiveReservations)}
+                    </span>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center">
+                    <span className="block text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
+                      Visitas Faturáveis
+                    </span>
+                    <span className="text-base font-black text-emerald-700 dark:text-emerald-300">
+                      {totalGuestsBilled}
+                    </span>
+                  </div>
+                  <div className="rounded-2xl border border-[#FF6B35]/30 bg-[#FF6B35]/10 px-3 py-2 text-center">
+                    <span className="block text-[10px] font-bold uppercase text-[#FF6B35]">
+                      Líquido Devido
+                    </span>
+                    <span className="text-base font-black text-[#FF6B35]">
+                      R$ {accruedBrl.toFixed(0)}
+                    </span>
+                    {creditsAbatedBrl > 0 && (
+                      <span className="block text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        (-R$ {creditsAbatedBrl.toFixed(0)} crédito)
+                      </span>
+                    )}
+                  </div>
                 </div>
+              </div>
+
+              {/* 4 Momentos Progressivos da Jornada do Parceiro */}
+              <div className="grid gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('offers');
+                    setOffDistributionMode('INDIVIDUAL');
+                    setOpFeedback(null);
+                  }}
+                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                    activeTab === 'offers' && offDistributionMode === 'INDIVIDUAL'
+                      ? 'border-[#FF6B35] bg-[#FF6B35]/10'
+                      : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[#FF6B35]/60'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#FF6B35]">
+                        1. Começar · Essencial
+                      </span>
+                      <CheckCircle2
+                        className={`h-4 w-4 ${
+                          hasCondition1Configured ? 'text-emerald-500' : 'text-[var(--text-secondary)]'
+                        }`}
+                      />
+                    </div>
+                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      Perfil &amp; Primeira Oferta
+                    </h3>
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                      Revise fotos/horários e publique sua 1ª oferta para receber clientes com QR Code.
+                    </p>
+                  </div>
+                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-[#FF6B35]">
+                    {hasCondition1Configured ? 'Gerenciar ofertas →' : 'Criar 1ª oferta agora →'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('offers');
+                    setOffDistributionMode('COLLECTIVE_MISSION');
+                    setOpFeedback(null);
+                  }}
+                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                    (activeTab === 'offers' && offDistributionMode === 'COLLECTIVE_MISSION') ||
+                    activeTab === 'demand'
+                      ? 'border-[#123B56] bg-[#123B56]/10 dark:border-[#8DC4EA]'
+                      : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[#123B56]/60'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full bg-[#123B56]/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#123B56] dark:text-[#8DC4EA]">
+                        2. Gerar mais demanda
+                      </span>
+                      <Users className="h-4 w-4 text-[#123B56] dark:text-[#8DC4EA]" />
+                    </div>
+                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      Missão Coletiva Progressiva
+                    </h3>
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                      Mesma oferta com benefício inicial garantido e faixas que destravam com mais adesões.
+                    </p>
+                  </div>
+                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                    Ativar modalidade coletiva →
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('rewards');
+                    setOpFeedback(null);
+                  }}
+                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                    activeTab === 'rewards'
+                      ? 'border-[#397B68] bg-[#397B68]/10'
+                      : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[#397B68]/60'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full bg-[#397B68]/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#397B68] dark:text-[#4CA188]">
+                        3. Fidelizar · Opcional
+                      </span>
+                      <Ticket className="h-4 w-4 text-[#397B68] dark:text-[#4CA188]" />
+                    </div>
+                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      Recompensas Rio Points
+                    </h3>
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                      Cadastre cortesias ou experiências para troca por pontos (0% comissão e R$ 0 taxa).
+                    </p>
+                  </div>
+                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
+                    {hasCondition2Configured ? `${tenantRewards.length} recompensa(s) ativa(s) →` : 'Configurar quando quiser →'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('campaigns');
+                    setOpFeedback(null);
+                  }}
+                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                    activeTab === 'campaigns'
+                      ? 'border-amber-500 bg-amber-500/10'
+                      : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-amber-500/60'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-amber-700 dark:text-amber-300">
+                        4. Acelerar · Opcional
+                      </span>
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                      Campanha &amp; Crédito (50%)
+                    </h3>
+                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                      Impulsione uma oferta existente e receba 50% do valor em crédito para abater visitas.
+                    </p>
+                  </div>
+                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                    {tenantCreditSummary.totalRemainingCreditBrl > 0
+                      ? `R$ ${tenantCreditSummary.totalRemainingCreditBrl.toFixed(0)} em crédito disponível →`
+                      : 'Impulsionar oferta existente →'}
+                  </span>
+                </button>
               </div>
             </section>
 
@@ -1182,23 +1487,23 @@ export function PartnerDashboard({
                 },
                 {
                   id: 'offers' as const,
-                  label: `Ofertas no Clube (${individualAndLastMinute.length})`,
+                  label: `1. Ofertas & Missões (${individualAndLastMinute.length + demandOfferings.length})`,
                   icon: Gift,
                 },
                 {
                   id: 'demand' as const,
-                  label: `Mesas Coletivas (${demandOfferings.length})`,
+                  label: `2. Painel Coletivo (${demandOfferings.length})`,
                   icon: Users,
                 },
                 {
                   id: 'rewards' as const,
-                  label: `Recompensas (${tenantRewards.length})`,
+                  label: `3. Recompensas (${tenantRewards.length})`,
                   icon: Ticket,
                 },
                 {
-                  id: 'nightlife' as const,
-                  label: `Agenda Noturna (${tenantNightlifeEvents.length})`,
-                  icon: MoonStar,
+                  id: 'campaigns' as const,
+                  label: `4. Impulsionar & Créditos (${tenantSponsoredCampaigns.length})`,
+                  icon: Sparkles,
                 },
                 {
                   id: 'checkin' as const,
@@ -1214,6 +1519,11 @@ export function PartnerDashboard({
                   id: 'profile' as const,
                   label: `Fotos & Perfil`,
                   icon: Building2,
+                },
+                {
+                  id: 'nightlife' as const,
+                  label: `Agenda Noturna (${tenantNightlifeEvents.length})`,
+                  icon: MoonStar,
                 },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -1496,7 +1806,7 @@ export function PartnerDashboard({
               </div>
             )}
 
-            {/* TAB 2: CONDIÇÃO 1 — OFERTAS INDIVIDUAIS & ÚLTIMA HORA */}
+            {/* TAB 2: OFERTA ÚNICA COM DUAS MODALIDADES DE DISTRIBUIÇÃO (INDIVIDUAL OU MISSÃO COLETIVA PROGRESSIVA) */}
             {activeTab === 'offers' && (
               <div className="grid gap-6 lg:grid-cols-3">
                 <form
@@ -1505,60 +1815,178 @@ export function PartnerDashboard({
                 >
                   <div className="space-y-1">
                     <span className="inline-block rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
-                      Oferta de Atração
+                      Uma Oferta · Duas Modalidades
                     </span>
                     <div className="flex items-center gap-2">
                       <Gift className="h-5 w-5 text-[#FF6B35]" />
                       <h2 className="font-sans text-lg font-bold">
-                        Nova Oferta Individual ou Última Hora
+                        Criar Oferta de Atração
                       </h2>
                     </div>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    Desconto opcional, cortesia, preço fechado ou experiência diferenciada para gerar aquisição sem comissão sobre a conta.
+                    Configure uma única oferta e escolha como distribuí-la: uso individual imediato ou missão coletiva com benefício progressivo.
                   </p>
 
-                  <div>
-                    <label className="text-xs font-bold">Modalidade</label>
-                    <select
-                      value={offModality}
-                      onChange={(e) =>
-                        setOffModality(e.target.value as 'INDIVIDUAL_OFFER' | 'LAST_MINUTE')
-                      }
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
-                    >
-                      <option value="INDIVIDUAL_OFFER">
-                        B. Oferta Individual (sem depender de grupo)
-                      </option>
-                      <option value="LAST_MINUTE">
-                        D. Oportunidade de Última Hora (vagas ociosas/hoje)
-                      </option>
-                    </select>
+                  {/* Seletor de Modalidade de Distribuição: Modalidade A vs Modalidade B */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold">Como deseja distribuir esta oferta?</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setOffDistributionMode('INDIVIDUAL')}
+                        className={`rounded-xl border p-2.5 text-left transition ${
+                          offDistributionMode === 'INDIVIDUAL'
+                            ? 'border-[#FF6B35] bg-[#FF6B35]/10 text-[#FF6B35]'
+                            : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        <span className="block text-xs font-extrabold">Modalidade A · Individual</span>
+                        <span className="mt-0.5 block text-[11px] opacity-85">
+                          Condição direta por participante sem metas coletivas.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setOffDistributionMode('COLLECTIVE_MISSION')}
+                        className={`rounded-xl border p-2.5 text-left transition ${
+                          offDistributionMode === 'COLLECTIVE_MISSION'
+                            ? 'border-[#123B56] bg-[#123B56]/10 text-[#123B56] dark:border-[#8DC4EA] dark:text-[#8DC4EA]'
+                            : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        <span className="block text-xs font-extrabold">Modalidade B · Missão Coletiva</span>
+                        <span className="mt-0.5 block text-[11px] opacity-85">
+                          Benefício inicial garantido + faixas progressivas.
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
+                  {offDistributionMode === 'INDIVIDUAL' && (
+                    <div>
+                      <label className="text-xs font-bold">Tipo de janela individual</label>
+                      <select
+                        value={offModality}
+                        onChange={(e) =>
+                          setOffModality(e.target.value as 'INDIVIDUAL_OFFER' | 'LAST_MINUTE')
+                        }
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      >
+                        <option value="INDIVIDUAL_OFFER">
+                          Oferta Individual (programada na semana)
+                        </option>
+                        <option value="LAST_MINUTE">
+                          Oportunidade de Última Hora (mesas ociosas hoje)
+                        </option>
+                      </select>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="text-xs font-bold">Título</label>
+                    <label className="text-xs font-bold">Título da Oferta</label>
                     <input
                       type="text"
                       required
                       value={offTitle}
                       onChange={(e) => setOffTitle(e.target.value)}
-                      placeholder="Ex: Menu executivo em 2 tempos / Mesas hoje 20h"
+                      placeholder="Ex: Menu executivo em 2 tempos / Quinta de Jazz & Drinks"
                       className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold">Condição ou benefício</label>
+                    <label className="text-xs font-bold">
+                      {offDistributionMode === 'COLLECTIVE_MISSION'
+                        ? 'Benefício Inicial Garantido (Faixa 1 — desde a 1ª adesão)'
+                        : 'Condição ou benefício'}
+                    </label>
                     <input
                       type="text"
                       required
                       value={offBenefit}
-                      onChange={(e) => setOffBenefit(e.target.value)}
-                      placeholder="Ex: Sobremesa cortesia ou preço fechado R$ 135"
+                      onChange={(e) => {
+                        setOffBenefit(e.target.value);
+                        if (offDistributionMode === 'COLLECTIVE_MISSION') {
+                          setOffInitialGuaranteedBenefit(e.target.value);
+                        }
+                      }}
+                      placeholder="Ex: Welcome drink garantido ou Menu especial a R$ 135"
                       className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
                     />
                   </div>
+
+                  {/* Faixas Progressivas da Missão Coletiva (Modalidade B) */}
+                  {offDistributionMode === 'COLLECTIVE_MISSION' && (
+                    <div className="space-y-2.5 rounded-2xl border border-[#123B56]/30 bg-[#123B56]/5 p-3.5 dark:border-[#8DC4EA]/30">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold text-[#123B56] dark:text-[#8DC4EA]">
+                          🎯 Faixas Progressivas de Adesão
+                        </span>
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                          Nunca cancela a oferta
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[var(--text-secondary)]">
+                        O cliente sempre tem o benefício inicial garantido e usa individualmente. Conforme mais pessoas aderem, as próximas faixas destravam para todos:
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold">Meta Faixa 1</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={offTier1Goal}
+                            onChange={(e) => setOffTier1Goal(Number(e.target.value))}
+                            className="mt-0.5 w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="text-[10px] font-bold">Faixa 2 · Meta &amp; Benefício Extra</label>
+                          <div className="mt-0.5 flex gap-1.5">
+                            <input
+                              type="number"
+                              min={2}
+                              value={offTier2Goal}
+                              onChange={(e) => setOffTier2Goal(Number(e.target.value))}
+                              className="w-16 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2 py-1.5 text-xs"
+                              title="Adesões para Faixa 2"
+                            />
+                            <input
+                              type="text"
+                              value={offTier2Benefit}
+                              onChange={(e) => setOffTier2Benefit(e.target.value)}
+                              placeholder="+ Sobremesa cortesia"
+                              className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold">Faixa 3 (Máxima) · Meta &amp; Benefício Completo</label>
+                        <div className="mt-0.5 flex gap-1.5">
+                          <input
+                            type="number"
+                            min={3}
+                            value={offTier3Goal}
+                            onChange={(e) => setOffTier3Goal(Number(e.target.value))}
+                            className="w-16 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2 py-1.5 text-xs"
+                            title="Adesões para Faixa 3"
+                          />
+                          <input
+                            type="text"
+                            value={offTier3Benefit}
+                            onChange={(e) => setOffTier3Benefit(e.target.value)}
+                            placeholder="+ Drink + Sobremesa + 50 RP"
+                            className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="text-xs font-bold">Produto ou serviço elegível</label>
@@ -1707,47 +2135,77 @@ export function PartnerDashboard({
                     )}
                   </div>
 
+                  {/* Transparência de Cobrança antes da Publicação */}
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs">
+                    <p className="font-bold text-emerald-800 dark:text-emerald-300">
+                      ✓ Condição Comercial transparente antes de publicar:
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-200">
+                      Você pagará apenas <strong>R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2).replace('.', ',')}</strong> por participante elegível com presença validada por QR Code (tarifa padrão R$ 10,00 · condição de lançamento R$ 5,00). Acompanhantes não cadastrados e reservas não comparecidas custam <strong>R$ 0,00</strong>.
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={offSaveAsDraft}
+                      onChange={(e) => setOffSaveAsDraft(e.target.checked)}
+                      className="rounded border-[var(--border-hairline)]"
+                    />
+                    Salvar como rascunho (para revisão ou aprovação assistida antes de publicar)
+                  </label>
+
                   <button
                     type="submit"
                     className="w-full rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white"
                   >
-                    Publicar no Bora Club
+                    {offSaveAsDraft
+                      ? 'Salvar Rascunho da Oferta'
+                      : offDistributionMode === 'COLLECTIVE_MISSION'
+                        ? 'Publicar Missão Coletiva Progressiva'
+                        : 'Publicar Oferta Individual no Bora Club'}
                   </button>
                 </form>
 
                 <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="font-sans text-lg font-bold">
-                      Condições Ativas &amp; Proteção Retroativa ({individualAndLastMinute.length})
+                      Ofertas &amp; Missões Coletivas ({individualAndLastMinute.length + demandOfferings.length})
                     </h2>
                     <span className="text-xs text-[var(--text-secondary)]">
                       Termos com reservas confirmadas ficam protegidos contra alteração retroativa.
                     </span>
                   </div>
 
-                  {individualAndLastMinute.length === 0 ? (
+                  {individualAndLastMinute.length + demandOfferings.length === 0 ? (
                     <p className="rounded-2xl border border-dashed border-[var(--border-hairline)] p-6 text-center text-xs text-[var(--text-secondary)]">
-                      Nenhuma oferta individual ou de última hora criada para {activeTenant.name}.
+                      Nenhuma oferta criada para {activeTenant.name}. Crie sua 1ª oferta ao lado para começar a receber clientes.
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {individualAndLastMinute.map((off) => {
+                      {[...individualAndLastMinute, ...demandOfferings].map((off) => {
                         const isCancelled = off.status === 'CANCELLED';
+                        const isDraft = off.status === 'DRAFT';
+                        const isCollective =
+                          off.distribution_mode === 'COLLECTIVE_MISSION' ||
+                          off.modality === 'DEMAND_OFFER';
+                        const progInfo = isCollective ? computeActiveProgressiveTier(off) : null;
+
                         const linkedBookingsCount = tenantReservations.filter(
                           (r) =>
                             r.offering_id === off.id &&
                             getEffectiveStage(r) !== 'CANCELLED' &&
                             getEffectiveStage(r) !== 'ENDED_WITHOUT_GOAL'
                         ).length;
-                        const attendedCount = tenantReservations.filter((r) => {
-                          const st = getEffectiveStage(r);
-                          return (
-                            r.offering_id === off.id &&
-                            (st === 'CHECKED_IN' ||
-                              st === 'VERIFIED_VISIT' ||
-                              st === 'VERIFIED_CONSUMPTION')
-                          );
-                        }).length;
+                        const attendedCount = tenantFeeLedger
+                          .filter(
+                            (f) =>
+                              tenantReservations.some(
+                                (r) => r.id === f.booking_id && r.offering_id === off.id
+                              ) &&
+                              (f.status === 'ACCRUED' || f.status === 'INVOICED')
+                          )
+                          .reduce((acc, f) => acc + f.attended_guests, 0);
 
                         return (
                           <div
@@ -1757,23 +2215,40 @@ export function PartnerDashboard({
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-xs font-bold text-[#FF6B35]">
-                                    {off.condition_badge}
+                                  <span
+                                    className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                                      isCollective
+                                        ? 'bg-[#123B56]/15 text-[#123B56] dark:text-[#8DC4EA]'
+                                        : 'bg-[#FF6B35]/15 text-[#FF6B35]'
+                                    }`}
+                                  >
+                                    {isCollective
+                                      ? '🎯 Missão Coletiva Progressiva'
+                                      : off.condition_badge}
                                   </span>
+                                  {off.is_sponsored && (
+                                    <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-extrabold text-amber-700 dark:text-amber-300">
+                                      ⚡ Patrocinado
+                                    </span>
+                                  )}
                                   <span
                                     className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                                       isCancelled
                                         ? 'bg-red-500/15 text-red-600 dark:text-red-300'
-                                        : off.partner_managed_active
-                                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                                          : 'bg-zinc-500/15 text-zinc-500'
+                                        : isDraft
+                                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                          : off.partner_managed_active
+                                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                            : 'bg-zinc-500/15 text-zinc-500'
                                     }`}
                                   >
                                     {isCancelled
                                       ? 'Encerrada'
-                                      : off.partner_managed_active
-                                        ? 'Ativa'
-                                        : 'Pausada'}
+                                      : isDraft
+                                        ? 'Rascunho (Aguardando Publicação)'
+                                        : off.partner_managed_active
+                                          ? 'Ativa'
+                                          : 'Pausada'}
                                   </span>
                                 </div>
                                 {off.image_url && (
@@ -1789,8 +2264,21 @@ export function PartnerDashboard({
                                 <p className="text-xs text-[var(--text-secondary)]">
                                   {off.benefit_summary} · {off.service_date} às {off.time_slot_label} ({off.reserved_count}/{off.capacity_total} vagas)
                                 </p>
+                                {progInfo && (
+                                  <div className="mt-2 rounded-xl border border-[#123B56]/25 bg-[#123B56]/5 p-2.5">
+                                    <p className="text-[11px] font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                                      Benefício Garantido Ativo: {progInfo.initialGuaranteedBenefit}
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
+                                      Adesões válidas: <strong>{progInfo.currentAdhesions}</strong>
+                                      {progInfo.nextTier
+                                        ? ` · Próxima faixa (${progInfo.nextTier.min_adhesions} adesões): ${progInfo.nextTier.benefit_label}`
+                                        : ' · Faixa máxima desbloqueada!'}
+                                    </p>
+                                  </div>
+                                )}
                                 {(off.eligible_item || off.valid_days_hours) && (
-                                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
                                     {off.eligible_item ? `Item: ${off.eligible_item}` : ''}
                                     {off.eligible_item && off.valid_days_hours ? ' · ' : ''}
                                     {off.valid_days_hours ? `Janela: ${off.valid_days_hours}` : ''}
@@ -1802,22 +2290,52 @@ export function PartnerDashboard({
                                     Visualizações: <strong>{off.views_count || 0}</strong>
                                   </span>
                                   <span>
-                                    Reservas: <strong>{Math.max(off.reserved_count, linkedBookingsCount)}</strong>
+                                    Adesões / Reservas: <strong>{Math.max(off.valid_adhesions_count ?? off.reserved_count, linkedBookingsCount)}</strong>
                                   </span>
-                                  <span>
-                                    Comparecimentos: <strong>{attendedCount}</strong>
+                                  <span className="text-emerald-700 dark:text-emerald-300">
+                                    Participantes Faturáveis Validados: <strong>{attendedCount}</strong>
                                   </span>
                                 </div>
                               </div>
 
                               {!isCancelled && (
                                 <div className="flex flex-wrap gap-1.5">
+                                  {isDraft ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const res = updatePartnerOffering(off.id, {
+                                          status: 'PUBLISHED',
+                                          partner_managed_active: true,
+                                        });
+                                        setOpFeedback({
+                                          ok: res.ok,
+                                          msg: 'Oferta aprovada e publicada no BoraRio!',
+                                        });
+                                        bumpStore();
+                                      }}
+                                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"
+                                    >
+                                      Aprovar &amp; Publicar
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleOffering(off)}
+                                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
+                                    >
+                                      {off.partner_managed_active ? 'Pausar' : 'Reativar'}
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
-                                    onClick={() => handleToggleOffering(off)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
+                                    onClick={() => {
+                                      setCampOfferingId(off.id);
+                                      setActiveTab('campaigns');
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300"
                                   >
-                                    {off.partner_managed_active ? 'Pausar' : 'Reativar'}
+                                    <Sparkles className="h-3 w-3" /> Impulsionar (50% Crédito)
                                   </button>
                                   <button
                                     type="button"
@@ -2863,6 +3381,339 @@ export function PartnerDashboard({
               </div>
             )}
 
+            {/* TAB 4A (MOMENTO 4 · ACELERAR): CAMPANHAS PATROCINADAS & CRÉDITO DE AQUISIÇÃO */}
+            {activeTab === 'campaigns' && (
+              <div className="space-y-6">
+                {/* Resumo de Crédito Comercial de Aquisição */}
+                <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
+                    <span className="text-xs font-bold text-[var(--text-secondary)]">
+                      Campanhas Ativas
+                    </span>
+                    <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                      {tenantCreditSummary.activeCampaignsCount}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                      Ofertas com selo "Patrocinado" no topo do BoraRio
+                    </p>
+                  </div>
+                  <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5">
+                    <span className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                      Crédito Inicial Gerado (50%)
+                    </span>
+                    <p className="mt-1 text-2xl font-black text-amber-700 dark:text-amber-300">
+                      R$ {tenantCreditSummary.totalInitialCreditBrl.toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-amber-800/80 dark:text-amber-200/80">
+                      Metade da mídia vira crédito para abater visitas
+                    </p>
+                  </div>
+                  <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5">
+                    <span className="text-xs font-bold text-[var(--text-secondary)]">
+                      Crédito Já Utilizado em Visitas
+                    </span>
+                    <p className="mt-1 text-2xl font-black text-[#123B56] dark:text-[#8DC4EA]">
+                      R$ {tenantCreditSummary.totalUsedCreditBrl.toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                      Abatido automaticamente dos check-ins validados
+                    </p>
+                  </div>
+                  <div className="rounded-3xl border border-emerald-500/35 bg-emerald-500/10 p-5">
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      Saldo Disponível para Abater
+                    </span>
+                    <p className="mt-1 text-2xl font-black text-emerald-700 dark:text-emerald-300">
+                      R$ {tenantCreditSummary.totalRemainingCreditBrl.toFixed(2)}
+                    </p>
+                    <p className="mt-1 text-[11px] text-emerald-800/80 dark:text-emerald-200/80">
+                      Cobre até{' '}
+                      {Math.floor(
+                        tenantCreditSummary.totalRemainingCreditBrl /
+                          Math.max(1, currentPlan?.fixed_fee_per_guest_brl ?? 5)
+                      )}{' '}
+                      participantes validados sem custo adicional
+                    </p>
+                  </div>
+                </section>
+
+                <div className="grid gap-6 lg:grid-cols-3">
+                  {/* Formulário para Impulsionar Oferta Existente */}
+                  <form
+                    onSubmit={handleCreateSponsoredCampaign}
+                    className="space-y-3.5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
+                  >
+                    <div className="space-y-1">
+                      <span className="inline-block rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                        4. Acelerar · Sem Criar Outra Oferta
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-amber-500" />
+                        <h2 className="font-sans text-lg font-bold">
+                          Impulsionar Oferta Existente
+                        </h2>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      Promova uma oferta que já está cadastrada. Parte do investimento vira <strong>Crédito Comercial de Aquisição</strong> para abater automaticamente a tarifa por participante validado (R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2)}).
+                    </p>
+
+                    <div>
+                      <label className="text-xs font-bold">Selecione a Oferta Existente</label>
+                      <select
+                        value={
+                          campOfferingId ||
+                          [...individualAndLastMinute, ...demandOfferings][0]?.id ||
+                          ''
+                        }
+                        onChange={(e) => setCampOfferingId(e.target.value)}
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      >
+                        {[...individualAndLastMinute, ...demandOfferings].length === 0 ? (
+                          <option value="">Cadastre sua 1ª oferta primeiro</option>
+                        ) : (
+                          [...individualAndLastMinute, ...demandOfferings].map((off) => (
+                            <option key={off.id} value={off.id}>
+                              {off.title} ({off.condition_badge})
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold">Nome da Campanha (Opcional)</label>
+                      <input
+                        type="text"
+                        value={campName}
+                        onChange={(e) => setCampName(e.target.value)}
+                        placeholder="Ex: Destaque Fim de Semana Zona Sul"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold">Bairros / Região de Destaque</label>
+                      <input
+                        type="text"
+                        value={campNeighborhoods}
+                        onChange={(e) => setCampNeighborhoods(e.target.value)}
+                        placeholder="Ipanema, Leblon, Botafogo"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs font-bold">Investimento (R$)</label>
+                        <input
+                          type="number"
+                          min={50}
+                          step={50}
+                          value={campInvestmentBrl}
+                          onChange={(e) => setCampInvestmentBrl(Number(e.target.value))}
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold">Duração (dias)</label>
+                        <input
+                          type="number"
+                          min={3}
+                          max={90}
+                          value={campDurationDays}
+                          onChange={(e) => setCampDurationDays(Number(e.target.value))}
+                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Simulador Automático de Crédito de Aquisição */}
+                    <div className="rounded-2xl border border-amber-500/35 bg-amber-500/10 p-3.5 text-xs space-y-1">
+                      <div className="flex items-center justify-between font-bold text-amber-900 dark:text-amber-200">
+                        <span>Investimento em Mídia:</span>
+                        <span>R$ {campInvestmentBrl.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between font-extrabold text-emerald-700 dark:text-emerald-300">
+                        <span>Crédito Comercial Gerado ({campConversionPct}%):</span>
+                        <span>R$ {((campInvestmentBrl * campConversionPct) / 100).toFixed(2)}</span>
+                      </div>
+                      <p className="pt-1 text-[11px] text-[var(--text-secondary)]">
+                        Equivale a{' '}
+                        <strong>
+                          {Math.floor(
+                            (campInvestmentBrl * campConversionPct) /
+                              100 /
+                              Math.max(1, currentPlan?.fixed_fee_per_guest_brl ?? 5)
+                          )}{' '}
+                          visitas faturáveis abatidas
+                        </strong>{' '}
+                        (a R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2)}/participante validado). Validade do crédito: 60 dias.
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full rounded-xl bg-gradient-to-r from-amber-500 via-[#FF6B35] to-[#FF4B2B] py-2.5 text-xs font-bold text-white shadow-sm"
+                    >
+                      Ativar Impulsionamento &amp; Gerar Crédito
+                    </button>
+                  </form>
+
+                  {/* Lista de Campanhas Patrocinadas e Extrato de Crédito */}
+                  <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h2 className="font-sans text-lg font-bold">
+                        Campanhas Patrocinadas &amp; Saldo de Crédito ({tenantSponsoredCampaigns.length})
+                      </h2>
+                      <span className="text-xs text-[var(--text-secondary)]">
+                        Receita de mídia e passivo de crédito comercial controlados separadamente
+                      </span>
+                    </div>
+
+                    {tenantSponsoredCampaigns.length === 0 ? (
+                      <p className="rounded-2xl border border-dashed border-[var(--border-hairline)] p-6 text-center text-xs text-[var(--text-secondary)]">
+                        Nenhuma campanha patrocinada ativa. Selecione uma oferta existente ao lado para destacar no app e converter 50% em crédito de visitas.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {tenantSponsoredCampaigns.map((camp) => (
+                          <div
+                            key={camp.id}
+                            className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-extrabold text-amber-700 dark:text-amber-300">
+                                    ⚡ Patrocinado
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                      camp.status === 'ACTIVE'
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                        : 'bg-zinc-500/15 text-zinc-500'
+                                    }`}
+                                  >
+                                    {camp.status}
+                                  </span>
+                                  <span className="text-[11px] text-[var(--text-secondary)]">
+                                    Expira em {new Date(camp.credits_expire_at).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                                <h3 className="mt-1.5 text-sm font-bold text-[var(--text-primary)]">
+                                  {camp.campaign_name}
+                                </h3>
+                                <p className="text-xs text-[var(--text-secondary)]">
+                                  Oferta promovida: <strong>{camp.offering_title}</strong> · Bairros:{' '}
+                                  {camp.target_neighborhoods.join(', ')}
+                                </p>
+                              </div>
+
+                              {camp.status === 'ACTIVE' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPartnerSponsoredCampaignStatus(camp.id, 'PAUSED');
+                                    markOfferingAsSponsored(camp.offering_id, camp.id, false);
+                                    bumpStore();
+                                  }}
+                                  className="rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-bold"
+                                >
+                                  Pausar Mídia
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[var(--border-hairline)] pt-3 sm:grid-cols-4">
+                              <div>
+                                <span className="block text-[10px] text-[var(--text-secondary)]">
+                                  Investimento Mídia
+                                </span>
+                                <span className="font-bold">R$ {camp.investment_brl.toFixed(2)}</span>
+                              </div>
+                              <div>
+                                <span className="block text-[10px] text-[var(--text-secondary)]">
+                                  Crédito Inicial ({camp.credit_conversion_pct}%)
+                                </span>
+                                <span className="font-bold text-amber-700 dark:text-amber-300">
+                                  R$ {camp.initial_acquisition_credit_brl.toFixed(2)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block text-[10px] text-[var(--text-secondary)]">
+                                  Crédito Abatido
+                                </span>
+                                <span className="font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                                  R$ {camp.used_acquisition_credit_brl.toFixed(2)} ({camp.attributed_billable_visits_count} visita(s))
+                                </span>
+                              </div>
+                              <div>
+                                <span className="block text-[10px] text-emerald-700 dark:text-emerald-300">
+                                  Saldo Restante
+                                </span>
+                                <span className="font-black text-emerald-700 dark:text-emerald-300">
+                                  R$ {camp.remaining_acquisition_credit_brl.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Movimentações do Crédito Comercial */}
+                    {tenantCreditLedger.length > 0 && (
+                      <div className="border-t border-[var(--border-hairline)] pt-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                          Histórico Auditável de Uso do Crédito Comercial ({tenantCreditLedger.length})
+                        </h3>
+                        <div className="mt-2.5 max-h-52 overflow-y-auto divide-y divide-[var(--border-hairline)] rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
+                          {tenantCreditLedger.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex flex-wrap items-center justify-between gap-2 p-3 text-xs"
+                            >
+                              <div>
+                                <span
+                                  className={`mr-2 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    item.entry_type === 'CREDIT_GRANTED'
+                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                      : 'bg-sky-500/15 text-sky-700 dark:text-sky-300'
+                                  }`}
+                                >
+                                  {item.entry_type === 'CREDIT_GRANTED'
+                                    ? '+ Crédito Gerado'
+                                    : '- Abatimento em Visita'}
+                                </span>
+                                <span className="font-semibold text-[var(--text-primary)]">
+                                  {item.description}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span
+                                  className={`font-black ${
+                                    item.amount_brl >= 0
+                                      ? 'text-emerald-700 dark:text-emerald-300'
+                                      : 'text-[#123B56] dark:text-[#8DC4EA]'
+                                  }`}
+                                >
+                                  {item.amount_brl >= 0 ? '+' : ''}R$ {item.amount_brl.toFixed(2)}
+                                </span>
+                                <span className="ml-2 text-[11px] text-[var(--text-secondary)]">
+                                  (Saldo: R$ {item.balance_after_brl.toFixed(2)})
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              </div>
+            )}
+
             {/* TAB 4B: AGENDA NOTURNA DA CASA (ENVIO PARA CURADORIA) */}
             {activeTab === 'nightlife' && (
               <div className="grid gap-6 lg:grid-cols-12">
@@ -3835,25 +4686,59 @@ export function PartnerDashboard({
                     </div>
 
                     {currentPlan.billing_model === 'PER_ATTENDED_GUEST' && (
-                      <div>
-                        <label className="text-xs font-bold">Taxa fixa por pessoa atendida (R$)</label>
-                        <input
-                          type="number"
-                          step="0.50"
-                          min={0}
-                          value={currentPlan.fixed_fee_per_guest_brl}
-                          onChange={(e) =>
-                            setPlanOverride({
-                              tenantId: activeTenant.id,
-                              plan: {
-                                ...currentPlan,
-                                fixed_fee_per_guest_brl: Number(e.target.value),
-                              },
-                            })
-                          }
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
-                        />
-                      </div>
+                      <>
+                        <div>
+                          <label className="text-xs font-bold">
+                            Tarifa por participante elegível validado (R$)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.50"
+                            min={0}
+                            value={currentPlan.fixed_fee_per_guest_brl}
+                            onChange={(e) =>
+                              setPlanOverride({
+                                tenantId: activeTenant.id,
+                                plan: {
+                                  ...currentPlan,
+                                  fixed_fee_per_guest_brl: Number(e.target.value),
+                                },
+                              })
+                            }
+                            className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          />
+                          <span className="mt-0.5 block text-[11px] text-[var(--text-secondary)]">
+                            Referência: R$ 10,00 padrão · R$ 5,00 condição especial de lançamento
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold">
+                            Teto opcional de participantes faturáveis por reserva (Proteção comercial p/ grupos)
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="Sem teto (cobra cada participante validado)"
+                            value={currentPlan.max_billable_guests_per_booking ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value.trim();
+                              setPlanOverride({
+                                tenantId: activeTenant.id,
+                                plan: {
+                                  ...currentPlan,
+                                  max_billable_guests_per_booking:
+                                    val && Number(val) > 0 ? Number(val) : null,
+                                },
+                              });
+                            }}
+                            className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          />
+                          <span className="mt-0.5 block text-[11px] text-[var(--text-secondary)]">
+                            Deixe em branco para regra padrão individual (1 cobrança por participante validado).
+                          </span>
+                        </div>
+                      </>
                     )}
 
                     {currentPlan.billing_model === 'PER_COMPLETED_BOOKING' && (
@@ -3902,13 +4787,16 @@ export function PartnerDashboard({
 
                     <div className="space-y-1 rounded-xl bg-[var(--bg-canvas)] p-3 text-xs text-[var(--text-secondary)]">
                       <p>
+                        <strong>Unidade faturável:</strong> Participante elegível com presença validada por QR Code (1x por visita)
+                      </p>
+                      <p>
+                        <strong>Acompanhantes não cadastrados:</strong> R$ 0,00 (não geram cobrança)
+                      </p>
+                      <p>
                         <strong>Percentual sobre a conta:</strong> 0% (não aplicável)
                       </p>
                       <p>
-                        <strong>Cobrança em no-show/cancelamento:</strong> Bloqueada
-                      </p>
-                      <p>
-                        <strong>Cliques / visualizações:</strong> Gratuitos
+                        <strong>Cobrança em no-show/cancelamento:</strong> Bloqueada (R$ 0,00)
                       </p>
                       <p>
                         <strong>Comissão em resgates de recompensas:</strong> 0% (R$ 0,00)
@@ -3925,113 +4813,139 @@ export function PartnerDashboard({
 
                   {/* Audit Ledger & Contest */}
                   <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid gap-3 sm:grid-cols-4">
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-xs text-[var(--text-secondary)]">Check-ins Apurados</p>
-                        <p className="mt-1 text-2xl font-extrabold">{tenantFeeLedger.length}</p>
-                      </div>
-                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-xs text-[var(--text-secondary)]">Pessoas Atendidas</p>
+                        <p className="text-xs text-[var(--text-secondary)]">Participantes Validados</p>
                         <p className="mt-1 text-2xl font-extrabold">{totalGuestsBilled}</p>
                       </div>
                       <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-xs text-[var(--text-secondary)]">Remuneração Fixa Devida</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#397B68]">
+                        <p className="text-xs text-[var(--text-secondary)]">Valor Bruto Apurado</p>
+                        <p className="mt-1 text-2xl font-extrabold">
+                          R$ {grossAccruedBrl.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5">
+                        <p className="text-xs text-amber-800 dark:text-amber-300">Crédito Abatido</p>
+                        <p className="mt-1 text-2xl font-extrabold text-amber-700 dark:text-amber-300">
+                          -R$ {creditsAbatedBrl.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+                        <p className="text-xs text-emerald-800 dark:text-emerald-300">Líquido Devido</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#397B68] dark:text-[#4CA188]">
                           R$ {accruedBrl.toFixed(2)}
                         </p>
                       </div>
                     </div>
 
                     <h3 className="font-sans text-base font-bold">
-                      Extrato Auditável por Evento (Check-in Válido)
+                      Extrato Auditável por Participante Elegível Validado (Zero Duplicidade)
                     </h3>
 
                     {tenantFeeLedger.length === 0 ? (
                       <p className="rounded-2xl border border-dashed border-[var(--border-hairline)] p-6 text-center text-xs text-[var(--text-secondary)]">
-                        Nenhum evento remunerável registrado ainda. Somente visitas com check-in QR dinâmico validado geram entradas aqui.
+                        Nenhum participante faturável registrado ainda. Somente participantes com check-in QR dinâmico validado geram entradas aqui.
                       </p>
                     ) : (
                       <div className="space-y-2.5">
-                        {tenantFeeLedger.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                                      entry.status === 'DISPUTED'
-                                        ? 'bg-red-500/15 text-red-600 dark:text-red-300'
-                                        : entry.status === 'WAIVED'
-                                          ? 'bg-zinc-500/15 text-zinc-500'
-                                          : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                                    }`}
-                                  >
-                                    {entry.status}
-                                  </span>
-                                  <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-semibold">
-                                    {entry.modality}
-                                  </span>
-                                  <span className="text-xs text-[var(--text-secondary)]">
-                                    Origem: {entry.attribution_origin}
-                                  </span>
-                                </div>
-                                <p className="mt-1 font-bold text-[var(--text-primary)]">
-                                  R$ {entry.total_fee_brl.toFixed(2)} ({entry.attended_guests} pessoa(s) × R${' '}
-                                  {entry.unit_fee_brl.toFixed(2)})
-                                </p>
-                                <p className="text-xs text-[var(--text-secondary)]">
-                                  Reserva: {entry.booking_id.slice(0, 8)} ·{' '}
-                                  {new Date(entry.event_timestamp).toLocaleString('pt-BR')}
-                                </p>
-                                {entry.dispute_reason && (
-                                  <p className="mt-1 font-semibold text-red-600 dark:text-red-300">
-                                    Contestação: {entry.dispute_reason}
+                        {tenantFeeLedger.map((entry) => {
+                          const slot = entry.participant_slot ?? 1;
+                          const label =
+                            entry.participant_label ||
+                            (slot === 1 ? 'Titular da reserva' : `Acompanhante validado #${slot}`);
+                          const gross = entry.gross_fee_brl ?? entry.total_fee_brl;
+                          const abated = entry.credit_abated_brl ?? 0;
+
+                          return (
+                            <div
+                              key={entry.id}
+                              className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                        entry.status === 'DISPUTED'
+                                          ? 'bg-red-500/15 text-red-600 dark:text-red-300'
+                                          : entry.status === 'WAIVED'
+                                            ? 'bg-zinc-500/15 text-zinc-500'
+                                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                      }`}
+                                    >
+                                      {entry.status}
+                                    </span>
+                                    <span className="rounded-full bg-[#123B56]/15 px-2.5 py-0.5 text-xs font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                                      Participante #{slot} · {label}
+                                    </span>
+                                    <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-semibold">
+                                      {entry.modality}
+                                    </span>
+                                    {abated > 0 && (
+                                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-extrabold text-amber-700 dark:text-amber-300">
+                                        ⚡ Abatido c/ Crédito (-R$ {abated.toFixed(2)})
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 font-bold text-[var(--text-primary)]">
+                                    Líquido: R$ {entry.total_fee_brl.toFixed(2)}{' '}
+                                    <span className="font-normal text-[var(--text-secondary)]">
+                                      (Tarifa bruta: R$ {gross.toFixed(2)}
+                                      {abated > 0 ? ` − Crédito campanha: R$ ${abated.toFixed(2)}` : ''})
+                                    </span>
                                   </p>
+                                  <p className="text-xs text-[var(--text-secondary)]">
+                                    Reserva: {entry.booking_id.slice(0, 8)} ·{' '}
+                                    {new Date(entry.event_timestamp).toLocaleString('pt-BR')} ·{' '}
+                                    Origem: {entry.attribution_origin}
+                                  </p>
+                                  {entry.dispute_reason && (
+                                    <p className="mt-1 font-semibold text-red-600 dark:text-red-300">
+                                      Contestação: {entry.dispute_reason}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {entry.status === 'ACCRUED' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDisputeTargetId(entry.id)}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
+                                  >
+                                    <ShieldAlert className="h-3.5 w-3.5" />
+                                    Contestar evento
+                                  </button>
                                 )}
                               </div>
 
-                              {entry.status === 'ACCRUED' && (
-                                <button
-                                  type="button"
-                                  onClick={() => setDisputeTargetId(entry.id)}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
-                                >
-                                  <ShieldAlert className="h-3.5 w-3.5" />
-                                  Contestar evento
-                                </button>
+                              {disputeTargetId === entry.id && (
+                                <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border-hairline)] pt-3">
+                                  <input
+                                    type="text"
+                                    value={disputeReason}
+                                    onChange={(e) => setDisputeReason(e.target.value)}
+                                    placeholder="Explique a divergência operacional para auditoria..."
+                                    className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDisputeFee(entry.id)}
+                                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white"
+                                  >
+                                    Registrar Contestação
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDisputeTargetId(null)}
+                                    className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
                               )}
                             </div>
-
-                            {disputeTargetId === entry.id && (
-                              <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border-hairline)] pt-3">
-                                <input
-                                  type="text"
-                                  value={disputeReason}
-                                  onChange={(e) => setDisputeReason(e.target.value)}
-                                  placeholder="Explique a divergência operacional para auditoria..."
-                                  className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleDisputeFee(entry.id)}
-                                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white"
-                                >
-                                  Registrar Contestação
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setDisputeTargetId(null)}
-                                  className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </section>
@@ -4435,12 +5349,70 @@ export function PartnerDashboard({
                   )}
                 </div>
 
-                {/* 3. Contatos e Horários */}
+                {/* 3. Modo de Entrada (Pelo Parceiro ou Cadastro Assistido pelo BoraRio) + Contatos */}
                 <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
-                  <h3 className="text-sm font-bold text-[var(--text-primary)]">
-                    Contatos &amp; Informações
-                  </h3>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                        Etapa 1 · Modo de Cadastro &amp; Responsável
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Reaproveite os dados já curados no catálogo ou use o Cadastro Assistido pela equipe BoraRio.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setOnboardingMode('SELF_SERVE')}
+                        className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                          onboardingMode === 'SELF_SERVE'
+                            ? 'border-[#FF6B35] bg-[#FF6B35]/15 text-[#FF6B35]'
+                            : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        Pelo Próprio Parceiro
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOnboardingMode('ASSISTED_BY_BORARIO')}
+                        className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                          onboardingMode === 'ASSISTED_BY_BORARIO'
+                            ? 'border-[#123B56] bg-[#123B56]/15 text-[#123B56] dark:border-[#8DC4EA] dark:text-[#8DC4EA]'
+                            : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                        }`}
+                      >
+                        🤝 Cadastro Assistido pelo BoraRio
+                      </button>
+                    </div>
+                  </div>
+
+                  {onboardingMode === 'ASSISTED_BY_BORARIO' && (
+                    <div className="mt-3 rounded-xl border border-[#123B56]/30 bg-[#123B56]/5 p-3 text-xs text-[var(--text-secondary)]">
+                      <strong>Modo Assistido Ativo:</strong> A equipe do BoraRio pré-configura o perfil e deixa a 1ª oferta pronta em rascunho. O responsável do estabelecimento tem controle total para revisar preços, regras, disponibilidade e aprovar a publicação em 1 clique.
+                    </div>
+                  )}
+
                   <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="text-xs font-bold">Responsável pelo Estabelecimento</label>
+                      <input
+                        type="text"
+                        value={responsibleName}
+                        onChange={(e) => setResponsibleName(e.target.value)}
+                        placeholder="Ex: Marcelo Silva"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold">Cargo / Função</label>
+                      <input
+                        type="text"
+                        value={responsibleRole}
+                        onChange={(e) => setResponsibleRole(e.target.value)}
+                        placeholder="Ex: Sócio / Gerente Geral"
+                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
                     <div>
                       <label className="text-xs font-bold">Telefone / WhatsApp</label>
                       <input

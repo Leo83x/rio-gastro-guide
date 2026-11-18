@@ -23,11 +23,13 @@ import {
   redeemClubOffer,
 } from '../services/clubRedemptionStore';
 import {
+  computeActiveProgressiveTier,
   getPartnerOfferings,
   incrementOfferingViews,
 } from '../services/opportunityStore';
 import { computePassportSummary } from '../services/passportStore';
 import { getWalletSummary } from '../services/pointsLedger';
+import { getMyReferralCode, getMyReferralLink } from '../services/referralStore';
 import {
   getPartnerRewards,
   redeemPartnerReward,
@@ -465,11 +467,14 @@ export function ClubView({
                   const meta = MODALITY_META[off.modality];
                   const ModIcon = meta.icon;
                   const remaining = Math.max(0, off.capacity_total - off.reserved_count);
-                  const isDemand = off.modality === 'DEMAND_OFFER';
-                  const minGoal = off.min_demand_goal || 15;
+                  const isDemand =
+                    off.modality === 'DEMAND_OFFER' ||
+                    off.distribution_mode === 'COLLECTIVE_MISSION';
+                  const tierInfo = computeActiveProgressiveTier(off);
+                  const minGoal = tierInfo.maxGoal;
                   const progressTotal = isDemand ? minGoal : off.capacity_total;
-                  const progressCurrent = off.reserved_count;
-                  const progressPct = Math.min(100, Math.round((progressCurrent / progressTotal) * 100));
+                  const progressCurrent = isDemand ? tierInfo.currentAdhesions : off.reserved_count;
+                  const progressPct = Math.min(100, Math.round((progressCurrent / Math.max(1, progressTotal)) * 100));
                   const savings = off.estimated_savings_brl;
                   const timingLabel =
                     off.condition_badge ||
@@ -540,16 +545,22 @@ export function ClubView({
                               <span>{off.price_range}</span>
                             </div>
 
-                            <div className="flex items-center gap-1.5 ml-auto">
+                            <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+                              {off.is_sponsored && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-300">
+                                  <Sparkles className="h-3 w-3" />
+                                  Patrocinado
+                                </span>
+                              )}
                               <span
                                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${meta.badgeCls}`}
                               >
                                 <ModIcon className="h-3 w-3" />
-                                {meta.shortLabel}
+                                {isDemand ? 'Missão Coletiva Progressiva' : meta.shortLabel}
                               </span>
                               <span
                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
-                                  off.status === 'CONFIRMED'
+                                  off.status === 'CONFIRMED' || isDemand
                                     ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                     : off.status === 'GOAL_REACHED'
                                       ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
@@ -558,8 +569,8 @@ export function ClubView({
                                         : 'bg-[#FF6B35]/12 text-[#FF6B35]'
                                 }`}
                               >
-                                {off.status === 'GOAL_REACHED'
-                                  ? 'Meta atingida · Aguardando casa'
+                                {isDemand
+                                  ? `Benefício Garantido · Faixa ${tierInfo.activeTierLevel} Ativa`
                                   : off.status === 'CONFIRMED'
                                     ? 'Confirmada pelo parceiro'
                                     : off.status === 'SOLD_OUT'
@@ -595,26 +606,26 @@ export function ClubView({
                                   R$ {off.partner_condition_price_brl.toFixed(2)}
                                 </strong>{' '}
                                 <span className="text-[10px] text-[var(--text-secondary)]">
-                                  (pago direto no local)
+                                  (pago direto no local · uso individual)
                                 </span>
                               </span>
                             )}
                           </div>
 
-                          {/* Barra de Progresso de Vagas Ocupadas */}
-                          <div className="mt-3 rounded-2xl bg-[var(--bg-canvas)] p-2.5">
+                          {/* Barra de Progresso: Missão Coletiva Progressiva vs Vagas Ocupadas */}
+                          <div className="mt-3 rounded-2xl bg-[var(--bg-canvas)] p-3 border border-[var(--border-hairline)]">
                             <div className="mb-1 flex items-center justify-between text-[11px] font-bold">
                               <span className="text-[var(--text-primary)] flex items-center gap-1">
                                 {isDemand
-                                  ? '⚡ Meta coletiva'
+                                  ? `⚡ Missão Coletiva Progressiva · Faixa ${tierInfo.activeTierLevel} Desbloqueada`
                                   : remaining <= 3
-                                    ? '🔥 Últimas mesas'
-                                    : '🔥 Lotação da janela'}
+                                    ? '🔥 Últimas vagas'
+                                    : '🔥 Disponibilidade da janela'}
                               </span>
                               <span className="text-[#FF6B35] font-extrabold">
                                 {isDemand
-                                  ? `${off.reserved_count}/${minGoal} adesões`
-                                  : `${off.reserved_count}/${off.capacity_total} mesas`}
+                                  ? `${tierInfo.currentAdhesions} adesões válidas`
+                                  : `${off.reserved_count}/${off.capacity_total} vagas`}
                               </span>
                             </div>
                             <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-subtle)]">
@@ -624,24 +635,77 @@ export function ClubView({
                                     ? 'bg-gradient-to-r from-[#FF6B35] to-[#EF4444]'
                                     : 'bg-gradient-to-r from-[#10B981] to-[#FF6B35]'
                                 }`}
-                                style={{ width: `${Math.max(10, progressPct)}%` }}
+                                style={{ width: `${Math.max(12, progressPct)}%` }}
                               />
                             </div>
-                            <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
-                              {isDemand
-                                ? `Destrave garantido ao atingir ${minGoal} adesões individuais.`
-                                : `Restam ${remaining} mesas disponíveis para reserva nesta janela.`}
-                            </p>
+
+                            {isDemand ? (
+                              <div className="mt-2 space-y-1.5">
+                                <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-semibold">
+                                  ✓ Garantido desde já: {tierInfo.activeBenefitLabel}
+                                </p>
+                                {off.progressive_tiers && off.progressive_tiers.length > 0 && (
+                                  <div className="grid gap-1 sm:grid-cols-3 pt-1">
+                                    {off.progressive_tiers.map((tier) => {
+                                      const unlocked = tierInfo.currentAdhesions >= tier.min_adhesions;
+                                      return (
+                                        <div
+                                          key={tier.tier_level}
+                                          className={`rounded-xl border px-2.5 py-1.5 text-[10px] ${
+                                            unlocked
+                                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 font-bold'
+                                              : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'
+                                          }`}
+                                        >
+                                          <span className="block uppercase tracking-wider text-[9px]">
+                                            {unlocked ? `✓ Faixa ${tier.tier_level} (${tier.min_adhesions}+)` : `🔒 Faixa ${tier.tier_level} (${tier.min_adhesions} adesões)`}
+                                          </span>
+                                          <span className="line-clamp-1">{tier.benefit_label}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                                <p className="text-[10px] text-[var(--text-secondary)]">
+                                  {tierInfo.nextTier
+                                    ? `Faltam apenas ${tierInfo.remainingToNextTier} adesões válidas para todos subirem para a Faixa ${tierInfo.nextTier.tier_level}! Uso 100% individual (sem dividir mesa).`
+                                    : 'Faixa máxima desbloqueada para todos os participantes! Uso individual no local.'}
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
+                                Restam {remaining} vagas disponíveis para uso individual ou em grupo nesta janela.
+                              </p>
+                            )}
                           </div>
                         </div>
 
                         {/* Action Buttons: Clean & Direct */}
                         <div className="mt-4 border-t border-[var(--border-hairline)] pt-3 flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                            +250 Rio Points no check-in
+                            +250 Rio Points no check-in individual
                           </span>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {isDemand && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const link = getMyReferralLink(off.restaurant_id);
+                                  const code = getMyReferralCode();
+                                  const txt = `🔥 Bora destravar a próxima faixa no *${off.restaurant_name}* (${off.neighborhood})?\n\nMissão Coletiva BoraRio: *${off.title}*\nJá temos *${tierInfo.currentAdhesions} adesões* e benefício garantido desde já (cada um usa individualmente quando for, sem dividir mesa)!\n\nAdicione sua adesão grátis aqui e ganhe +250 RP no check-in:\n${link}\nCódigo VIP: *${code}*`;
+                                  window.open(
+                                    `https://wa.me/?text=${encodeURIComponent(txt)}`,
+                                    '_blank',
+                                    'noopener,noreferrer'
+                                  );
+                                }}
+                                className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
+                              >
+                                Convidar Amigos (+300 RP)
+                              </button>
+                            )}
+
                             <button
                               type="button"
                               onClick={() => openVenue(off.restaurant_id)}
@@ -658,7 +722,7 @@ export function ClubView({
                             >
                               <span>
                                 {isDemand
-                                  ? 'Quero participar'
+                                  ? 'Participar da Missão'
                                   : off.modality === 'TRADITIONAL_BOOKING'
                                     ? 'Solicitar reserva'
                                     : 'Quero aproveitar'}

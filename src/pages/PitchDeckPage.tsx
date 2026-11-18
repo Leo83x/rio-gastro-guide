@@ -896,7 +896,7 @@ function Slide2Opportunity({ isDark }: { isDark: boolean }) {
   );
 }
 
-// Slide 3: Solução (BoraRio: da descoberta à experiência)
+// Slide 3: Solução (BoraRio: da descoberta à experiência + Jornada do Parceiro em 3 Etapas)
 function Slide3Solution({ isDark }: { isDark: boolean }) {
   return (
     <div>
@@ -908,18 +908,18 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
               : 'border-[#0077B6]/40 bg-[#0077B6]/15 text-[#005B8C]'
           }`}
         >
-          02 • Solução
+          02 • Solução &amp; Entrada sem Fricção
         </span>
         <h2 className={`mt-3 text-3xl sm:text-4xl xl:text-5xl font-black tracking-tight ${isDark ? 'text-white' : 'text-[#102F46]'}`}>
-          BoraRio: da descoberta à experiência
+          Uma oferta, várias possibilidades. Zero fricção.
         </h2>
         <p className={`mt-2 text-base sm:text-lg xl:text-xl font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-          O BoraRio não é apenas um guia: é um <strong className="text-[#0077B6]">motor de fluxo qualificado</strong> para os estabelecimentos e um <strong className="text-[#0077B6]">passaporte de vantagens</strong> para quem vive o Rio.
+          O estabelecimento entra em <strong className="text-[#0077B6]">3 etapas simples</strong> (com opção de <strong className="text-[#FF6B35]">Cadastro Assistido</strong> pela equipe BoraRio) e evolui em 4 momentos progressivos conforme percebe resultado.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* 1. Descobrir */}
+        {/* Momento 1. Começar */}
         <div
           className={`group rounded-2xl border p-6 transition ${
             isDark
@@ -930,14 +930,14 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0077B6]/15 text-[#0077B6] text-xl font-black">
             1
           </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>Descobrir</h3>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">Curadoria viva em tempo real</p>
+          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>1. Começar</h3>
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">Perfil + 1ª Oferta (3 Passos)</p>
           <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Gastronomia carioca, noites e eventos mapeados ao vivo por bairro e ocasião (Casal, Família, Galera ou Econômico).
+            Reaproveita dados do catálogo ou Cadastro Assistido BoraRio. Publica a 1ª oferta sem exigir campanha ou programa de pontos na entrada.
           </p>
         </div>
 
-        {/* 2. Aproveitar */}
+        {/* Momento 2. Gerar mais demanda */}
         <div
           className={`group rounded-2xl border p-6 transition ${
             isDark
@@ -948,14 +948,14 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FF6B35]/15 text-[#FF6B35] text-xl font-black">
             2
           </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>Aproveitar</h3>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#FF6B35]">Oportunidades de verdade</p>
+          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>2. Gerar Demanda</h3>
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#FF6B35]">Missão Coletiva Progressiva</p>
           <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Janelas curtas de benefício para horários específicos. Condições transparentes, sem pegadinhas nem regras confusas.
+            A mesma oferta pode ser distribuída como Individual ou Missão Coletiva: benefício inicial garantido + faixas extras conforme novas adesões.
           </p>
         </div>
 
-        {/* 3. Validar */}
+        {/* Momento 3. Fidelizar */}
         <div
           className={`group rounded-2xl border p-6 transition ${
             isDark
@@ -966,14 +966,14 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0077B6]/15 text-[#0077B6] text-xl font-black">
             3
           </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>Validar</h3>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">Check-in individual verificado</p>
+          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>3. Fidelizar</h3>
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">Recompensas Rio Points (0%)</p>
           <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Presença física confirmada no local via QR Code. Cada integrante do grupo valida sua própria visita no app.
+            Módulo opcional posterior: o parceiro cadastra cortesias para troca por pontos sem pagar comissão nem taxa de check-in no resgate.
           </p>
         </div>
 
-        {/* 4. Recompensar */}
+        {/* Momento 4. Acelerar */}
         <div
           className={`group rounded-2xl border p-6 transition ${
             isDark
@@ -984,10 +984,10 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xl font-black">
             4
           </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>Recompensar</h3>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Rio Points em circulação</p>
+          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>4. Acelerar</h3>
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Impulsionar + 50% Crédito</p>
           <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Pontos acumulados a cada visita que podem ser trocados em benefícios por toda a rede de parceiros cariocas.
+            Promove uma oferta existente com selo "Patrocinado" e converte 50% do valor investido em Crédito Comercial para abater visitas faturáveis.
           </p>
         </div>
       </div>
@@ -1000,48 +1000,48 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
         }`}
       >
         <p className="text-sm sm:text-base xl:text-lg">
-          💡 <strong>O ciclo virtuoso:</strong> Descoberta qualificada gera visita real → Check-in gera receita para a plataforma e dados para o parceiro → Recompensa estimula a próxima experiência na cidade.
+          💡 <strong>Entrada rápida na rua ou WhatsApp:</strong> Com o Cadastro Assistido, nossa equipe pré-configura o perfil e a 1ª oferta, deixando para o sócio do restaurante apenas revisar e aprovar em 1 clique.
         </p>
       </div>
     </div>
   );
 }
 
-// Slide 4: Produto e Jornada do Usuário (Widescreen + Mockup Legível)
+// Slide 4: Produto, Jornada do Usuário & Viralização de Mesa
 function Slide4ProductJourney({ isDark }: { isDark: boolean }) {
   const steps = [
     {
       num: '1',
-      title: 'Descobre',
-      desc: 'Abre o app e vê o que está acontecendo por perto agora com curadoria viva.',
+      title: 'Descobre & Ativa',
+      desc: 'Escolhe uma Oferta Individual ou adere a uma Missão Coletiva Progressiva (com benefício inicial já garantido).',
       icon: Compass,
       color: 'text-[#0077B6] bg-[#0077B6]/15 border-[#0077B6]/30',
     },
     {
       num: '2',
-      title: 'Ativa',
-      desc: 'Escolhe a oportunidade com condições, janela de horário e tamanho do grupo.',
+      title: 'Convida Amigos (Viralização)',
+      desc: 'Compartilha a missão no WhatsApp para destravar as Faixas 2 e 3 ou envia seu Convite VIP (+300 RP).',
       icon: Target,
       color: 'text-[#FF6B35] bg-[#FF6B35]/15 border-[#FF6B35]/30',
     },
     {
       num: '3',
-      title: 'Comparece',
-      desc: 'Cada pessoa do grupo valida presença individualmente via QR Code na mesa.',
+      title: 'Valida por Participante na Mesa',
+      desc: 'Cada participante elegível valida presença via QR Code dinâmico (1 validação por pessoa por visita, zero duplicidade).',
       icon: QrCode,
       color: 'text-[#0077B6] bg-[#0077B6]/15 border-[#0077B6]/30',
     },
     {
       num: '4',
-      title: 'Acumula',
-      desc: 'Ganha Rio Points imediatos pela visita individual confirmada no salão.',
+      title: 'Bônus Anfitrião de Mesa (+100 RP)',
+      desc: 'O titular da reserva ganha +100 RP extras por cada amigo da mesa que também valida seu próprio check-in (até +300 RP).',
       icon: Award,
       color: 'text-amber-500 bg-amber-500/15 border-amber-500/30',
     },
     {
       num: '5',
-      title: 'Resgata',
-      desc: 'Usa os pontos em drinks cortesia, sobremesas ou novas visitas na rede.',
+      title: 'Resgata em Toda a Rede',
+      desc: 'Troca Rio Points por drinks, sobremesas e experiências nos parceiros da cidade (0% comissão para o restaurante).',
       icon: Wallet,
       color: 'text-purple-500 bg-purple-500/15 border-purple-500/30',
     },
@@ -1057,13 +1057,13 @@ function Slide4ProductJourney({ isDark }: { isDark: boolean }) {
               : 'border-[#0077B6]/40 bg-[#0077B6]/15 text-[#005B8C]'
           }`}
         >
-          03 • Produto
+          03 • Produto &amp; Loop Viral
         </span>
         <h2 className={`mt-3 text-3xl sm:text-4xl xl:text-5xl font-black tracking-tight ${isDark ? 'text-white' : 'text-[#102F46]'}`}>
-          Uma jornada simples em 5 passos
+          Jornada em 5 passos com viralização nativa na mesa
         </h2>
         <p className={`mt-2 text-base sm:text-lg xl:text-xl font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-          Criamos um fluxo direto e sem atrito, pensado para o ritmo da cidade e a rotina de um salão de restaurante.
+          Transformamos cada mesa e cada missão coletiva em um canal orgânico de aquisição de novos usuários com CAC próximo de zero.
         </p>
       </div>
 
@@ -1115,21 +1115,21 @@ function Slide4ProductJourney({ isDark }: { isDark: boolean }) {
                 <span className="font-extrabold text-sm">BoraRio</span>
               </div>
               <span className="rounded-full bg-[#0077B6]/15 px-2.5 py-1 text-xs font-bold text-[#0077B6]">
-                ⭐ 1.250 RP
+                ⭐ 1.550 RP
               </span>
             </div>
 
-            {/* Mocked Live Opportunity Card */}
+            {/* Mocked Progressive Collective Mission Card */}
             <div className="mt-3 rounded-2xl border border-[#FF6B35]/40 bg-gradient-to-br from-[#FF6B35]/15 to-transparent p-3.5">
               <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-[#FF6B35]">🔥 AO VIVO AGORA</span>
-                <span className="text-slate-500">Válido até 21h30</span>
+                <span className="text-[#FF6B35]">🎯 MISSÃO COLETIVA</span>
+                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-500">Faixa 2 Ativa</span>
               </div>
-              <div className="mt-1.5 font-black text-sm sm:text-base">Bar Urca · Pôr do Sol</div>
-              <p className="mt-1 text-xs sm:text-sm text-slate-500">2 Chopes + Bolinhos de Bacalhau por R$ 38</p>
+              <div className="mt-1.5 font-black text-sm sm:text-base">Gero Ipanema · Menu + Taça</div>
+              <p className="mt-1 text-xs text-slate-500">Garantido: Menu R$ 195 · Faixa 2 (6/10): + Taça Prosecco</p>
               <div className="mt-2.5 flex items-center justify-between rounded-xl bg-white/20 dark:bg-black/40 p-2 text-xs font-bold">
-                <span>Mesa 04 · Seu Grupo:</span>
-                <span className="text-[#0077B6]">2 de 4 Validados</span>
+                <span>Sua Mesa (4 lugares):</span>
+                <span className="text-[#0077B6]">3 Participantes Validados</span>
               </div>
             </div>
 
@@ -1137,17 +1137,17 @@ function Slide4ProductJourney({ isDark }: { isDark: boolean }) {
             <div className="mt-3 rounded-2xl border border-[#0077B6]/40 bg-[#0077B6]/15 p-3 text-center">
               <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black text-[#0077B6]">
                 <CheckCircle2 className="h-4 w-4 text-[#0077B6]" />
-                <span>Check-in Validado!</span>
+                <span>3 Check-ins + Bônus Anfitrião!</span>
               </div>
               <p className="mt-1 text-xs text-slate-500 font-medium">
-                +250 Rio Points creditados na sua carteira.
+                +200 RP amigos na mesa · Acompanhante s/ app: R$ 0 cobrado.
               </p>
             </div>
 
             {/* Bottom Nav pill */}
             <div className="mt-4 flex justify-around border-t pt-2.5 text-xs font-bold text-slate-400">
               <span className="text-[#0077B6]">Explorar</span>
-              <span>Desejos</span>
+              <span>Missões</span>
               <span>Carteira</span>
             </div>
           </div>
@@ -1157,38 +1157,38 @@ function Slide4ProductJourney({ isDark }: { isDark: boolean }) {
   );
 }
 
-// Slide 5: Diferenciais Competitivos
+// Slide 5: Diferenciais Competitivos & Viralização Orgânica (Baixo CAC)
 function Slide5Differentiators({ isDark }: { isDark: boolean }) {
   const items = [
     {
-      title: 'Oportunidades Vivas',
-      desc: 'Condições dinâmicas criadas em tempo real pelo parceiro para preencher horários ociosos com inteligência e controle de fluxo.',
-      icon: Flame,
-      color: 'text-[#FF6B35]',
-    },
-    {
-      title: 'Visita Verificável (Pay-for-Performance)',
-      desc: 'O parceiro só paga por pessoas que efetivamente compareceram ao local e validaram seu check-in. Risco zero com reservas fantasmas ou no-show.',
+      title: 'Cobrança por Participante Elegível Validado',
+      desc: 'Separamos Reserva, Participantes e Visita Faturável. Só gera cobrança quem aderiu pelo BoraRio e validou presença física por QR Code (1x por visita).',
       icon: ShieldCheck,
       color: 'text-[#0077B6]',
     },
     {
-      title: 'Fidelização Cruzada entre Parceiros',
-      desc: 'Pontos ganhos em um almoço tradicional na Tijuca podem ser usados em um rooftop no Leblon. O ecossistema inteiro estimula a circulação pela cidade.',
+      title: 'Missões Coletivas Progressivas (Sem Frustração)',
+      desc: 'Toda missão já nasce com Benefício Inicial Garantido. Novas adesões destravam Faixas 2 e 3 para todos, com uso 100% individual e zero risco de cancelamento.',
+      icon: Flame,
+      color: 'text-[#FF6B35]',
+    },
+    {
+      title: 'Viralização de Mesa Autofinanciada (+100 RP)',
+      desc: 'O anfitrião ganha +100 RP por amigo que escaneia o QR Code na mesa. Cada bônus(custo ~R$ 1) é financiado pela visita faturável gerada pelo próprio amigo (R$ 5 a R$ 10).',
+      icon: Users,
+      color: 'text-emerald-600 dark:text-emerald-400',
+    },
+    {
+      title: 'Indicação Assíncrona (+300 RP no 1º Check-in)',
+      desc: 'Usuários ganham +300 RP ao indicar amigos, mesmo que consumam ofertas diferentes em outros dias. O prêmio só libera após a 1ª visita real validada (fraude zero).',
       icon: RotateCcw,
       color: 'text-[#0077B6]',
     },
     {
-      title: 'Demanda Controlada pelo Parceiro',
-      desc: 'O estabelecimento define estoque, horários de ativação e regras, sem cláusulas abusivas nem aprisionamento a descontos insustentáveis.',
-      icon: Building2,
-      color: 'text-amber-600 dark:text-amber-400',
-    },
-    {
-      title: 'Inteligência Transversal Bora IA',
-      desc: 'IA nativa que compreende contexto de clima, bairro e momento social para sugerir roteiros personalizados e maximizar a conversão das ofertas.',
+      title: 'Mídia com 50% de Crédito de Aquisição',
+      desc: 'Ao impulsionar uma oferta existente, 50% do investimento vira crédito comercial para abater visitas faturáveis — eliminando o medo de gastar com anúncio sem retorno.',
       icon: Sparkles,
-      color: 'text-purple-600 dark:text-purple-400',
+      color: 'text-amber-600 dark:text-amber-400',
     },
   ];
 
@@ -1202,13 +1202,13 @@ function Slide5Differentiators({ isDark }: { isDark: boolean }) {
               : 'border-purple-600/40 bg-purple-100 text-purple-900'
           }`}
         >
-          04 • Diferenciais
+          04 • Diferenciais &amp; Baixo CAC
         </span>
         <h2 className={`mt-3 text-3xl sm:text-4xl xl:text-5xl font-black tracking-tight ${isDark ? 'text-white' : 'text-[#102F46]'}`}>
-          Por que o BoraRio é diferente
+          Crescimento viral autofinanciado e proteção comercial
         </h2>
         <p className={`mt-2 text-base sm:text-lg xl:text-xl font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-          Construímos um modelo que corrige as principais dores dos velhos clubes de desconto e guias estáticos.
+          Resolvemos a maior barreira dos marketplaces locais: o Custo de Aquisição de Clientes (CAC) e o atrito de entrada dos estabelecimentos.
         </p>
       </div>
 
@@ -1243,15 +1243,15 @@ function Slide5Differentiators({ isDark }: { isDark: boolean }) {
             : 'border-purple-300 bg-purple-100 text-purple-950 font-bold'
         }`}
       >
-        <span><strong>Guias Clássicos:</strong> Anúncios fixos caros e sem métrica de conversão.</span>
-        <span><strong>Clubes de Cupons:</strong> Descontos predatórios que atraem caçadores de preço único.</span>
-        <span className="font-black text-[#0077B6]"><strong>BoraRio:</strong> Performance real e fidelidade unificada.</span>
+        <span><strong>CAC Orgânico Autofinanciado:</strong> Pontos só são emitidos quando há check-in faturável real.</span>
+        <span><strong>Zero Fricção B2B:</strong> 1 perfil + 1 oferta para começar.</span>
+        <span className="font-black text-[#0077B6]"><strong>BoraRio:</strong> Economia unitária positiva desde a 1ª visita.</span>
       </div>
     </div>
   );
 }
 
-// Slide 6: Modelo de Receita (Monetização clara e alinhada ao resultado)
+// Slide 6: Modelo de Receita (Cobrança por Participante Elegível + Campanhas com Crédito de Aquisição)
 function Slide6BusinessModel({ isDark }: { isDark: boolean }) {
   return (
     <div>
@@ -1266,35 +1266,35 @@ function Slide6BusinessModel({ isDark }: { isDark: boolean }) {
           05 • Modelo de Receita
         </span>
         <h2 className={`mt-3 text-3xl sm:text-4xl xl:text-5xl font-black tracking-tight ${isDark ? 'text-white' : 'text-[#102F46]'}`}>
-          Monetização clara e alinhada ao resultado
+          Cobrança por participante elegível atendido + Mídia com crédito
         </h2>
         <p className={`mt-2 text-base sm:text-lg xl:text-xl font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-          Modelo simples de explicar, fácil de auditar e 100% atrelado a quem efetivamente sentou à mesa.
+          Uma reserva para 4 pessoas não cobra 4 visitas automaticamente: só gera cobrança quem aderiu pelo BoraRio e validou presença física no local.
         </p>
       </div>
 
       {/* 3 Core Pricing Pillars */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {/* Tarifa Padrão */}
+        {/* Tarifa por Participante Elegível */}
         <div
           className={`rounded-2xl border p-6 sm:p-8 text-left ${
             isDark ? 'border-white/15 bg-white/[0.04]' : 'border-slate-300 bg-white shadow-sm'
           }`}
         >
           <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-            Tarifa Operacional Padrão
+            Tarifa Padrão por Participante
           </span>
           <div className="mt-3 flex items-baseline gap-2">
             <span className={`text-4xl sm:text-5xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>R$ 10,00</span>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>/ check-in individual</span>
+            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>/ participante validado</span>
           </div>
           <p className={`mt-4 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Cobrado do estabelecimento exclusivamente por pessoa com visita validada no salão.
+            Cobrado exclusivamente por participante identificado no BoraRio, com presença validada por QR Code e efetivamente atendido.
           </p>
           <div className={`mt-6 border-t pt-4 text-xs sm:text-sm font-medium ${isDark ? 'border-white/10 text-slate-300' : 'border-slate-200 text-slate-700'}`}>
-            ✓ Sem taxa fixa mensal<br />
-            ✓ Sem cobrança por reserva cancelada<br />
-            ✓ Sem surpresas na fatura
+            ✓ 1 validação única por pessoa por visita<br />
+            ✓ Acompanhantes sem adesão no app: R$ 0<br />
+            ✓ Proteção opcional de teto para grupos
           </div>
         </div>
 
@@ -1307,97 +1307,99 @@ function Slide6BusinessModel({ isDark }: { isDark: boolean }) {
           }`}
         >
           <span className="absolute -top-3 right-6 rounded-full bg-[#0077B6] px-3.5 py-1 text-xs font-black uppercase tracking-wider text-white shadow-md">
-            50% OFF · Early Adopters
+            50% OFF · Lançamento Rio
           </span>
           <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">
-            Condição Especial de Lançamento
+            Condição Especial de Entrada
           </span>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-4xl sm:text-5xl font-black text-[#0077B6]">R$ 5,00</span>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>/ check-in individual</span>
+            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>/ participante validado</span>
           </div>
           <p className={`mt-4 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Para acelerar a adesão dos primeiros parceiros durante a fase de piloto e lançamento oficial no Rio.
+            Tarifa promocional de entrada para os primeiros estabelecimentos parceiros, com 0% de comissão sobre a conta e resgates gratuitos.
           </p>
           <div
             className={`mt-6 border-t pt-4 text-xs sm:text-sm font-bold ${
               isDark ? 'border-[#0077B6]/40 text-sky-200' : 'border-[#0077B6]/30 text-[#005B8C]'
             }`}
           >
-            ✓ Reduz a barreira para 100% dos parceiros<br />
-            ✓ Estímulo rápido à densidade de catálogo<br />
-            ✓ Válido para os primeiros 200 cadastrados
+            ✓ Prévia transparente antes de publicar<br />
+            ✓ Recompensas Rio Points com 0% comissão<br />
+            ✓ No-show ou cancelamento = R$ 0,00
           </div>
         </div>
 
-        {/* Recompensas & Circulação */}
+        {/* Campanhas Patrocinadas com 50% Crédito */}
         <div
           className={`rounded-2xl border p-6 sm:p-8 text-left ${
             isDark ? 'border-white/15 bg-white/[0.04]' : 'border-slate-300 bg-white shadow-sm'
           }`}
         >
-          <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-            Circulação de Recompensas
+          <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400`}>
+            Campanhas Patrocinadas
           </span>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className={`text-4xl sm:text-5xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>0%</span>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>comissão em resgates</span>
+            <span className={`text-4xl sm:text-5xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>50%</span>
+            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>vira Crédito de Aquisição</span>
           </div>
           <p className={`mt-4 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            O parceiro oferece recompensas (cortesias/benefícios) sem pagar taxa percentual ao BoraRio no resgate de Rio Points.
+            O parceiro impulsiona uma oferta já existente (ex: R$ 200) e recebe 50% (R$ 100) em crédito comercial para abater visitas faturáveis.
           </p>
           <div className={`mt-6 border-t pt-4 text-xs sm:text-sm font-medium ${isDark ? 'border-white/10 text-slate-300' : 'border-slate-200 text-slate-700'}`}>
-            ✓ Custo sob controle do próprio parceiro<br />
-            ✓ Incentiva a oferta de benefícios reais<br />
-            ✓ Fideliza clientes sem intermediários
+            ✓ Receita recorrente de destaque (Mídia)<br />
+            ✓ Reduz o risco percebido pelo restaurante<br />
+            ✓ Contabilização separada de mídia vs. crédito
           </div>
         </div>
       </div>
 
-      {/* Simulation Table: Pessoas x Custo */}
+      {/* Practical Example: Reserva de 4 pessoas com 3 participantes validados */}
       <div
         className={`mt-8 overflow-hidden rounded-2xl border ${
           isDark ? 'border-white/15 bg-slate-900/80' : 'border-slate-300 bg-white shadow-sm'
         }`}
       >
         <div
-          className={`border-b px-6 py-3.5 text-sm sm:text-base font-black ${
+          className={`border-b px-6 py-3.5 text-sm sm:text-base font-black flex flex-wrap items-center justify-between gap-2 ${
             isDark ? 'border-white/10 bg-slate-800/80 text-white' : 'border-slate-200 bg-slate-100 text-[#102F46]'
           }`}
         >
-          Simulação de Receita por Mesa / Grupo de Amigos
+          <span>Exemplo Real de Apuração: Reserva para 4 Pessoas na Mesa</span>
+          <span className="text-xs font-bold text-[#0077B6]">Zero Duplicidade · Cobrança Individual Auditável</span>
         </div>
         <div
-          className={`grid grid-cols-4 divide-x p-5 text-center text-sm sm:text-base ${
+          className={`grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x p-5 text-center text-sm ${
             isDark ? 'divide-white/10' : 'divide-slate-200'
           }`}
         >
-          <div>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Pessoas Validadas</span>
-            <div className={`mt-2 font-black text-base sm:text-lg ${isDark ? 'text-white' : 'text-[#102F46]'}`}>1 Pessoa</div>
-            <div className={`mt-1 text-xs sm:text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Lançamento: <strong className="text-[#0077B6]">R$ 5</strong> | Padrão: <strong>R$ 10</strong>
-            </div>
+          <div className="p-2">
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Pessoa 1 (Titular)</span>
+            <div className="mt-1 font-black text-emerald-500">✓ Validada (QR)</div>
+            <div className="mt-0.5 text-xs">1 visita faturável</div>
           </div>
-          <div>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Casal</span>
-            <div className={`mt-2 font-black text-base sm:text-lg ${isDark ? 'text-white' : 'text-[#102F46]'}`}>2 Pessoas</div>
-            <div className={`mt-1 text-xs sm:text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Lançamento: <strong className="text-[#0077B6]">R$ 10</strong> | Padrão: <strong>R$ 20</strong>
-            </div>
+          <div className="p-2">
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Pessoa 2 (Aderiu)</span>
+            <div className="mt-1 font-black text-emerald-500">✓ Validada (QR)</div>
+            <div className="mt-0.5 text-xs">1 visita + 100 RP anfitrião</div>
           </div>
-          <div>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Grupo Amigos</span>
-            <div className={`mt-2 font-black text-base sm:text-lg ${isDark ? 'text-white' : 'text-[#102F46]'}`}>4 Pessoas</div>
-            <div className={`mt-1 text-xs sm:text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Lançamento: <strong className="text-[#0077B6]">R$ 20</strong> | Padrão: <strong>R$ 40</strong>
-            </div>
+          <div className="p-2">
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Pessoa 3 (Aderiu)</span>
+            <div className="mt-1 font-black text-emerald-500">✓ Validada (QR)</div>
+            <div className="mt-0.5 text-xs">1 visita + 100 RP anfitrião</div>
           </div>
-          <div>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Mesa Grande</span>
-            <div className={`mt-2 font-black text-base sm:text-lg ${isDark ? 'text-white' : 'text-[#102F46]'}`}>6 Pessoas</div>
-            <div className={`mt-1 text-xs sm:text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Lançamento: <strong className="text-[#0077B6]">R$ 30</strong> | Padrão: <strong>R$ 60</strong>
+          <div className="p-2">
+            <span className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Pessoa 4 (Acompanhante)</span>
+            <div className="mt-1 font-bold text-slate-400">Não aderiu no app</div>
+            <div className="mt-0.5 text-xs">R$ 0,00 cobrado</div>
+          </div>
+          <div className="col-span-2 sm:col-span-1 p-2 bg-[#0077B6]/10 rounded-xl sm:rounded-none">
+            <span className="text-xs font-bold uppercase text-[#0077B6]">Total Faturável: 3</span>
+            <div className={`mt-1 font-black text-base ${isDark ? 'text-white' : 'text-[#102F46]'}`}>
+              R$ 15 (Lanç.) / R$ 30 (Padrão)
+            </div>
+            <div className="mt-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+              Ou R$ 0 se abatido c/ crédito
             </div>
           </div>
         </div>

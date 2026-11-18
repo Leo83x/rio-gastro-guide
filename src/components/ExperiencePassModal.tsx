@@ -17,7 +17,11 @@ import {
 import { useState } from 'react';
 import { formatOfferingSchedule } from '../services/opportunityStore';
 import { getMyReferralCode, getMyReferralLink } from '../services/referralStore';
-import { completeReservationCheckin, getReservations } from '../services/superappStore';
+import {
+  completeReservationCheckin,
+  getReservations,
+  validateGroupCompanionCheckin,
+} from '../services/superappStore';
 import { getActiveVenueQrToken, issueDynamicVenueQrToken } from '../services/visitProofStore';
 import type { ReservationRequest } from '../types/experience';
 import type { Restaurant } from '../types/restaurant';
@@ -124,10 +128,51 @@ export function ExperiencePassModal({
     }
   };
 
+  const handleValidateCompanionSlot = (slotNumber: number) => {
+    setCheckinLoading(true);
+    try {
+      let pin = pinInput.trim().toUpperCase();
+      if (!pin) {
+        let activeToken = getActiveVenueQrToken(venueId);
+        if (!activeToken) {
+          activeToken = issueDynamicVenueQrToken({
+            restaurantId: venueId,
+            ttlSeconds: 900,
+            maxUses: 10,
+            issuedByLabel: venueName,
+          });
+        }
+        pin = activeToken.contingency_pin || activeToken.token_code;
+      }
+      const res = validateGroupCompanionCheckin({
+        reservationId: currentRes.id,
+        scannedCodeOrPin: pin,
+        participantSlot: slotNumber,
+      });
+      if (res.ok && res.reservation) {
+        setCurrentRes(res.reservation);
+        setCheckinFeedback({
+          ok: true,
+          msg: res.message,
+        });
+        const allUpdated = getReservations();
+        onReservationsUpdated?.(allUpdated);
+        onCheckinSuccess?.(res.reservation);
+      } else {
+        setCheckinFeedback({
+          ok: false,
+          msg: res.message,
+        });
+      }
+    } finally {
+      setCheckinLoading(false);
+    }
+  };
+
   const handleShareWhatsApp = () => {
     const venueLink = getMyReferralLink(venueId);
     const myCode = getMyReferralCode();
-    const text = `Bora comigo no *${venueName}* (${neighborhood})?\nConsegui uma vantagem exclusiva pelo Bora Club: *${offeringTitle}*!\n\nAcesse pelo link oficial para aproveitar também:\n${venueLink}\n\nCódigo de indicação: *${myCode}*`;
+    const text = `🎁 *Convite VIP BoraRio (+250 RP)*\nBora comigo no *${venueName}* (${neighborhood})?\nAtivei no BoraRio: *${offeringTitle}*!\n\nEntre pelo meu link VIP para ganhar +250 Rio Points no seu 1º check-in (e eu ganho +300 RP quando você validar sua 1ª visita no Rio):\n${venueLink}\n\nCódigo VIP: *${myCode}*`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -397,29 +442,31 @@ export function ExperiencePassModal({
             </div>
           )}
 
-          {/* 4. SEU GRUPO & VALIDAÇÃO INDIVIDUAL */}
+          {/* 4. SEU GRUPO, VALIDAÇÃO INDIVIDUAL POR PARTICIPANTE & BÔNUS ANFITRIÃO */}
           {totalGuests > 1 && (
             <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-[#FF6B35]" />
-                  Seu grupo ({isCheckedIn ? 1 : 0} de {totalGuests} confirmados)
+                  Participantes da Mesa (
+                  {(currentRes.group_validated_slots?.length || (isCheckedIn ? 1 : 0))} de {totalGuests}{' '}
+                  validados)
                 </span>
-                <span className="text-[10px] font-bold uppercase rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 px-2.5 py-0.5">
-                  Check-in individual
+                <span className="text-[10px] font-bold uppercase rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 px-2.5 py-0.5">
+                  +100 RP Bônus Anfitrião / amigo
                 </span>
               </div>
 
               <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                <strong>Cada pessoa valida sua própria visita.</strong> Para todos receberem seus 250 Rio Points e registrarem o carimbo no Passaporte BoraRio, cada participante deve abrir o app e validar a presença no balcão.
+                <strong>Validação individual por participante:</strong> cada acompanhante que aderir e validar o QR Code no balcão ganha <strong>+250 RP</strong> na própria conta, e você recebe <strong>+100 RP de Bônus Anfitrião</strong> (até 3 amigos por mesa). Acompanhantes sem check-in não geram cobrança ao restaurante.
               </p>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-xs border border-[var(--border-hairline)]">
-                  <span className="font-semibold text-[var(--text-primary)]">Você (Titular)</span>
+                  <span className="font-semibold text-[var(--text-primary)]">1. Você (Anfitrião)</span>
                   {isCheckedIn ? (
                     <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Validado
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Presença validada (+250 RP)
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 font-semibold text-amber-500">
@@ -428,35 +475,67 @@ export function ExperiencePassModal({
                   )}
                 </div>
 
-                {Array.from({ length: totalGuests - 1 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-xs border border-[var(--border-hairline)]"
-                  >
-                    <span className="text-[var(--text-secondary)]">Participante {idx + 2}</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--text-tertiary)]">
-                      <Clock className="h-3 w-3" /> Aguardando no app
-                    </span>
-                  </div>
-                ))}
-              </div>
+                {Array.from({ length: totalGuests - 1 }).map((_, idx) => {
+                  const slotNumber = idx + 2;
+                  const validatedSlot = currentRes.group_validated_slots?.find(
+                    (s) => s.slot === slotNumber
+                  );
+                  return (
+                    <div
+                      key={slotNumber}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--bg-surface)] px-3 py-2 text-xs border border-[var(--border-hairline)]"
+                    >
+                      <div>
+                        <span className="font-semibold text-[var(--text-primary)]">
+                          {slotNumber}. {validatedSlot?.participant_label || `Participante #${slotNumber}`}
+                        </span>
+                        <span className="ml-2 text-[10px] text-[var(--text-secondary)]">
+                          {validatedSlot
+                            ? 'Atendido · +250 RP (amigo) · +100 RP (você)'
+                            : 'Gera visita somente se validar QR'}
+                        </span>
+                      </div>
 
-              <div className="rounded-xl bg-sky-500/10 border border-sky-500/20 p-2.5 text-[11px] text-sky-950 dark:text-sky-200">
-                💡 <em>Por que cada um deve fazer o check-in?</em> Assim, cada pessoa recebe seus próprios pontos e registra sua visita no Passaporte BoraRio.
+                      {validatedSlot ? (
+                        <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Validado
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleShareWhatsApp}
+                            className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500/20"
+                          >
+                            Convidar no WhatsApp
+                          </button>
+                          <button
+                            type="button"
+                            disabled={checkinLoading}
+                            onClick={() => handleValidateCompanionSlot(slotNumber)}
+                            className="rounded-lg bg-[#123B56] px-2.5 py-1 text-[10px] font-bold text-white hover:bg-[#0077B6] disabled:opacity-50"
+                          >
+                            Validar QR Individual
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* 5. ÁREA DE COMPARTILHAMENTO SIMPLIFICADA */}
-          <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-4">
-            <div className="flex items-start justify-between gap-3">
+          {/* 5. ÁREA DE COMPARTILHAMENTO VIRAL (MESMA MESA OU QUALQUER LUGAR DO RIO) */}
+          <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-[var(--bg-subtle)] to-transparent p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-                  <Share2 className="h-3.5 w-3.5 text-emerald-600" />
-                  Chamar amigos para ir junto
+                  <Gift className="h-4 w-4 text-emerald-500" />
+                  Presentear amigo com Convite VIP (+300 RP para você)
                 </p>
                 <p className="mt-0.5 text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                  Seu amigo também ganha benefícios e você recebe pontos adicionais quando a visita dele for validada no local.
+                  Chame para ir junto nesta mesa (<strong>+100 RP</strong>) ou indique para qualquer experiência no Rio: quando seu amigo fizer o 1º check-in validado dele, ele ganha <strong>+250 RP</strong> e você destrava <strong>+300 RP</strong>!
                 </p>
               </div>
 
@@ -464,15 +543,16 @@ export function ExperiencePassModal({
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
-                  className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
                 >
-                  WhatsApp
+                  <Share2 className="h-3.5 w-3.5" />
+                  Enviar Convite VIP
                 </button>
                 <button
                   type="button"
                   onClick={handleCopyShareLink}
                   className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
-                  title="Copiar link do benefício"
+                  title="Copiar link com seu código de indicação"
                 >
                   {copiedLink ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
                 </button>

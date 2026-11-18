@@ -231,6 +231,8 @@ export function completeReservationCheckin(params: {
   const feeResult = accruePartnerFeeFromCheckin({
     reservation: updatedReservation,
     visitProof: res.proof,
+    participantSlot: 1,
+    participantLabel: 'Titular da Reserva',
     attributedFromRewardVoucherId: priorVoucher?.id,
   });
 
@@ -262,7 +264,7 @@ export function completeReservationCheckin(params: {
     title: `Check-in validado em ${updatedReservation.experience_name}`,
     message:
       (pointRes.tx
-        ? `+${pointRes.pointsCredited} Rio Points creditados! Visita registrada (${nextStage}).`
+        ? `+${pointRes.pointsCredited} Rio Points creditados! Visita individual registrada (${nextStage}).`
         : `Sua presença foi validada corretamente antes do consumo.`) +
       (referralConversion.converted
         ? ` Indicação convertida (+${referralConversion.pointsCredited} RP).`
@@ -282,7 +284,10 @@ export function completeReservationCheckin(params: {
 
 /**
  * Validação individual para acompanhantes de uma reserva em grupo (slot 2..N).
- * Cada participante valida sua própria presença com QR dinâmico; NUNCA soma pontos ao titular.
+ * - Cada participante elegível valida sua própria presença com QR dinâmico e gera 1 visita faturável individual.
+ * - O acompanhante recebe seus +250 RP individuais na própria conta.
+ * - O anfitrião da mesa recebe +100 RP de Bônus Anfitrião de Mesa (até 3 convidados validados por mesa),
+ *   auto-financiado pelo check-in verificado do convidado.
  */
 export function validateGroupCompanionCheckin(params: {
   reservationId: string;
@@ -295,7 +300,7 @@ export function validateGroupCompanionCheckin(params: {
   proof?: VisitProofRecord;
   reservation?: ReservationRequest;
   companionPointsAwarded: number;
-  ownerPointsAwarded: 0;
+  ownerPointsAwarded: number;
 } {
   const slot = Math.round(params.participantSlot);
   if (slot < 2) {
@@ -356,6 +361,8 @@ export function validateGroupCompanionCheckin(params: {
   });
 
   const existingSlots = target.group_validated_slots || [];
+  const wasSlotAlreadyValidated = existingSlots.some((s) => s.slot === slot);
+
   const nextSlots: GroupParticipantValidation[] = [
     ...existingSlots.filter((s) => s.slot !== slot),
     {
@@ -377,20 +384,49 @@ export function validateGroupCompanionCheckin(params: {
     JSON.stringify(all.map((r) => (r.id === updatedReservation.id ? updatedReservation : r)))
   );
 
+  // Registra a visita faturável individual deste participante elegível (slot 2..N)
+  accruePartnerFeeFromCheckin({
+    reservation: updatedReservation,
+    visitProof: res.proof,
+    participantSlot: slot,
+    participantLabel: cleanLabel,
+  });
+
+  // Bônus Anfitrião de Mesa (+100 RP para o criador da reserva até o 3º acompanhante validado: slots 2, 3 e 4)
+  let hostBonusAwarded = 0;
+  if (!wasSlotAlreadyValidated && slot >= 2 && slot <= 4) {
+    hostBonusAwarded = 100;
+    appendLedgerTransaction({
+      type: 'CREDIT',
+      amount: hostBonusAwarded,
+      origin: 'referral',
+      description: `Bônus Anfitrião de Mesa: ${cleanLabel} validou check-in individual em ${target.experience_name}`,
+      experience_id: target.experience_id,
+      experience_name: target.experience_name,
+      validation_status: 'RELEASED',
+    });
+  }
+
   addNotification({
     channel: 'internal',
     type: 'reward',
     title: `Participante #${slot} validado em ${target.experience_name}`,
-    message: `Presença individual de ${cleanLabel} confirmada (+${companionPoints} RP na conta individual do participante; 0 RP adicionados ao titular).`,
+    message:
+      `Presença individual de ${cleanLabel} confirmada (+${companionPoints} RP na carteira de ${cleanLabel})` +
+      (hostBonusAwarded > 0
+        ? ` e +${hostBonusAwarded} RP de Bônus Anfitrião creditados para você!`
+        : '.'),
   });
 
   return {
     ok: true,
-    message: `Presença individual de ${cleanLabel} (slot #${slot}) validada! (+${companionPoints} RP individuais do acompanhante; 0 RP extras para o titular).`,
+    message:
+      `Presença individual de ${cleanLabel} (slot #${slot}) validada! (+${companionPoints} RP para ${cleanLabel}` +
+      (hostBonusAwarded > 0 ? ` · +${hostBonusAwarded} RP Bônus Anfitrião para você!` : ')'),
     proof: res.proof,
     reservation: updatedReservation,
     companionPointsAwarded: companionPoints,
-    ownerPointsAwarded: 0,
+    ownerPointsAwarded: hostBonusAwarded,
   };
 }
 

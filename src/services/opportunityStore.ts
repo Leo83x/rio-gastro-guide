@@ -1,8 +1,10 @@
 import type { ReservationRequest } from '../types/experience';
 import type {
   DemandParticipation,
+  OfferingAdhesionRecord,
   PartnerOffering,
   PartnerOfferingStatus,
+  ProgressiveMissionTier,
 } from '../types/marketplace';
 import type { CommercialModality } from '../types/partnerCommercial';
 import {
@@ -21,7 +23,32 @@ import {
 const KEYS = {
   OFFERINGS: 'borario_partner_offerings_v1',
   PARTICIPATIONS: 'borario_demand_participations_v1',
+  ADHESIONS: 'borario_offering_adhesions_v1',
 };
+
+const DEFAULT_GERO_PROGRESSIVE_TIERS: ProgressiveMissionTier[] = [
+  {
+    tier_level: 1,
+    min_adhesions: 5,
+    benefit_label: 'Faixa 1 (Garantida): 10% OFF no Menu Degustação + Welcome Drink',
+    condition_price_brl: 279,
+    estimated_savings_brl: 31,
+  },
+  {
+    tier_level: 2,
+    min_adhesions: 15,
+    benefit_label: 'Faixa 2 (Ativa): Menu Degustação em 3 Tempos por R$ 235 + Welcome Drink',
+    condition_price_brl: 235,
+    estimated_savings_brl: 75,
+  },
+  {
+    tier_level: 3,
+    min_adhesions: 20,
+    benefit_label: 'Faixa 3 (Máxima): Menu em 3 Tempos por R$ 210 + Taça de Vinho Reserva',
+    condition_price_brl: 210,
+    estimated_savings_brl: 100,
+  },
+];
 
 function getTodayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -44,13 +71,15 @@ function buildStarterOfferings(): PartnerOffering[] {
       category: 'Pizzaria',
       price_range: '$$$',
       modality: 'TRADITIONAL_BOOKING',
+      distribution_mode: 'INDIVIDUAL',
       status: 'PUBLISHED',
       title: 'Mesa VIP no Forno a Lenha com Sobremesa Cortesia',
       description:
         'Mesa reservada no salão nobre com forno a lenha, 1 entrada especial da casa e sobremesa artesanal cortesia.',
       benefit_summary: '🍕 Pizza Especial da Casa + Sobremesa Cortesia do Forno',
+      initial_guaranteed_benefit: '🍕 Pizza Especial da Casa + Sobremesa Cortesia do Forno',
       rules_summary: 'Válido para a janela das 20h. Apresente seu check-in BoraRio ao maitre na chegada.',
-      eligibility_rules: 'Reserva garantida para mesas de até 4 pessoas.',
+      eligibility_rules: 'Reserva garantida para mesas de até 4 pessoas. Uso individual por participante validado.',
       cancellation_policy: 'Cancelamento sem ônus pelo app até 2 horas antes do horário marcado.',
       payment_instructions: DIRECT_PAYMENT_NOTICE,
       has_discount: true,
@@ -62,10 +91,11 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(72),
       capacity_total: 10,
       reserved_count: 7,
+      valid_adhesions_count: 7,
       eligible_item: 'Pizza especial + Sobremesa cortesia',
       offer_category: 'Gastronomia',
       valid_days_hours: 'Todos os dias · 19h às 22h',
-      views_count: 0,
+      views_count: 42,
       partner_managed_active: true,
       is_demonstrative: true,
       image_url:
@@ -81,11 +111,13 @@ function buildStarterOfferings(): PartnerOffering[] {
       category: 'Carnes',
       price_range: '$$$$',
       modality: 'INDIVIDUAL_OFFER',
+      distribution_mode: 'INDIVIDUAL',
       status: 'PUBLISHED',
       title: 'Menu Executivo do Chef com Rodízio de Acompanhamentos',
       description:
         'Cortes nobres grelhados com rodízio contínuo de acompanhamentos franceses e taça de vinho cortesia.',
       benefit_summary: '🥩 Rodízio de Acompanhamentos do Chef + 1 Taça de Vinho',
+      initial_guaranteed_benefit: '🥩 Rodízio de Acompanhamentos do Chef + 1 Taça de Vinho',
       rules_summary: 'Válido para almoço na janela das 13h. Apresente o check-in QR antes do consumo.',
       eligibility_rules: 'Uso individual ou em grupo independente de quórum coletivo.',
       cancellation_policy: 'Alteração ou cancelamento livre até 2 horas antes da janela.',
@@ -101,10 +133,11 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(48),
       capacity_total: 12,
       reserved_count: 9,
+      valid_adhesions_count: 9,
       eligible_item: 'Menu Executivo (Entrada + Prato Principal + Vinho)',
       offer_category: 'Gastronomia',
       valid_days_hours: 'Segunda a Sexta · 12h às 15h30',
-      views_count: 0,
+      views_count: 68,
       partner_managed_active: true,
       is_demonstrative: true,
       image_url:
@@ -120,18 +153,24 @@ function buildStarterOfferings(): PartnerOffering[] {
       category: 'Italiana',
       price_range: '$$$$',
       modality: 'DEMAND_OFFER',
+      distribution_mode: 'COLLECTIVE_MISSION',
       status: 'CAPTURING',
       title: 'Menu Degustação em 3 Tempos com Welcome Drink',
       description:
-        'Alta gastronomia italiana em 3 tempos (Entrada + Prato Principal + Sobremesa) com welcome drink do sommelier.',
-      benefit_summary: '🔥 Menu Degustação em 3 Tempos + Welcome Drink Exclusivo',
+        'Alta gastronomia italiana em 3 tempos (Entrada + Prato Principal + Sobremesa) com welcome drink do sommelier. Missão Coletiva Progressiva: benefício inicial já garantido e evolução automática conforme mais pessoas aderem!',
+      benefit_summary: '🔥 Menu Degustação em 3 Tempos + Welcome Drink Exclusivo (Faixa 2 Ativa)',
+      initial_guaranteed_benefit:
+        '10% OFF no Menu Degustação + Welcome Drink (Garantido desde a 1ª adesão)',
+      progressive_tiers: DEFAULT_GERO_PROGRESSIVE_TIERS,
       rules_summary:
-        'Sua solicitação só se torna reserva confirmada após o alcance da meta e confirmação expressa do estabelecimento.',
-      eligibility_rules: 'Participantes independentes na mesma data/janela de atendimento.',
-      cancellation_policy: 'Sem cobrança no app; caso a meta não seja atingida, a solicitação é encerrada sem ônus.',
+        'Benefício inicial garantido desde a publicação. Conforme mais participantes aderem à missão, todos desbloqueiam faixas superiores para uso individual no local.',
+      eligibility_rules:
+        'Uso 100% individual: os participantes não precisam se conhecer, não dividem mesa e pagam direto no estabelecimento.',
+      cancellation_policy:
+        'Sua vantagem inicial já está garantida. Nunca há cancelamento da oferta caso faixas superiores não sejam atingidas.',
       payment_instructions: DIRECT_PAYMENT_NOTICE,
       has_discount: true,
-      condition_badge: '⚡ Meta Quase Batida',
+      condition_badge: '⚡ Faixa 2 Desbloqueada (15/20)',
       base_price_brl: 310,
       partner_condition_price_brl: 235,
       estimated_savings_brl: 75,
@@ -141,11 +180,12 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(36),
       capacity_total: 20,
       reserved_count: 15,
+      valid_adhesions_count: 15,
       min_demand_goal: 20,
       eligible_item: 'Menu Degustação Completo em 3 Tempos',
       offer_category: 'Gastronomia',
-      valid_days_hours: 'Terça e Quarta · 19h30 às 22h',
-      views_count: 0,
+      valid_days_hours: 'Terça a Quinta · 19h30 às 22h',
+      views_count: 94,
       partner_managed_active: true,
       is_demonstrative: true,
       image_url:
@@ -161,11 +201,13 @@ function buildStarterOfferings(): PartnerOffering[] {
       category: 'Brasileira',
       price_range: '$$',
       modality: 'LAST_MINUTE',
+      distribution_mode: 'INDIVIDUAL',
       status: 'PUBLISHED',
       title: 'Pôr do Sol no Salão Superior com Petiscos da Casa',
       description:
         'Mesas exclusivas na janela com vista panorâmica para a Baía de Guanabara, porção de empadas e chopp gelado.',
       benefit_summary: '🍺 Empadas de Camarão + Chopp Gelado no Pôr do Sol',
+      initial_guaranteed_benefit: '🍺 Empadas de Camarão + Chopp Gelado no Pôr do Sol',
       rules_summary: 'Válido apenas para a janela de hoje descrita ao lado, mediante vagas remanescentes reais.',
       eligibility_rules: 'Solicitação sujeita à disponibilidade imediata da janela.',
       cancellation_policy: 'Avise caso não possa comparecer para liberar o lugar na fila.',
@@ -179,10 +221,11 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(8),
       capacity_total: 8,
       reserved_count: 6,
+      valid_adhesions_count: 6,
       eligible_item: 'Empada de camarão cortesia + mesa no salão superior',
       offer_category: 'Gastronomia',
       valid_days_hours: 'Hoje · 17h30 às 19h30',
-      views_count: 0,
+      views_count: 51,
       partner_managed_active: true,
       is_demonstrative: true,
       image_url:
@@ -198,11 +241,13 @@ function buildStarterOfferings(): PartnerOffering[] {
       category: 'Contemporâneo',
       price_range: '$$$',
       modality: 'INDIVIDUAL_OFFER',
+      distribution_mode: 'INDIVIDUAL',
       status: 'PUBLISHED',
       title: 'Sunset VIP no Deck com Coquetel Autoral',
       description:
         'Mesa reservada na área panorâmica de frente para o Pão de Açúcar com drink autoral de boas-vindas.',
       benefit_summary: '🍸 Drink Autoral de Boas-Vindas + Vista Panorâmica do Pão de Açúcar',
+      initial_guaranteed_benefit: '🍸 Drink Autoral de Boas-Vindas + Vista Panorâmica do Pão de Açúcar',
       rules_summary: 'Válido para happy hour na janela das 18h30. Acerto direto no local.',
       eligibility_rules: 'Mesas de 2 a 4 pessoas.',
       cancellation_policy: 'Cancelamento livre até 2 horas antes.',
@@ -216,10 +261,11 @@ function buildStarterOfferings(): PartnerOffering[] {
       ends_at: getFutureIso(56),
       capacity_total: 15,
       reserved_count: 11,
+      valid_adhesions_count: 11,
       eligible_item: 'Drink autoral da casa + mesa panorâmica',
       offer_category: 'Gastronomia',
       valid_days_hours: 'Hoje · 18h às 21h',
-      views_count: 0,
+      views_count: 77,
       partner_managed_active: true,
       is_demonstrative: true,
       image_url:
@@ -234,6 +280,7 @@ const STARTER_ENRICHMENT_MAP: Record<string, Partial<PartnerOffering>> = {
   'off-trad-braz': {
     title: 'Mesa VIP no Forno a Lenha com Sobremesa Cortesia',
     benefit_summary: '🍕 Pizza Especial da Casa + Sobremesa Cortesia do Forno',
+    distribution_mode: 'INDIVIDUAL',
     condition_badge: '⏰ Hoje às 20:00',
     estimated_savings_brl: 45,
     capacity_total: 10,
@@ -245,6 +292,7 @@ const STARTER_ENRICHMENT_MAP: Record<string, Partial<PartnerOffering>> = {
   'off-indiv-ct': {
     title: 'Menu Executivo do Chef com Rodízio de Guarnições',
     benefit_summary: '🥩 Rodízio de Acompanhamentos do Chef + 1 Taça de Vinho',
+    distribution_mode: 'INDIVIDUAL',
     condition_badge: '⏰ Almoço às 13:00',
     estimated_savings_brl: 45,
     capacity_total: 12,
@@ -255,11 +303,16 @@ const STARTER_ENRICHMENT_MAP: Record<string, Partial<PartnerOffering>> = {
   },
   'off-demand-gero': {
     title: 'Menu Degustação em 3 Tempos com Welcome Drink',
-    benefit_summary: '🔥 Menu Degustação em 3 Tempos + Welcome Drink Exclusivo',
-    condition_badge: '⚡ Meta Quase Batida',
+    benefit_summary: '🔥 Menu Degustação em 3 Tempos + Welcome Drink Exclusivo (Faixa 2 Ativa)',
+    distribution_mode: 'COLLECTIVE_MISSION',
+    initial_guaranteed_benefit:
+      '10% OFF no Menu Degustação + Welcome Drink (Garantido desde a 1ª adesão)',
+    progressive_tiers: DEFAULT_GERO_PROGRESSIVE_TIERS,
+    condition_badge: '⚡ Faixa 2 Desbloqueada (15/20)',
     estimated_savings_brl: 75,
     capacity_total: 20,
     reserved_count: 15,
+    valid_adhesions_count: 15,
     min_demand_goal: 20,
     time_slot_label: '20:30',
     image_url:
@@ -268,6 +321,7 @@ const STARTER_ENRICHMENT_MAP: Record<string, Partial<PartnerOffering>> = {
   'off-last-urca': {
     title: 'Pôr do Sol no Salão Superior com Petiscos da Casa',
     benefit_summary: '🍺 Empadas de Camarão + Chopp Gelado no Pôr do Sol',
+    distribution_mode: 'INDIVIDUAL',
     condition_badge: '🔥 Restam 2 mesas',
     estimated_savings_brl: 35,
     capacity_total: 8,
@@ -386,6 +440,152 @@ export function getDemandParticipations(offeringId?: string): DemandParticipatio
   return list.filter((p) => p.offering_id === offeringId);
 }
 
+export function getOfferingAdhesions(offeringId?: string): OfferingAdhesionRecord[] {
+  const list = readJson<OfferingAdhesionRecord[]>(KEYS.ADHESIONS, []);
+  if (!offeringId) return list;
+  return list.filter((a) => a.offering_id === offeringId);
+}
+
+/**
+ * Calcula a faixa progressiva ativa de uma Missão Coletiva Progressiva.
+ * - O benefício inicial é SEMPRE garantido desde a publicação (nunca cancela a oferta caso faixas superiores não sejam atingidas).
+ * - A progressão conta apenas adesões válidas (`valid_adhesions_count ?? reserved_count`), nunca meros cliques ou visualizações.
+ */
+export function computeActiveProgressiveTier(offering: PartnerOffering): {
+  isCollectiveMission: boolean;
+  currentAdhesions: number;
+  initialGuaranteedBenefit: string;
+  activeTierLevel: number;
+  activeBenefitLabel: string;
+  nextTier?: ProgressiveMissionTier;
+  remainingToNextTier: number;
+  maxGoal: number;
+  progressPct: number;
+} {
+  const isCollective =
+    offering.distribution_mode === 'COLLECTIVE_MISSION' || offering.modality === 'DEMAND_OFFER';
+  const currentAdhesions = Math.max(
+    offering.valid_adhesions_count ?? 0,
+    offering.reserved_count ?? 0
+  );
+  const initialGuaranteedBenefit =
+    offering.initial_guaranteed_benefit || offering.benefit_summary || offering.title;
+  const tiers = (offering.progressive_tiers || []).slice().sort((a, b) => a.min_adhesions - b.min_adhesions);
+
+  if (!isCollective || tiers.length === 0) {
+    const maxGoal = offering.min_demand_goal || offering.capacity_total || 10;
+    return {
+      isCollectiveMission: isCollective,
+      currentAdhesions,
+      initialGuaranteedBenefit,
+      activeTierLevel: 1,
+      activeBenefitLabel: offering.benefit_summary || initialGuaranteedBenefit,
+      nextTier: undefined,
+      remainingToNextTier: Math.max(0, maxGoal - currentAdhesions),
+      maxGoal,
+      progressPct: Math.min(100, Math.round((currentAdhesions / Math.max(1, maxGoal)) * 100)),
+    };
+  }
+
+  let activeTierLevel = 1;
+  let activeBenefitLabel = initialGuaranteedBenefit;
+  let nextTier: ProgressiveMissionTier | undefined;
+
+  for (const tier of tiers) {
+    if (currentAdhesions >= tier.min_adhesions) {
+      activeTierLevel = tier.tier_level;
+      activeBenefitLabel = tier.benefit_label;
+    } else if (!nextTier) {
+      nextTier = tier;
+    }
+  }
+
+  const maxGoal = tiers[tiers.length - 1]?.min_adhesions || offering.min_demand_goal || offering.capacity_total || 20;
+  const remainingToNextTier = nextTier ? Math.max(0, nextTier.min_adhesions - currentAdhesions) : 0;
+
+  return {
+    isCollectiveMission: true,
+    currentAdhesions,
+    initialGuaranteedBenefit,
+    activeTierLevel,
+    activeBenefitLabel,
+    nextTier,
+    remainingToNextTier,
+    maxGoal,
+    progressPct: Math.min(100, Math.round((currentAdhesions / Math.max(1, maxGoal)) * 100)),
+  };
+}
+
+export function recordValidOfferingAdhesion(params: {
+  offeringId: string;
+  reservationId?: string;
+  adhesionStage?: OfferingAdhesionRecord['adhesion_stage'];
+}): OfferingAdhesionRecord | undefined {
+  const allOfferings = getPartnerOfferings({ includeDrafts: true });
+  const target = allOfferings.find((o) => o.id === params.offeringId);
+  if (!target) return undefined;
+
+  const me = getUserProfileIdentity();
+  const list = readJson<OfferingAdhesionRecord[]>(KEYS.ADHESIONS, []);
+  const tierInfo = computeActiveProgressiveTier(target);
+  const nowIso = new Date().toISOString();
+
+  const existingIdx = list.findIndex(
+    (a) => a.offering_id === params.offeringId && a.user_id === me.id
+  );
+
+  let record: OfferingAdhesionRecord;
+  if (existingIdx >= 0) {
+    record = {
+      ...list[existingIdx],
+      reservation_id: params.reservationId || list[existingIdx].reservation_id,
+      adhesion_stage: params.adhesionStage || 'VALID_ADHESION',
+      unlocked_tier_level: tierInfo.activeTierLevel,
+      unlocked_benefit_label: tierInfo.activeBenefitLabel,
+      updated_at: nowIso,
+    };
+    list[existingIdx] = record;
+  } else {
+    record = {
+      id: generateUUID(),
+      offering_id: target.id,
+      restaurant_id: target.restaurant_id,
+      user_id: me.id,
+      user_label: me.display_name || 'Cliente BoraRio',
+      reservation_id: params.reservationId,
+      adhesion_stage: params.adhesionStage || 'VALID_ADHESION',
+      unlocked_tier_level: tierInfo.activeTierLevel,
+      unlocked_benefit_label: tierInfo.activeBenefitLabel,
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+    list.unshift(record);
+  }
+
+  writeJson(KEYS.ADHESIONS, list);
+  return record;
+}
+
+export function markOfferingAsSponsored(
+  offeringId: string,
+  campaignId: string | undefined,
+  isSponsored: boolean
+): PartnerOffering[] {
+  const all = getPartnerOfferings({ includeDrafts: true });
+  const next = all.map((o) =>
+    o.id === offeringId
+      ? {
+          ...o,
+          is_sponsored: isSponsored,
+          sponsored_campaign_id: campaignId,
+          updated_at: new Date().toISOString(),
+        }
+      : o
+  );
+  writeJson(KEYS.OFFERINGS, next);
+  return next;
+}
+
 export function incrementOfferingViews(offeringId: string): PartnerOffering[] {
   const all = getPartnerOfferings({ includeDrafts: true });
   let found = false;
@@ -430,7 +630,7 @@ export function createPartnerOffering(
     return {
       ok: false,
       message:
-        'Para Reserva Inteligente por Demanda, defina uma meta mínima de 2 pessoas até a capacidade total.',
+        'Para Missão Coletiva Progressiva, defina uma meta a partir de 2 adesões até a capacidade total.',
       offerings: getPartnerOfferings({ includeDrafts: true }),
     };
   }
@@ -443,12 +643,36 @@ export function createPartnerOffering(
         ? Math.max(0, Number((payload.base_price_brl - payload.partner_condition_price_brl).toFixed(2)))
         : 0;
 
+  const isCollective =
+    payload.distribution_mode === 'COLLECTIVE_MISSION' || payload.modality === 'DEMAND_OFFER';
+
   const offering: PartnerOffering = {
     ...payload,
+    distribution_mode: isCollective ? 'COLLECTIVE_MISSION' : 'INDIVIDUAL',
+    initial_guaranteed_benefit:
+      payload.initial_guaranteed_benefit?.trim() || payload.benefit_summary.trim(),
+    progressive_tiers: payload.progressive_tiers || (isCollective
+      ? [
+          {
+            tier_level: 1,
+            min_adhesions: Math.max(2, Math.round((payload.min_demand_goal || 10) * 0.4)),
+            benefit_label: payload.initial_guaranteed_benefit?.trim() || payload.benefit_summary.trim(),
+            condition_price_brl: payload.partner_condition_price_brl,
+          },
+          {
+            tier_level: 2,
+            min_adhesions: payload.min_demand_goal || 10,
+            benefit_label: payload.benefit_summary.trim(),
+            condition_price_brl: payload.partner_condition_price_brl,
+          },
+        ]
+      : undefined),
     eligible_item: payload.eligible_item?.trim() || payload.benefit_summary.trim(),
     offer_category: payload.offer_category || payload.category,
     valid_days_hours: payload.valid_days_hours?.trim() || `${payload.service_date} · ${payload.time_slot_label}`,
     views_count: payload.views_count ?? 0,
+    valid_adhesions_count: 0,
+    verified_visits_count: 0,
     estimated_savings_brl: computedSavings,
     id: generateUUID(),
     reserved_count: 0,
@@ -463,7 +687,10 @@ export function createPartnerOffering(
 
   return {
     ok: true,
-    message: 'Condição comercial publicada pelo estabelecimento com sucesso!',
+    message:
+      offering.status === 'DRAFT'
+        ? 'Rascunho da oferta salvo! Publique quando desejar começar a receber clientes.'
+        : 'Oferta publicada com sucesso no BoraRio!',
     offering,
     offerings: next,
   };
@@ -481,6 +708,9 @@ export function updatePartnerOffering(
       | 'title'
       | 'description'
       | 'benefit_summary'
+      | 'initial_guaranteed_benefit'
+      | 'progressive_tiers'
+      | 'distribution_mode'
       | 'rules_summary'
       | 'partner_condition_price_brl'
       | 'capacity_total'
@@ -488,6 +718,8 @@ export function updatePartnerOffering(
       | 'valid_days_hours'
       | 'partner_managed_active'
       | 'status'
+      | 'is_sponsored'
+      | 'sponsored_campaign_id'
     >
   >
 ): { ok: boolean; message: string; offerings: PartnerOffering[] } {
@@ -641,6 +873,7 @@ export function submitOfferingRequest(params: {
   const updatedOffering: PartnerOffering = {
     ...target,
     reserved_count: nextReserved,
+    valid_adhesions_count: Math.max(nextReserved, (target.valid_adhesions_count || 0) + 1),
     status: nextStatus,
     updated_at: new Date().toISOString(),
   };
@@ -650,7 +883,13 @@ export function submitOfferingRequest(params: {
     all.map((o) => (o.id === target.id ? updatedOffering : o))
   );
 
-  if (target.modality === 'DEMAND_OFFER') {
+  recordValidOfferingAdhesion({
+    offeringId: target.id,
+    reservationId: req.id,
+    adhesionStage: 'VALID_ADHESION',
+  });
+
+  if (target.modality === 'DEMAND_OFFER' || target.distribution_mode === 'COLLECTIVE_MISSION') {
     const me = getUserProfileIdentity();
     const participations = readJson<DemandParticipation[]>(KEYS.PARTICIPATIONS, []);
     const part: DemandParticipation = {
@@ -661,6 +900,7 @@ export function submitOfferingRequest(params: {
       user_id: me.id,
       guests,
       stage: 'REQUESTED',
+      adhesion_stage: 'VALID_ADHESION',
       created_at: new Date().toISOString(),
     };
     writeJson(KEYS.PARTICIPATIONS, [part, ...participations]);
