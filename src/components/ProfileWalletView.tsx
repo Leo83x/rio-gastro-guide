@@ -98,6 +98,7 @@ import {
   type ReservationLifecycleStage,
 } from '../types/verification';
 import { haversineKm } from '../utils/geo';
+import { UserIncidentsSection } from './UserIncidentsSection';
 
 export type ProfileSectionTab = 'passport' | 'agenda' | 'privacy';
 export type ProfileFocusTarget = 'ledger' | 'missions' | 'vouchers' | null;
@@ -1272,6 +1273,8 @@ export function ProfileWalletView({
               </div>
             </div>
           </section>
+
+          <UserIncidentsSection />
 
           <div className="space-y-6">
             {voucherFeedback && (

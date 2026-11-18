@@ -26,6 +26,13 @@ export type VisitProofLevel =
   | 'VERIFIED_VISIT'
   | 'VERIFIED_CONSUMPTION';
 
+export type VisitOperationalStatus =
+  | 'VALIDATED'
+  | 'DISPUTED'
+  | 'QR_FAILED_PENDING'
+  | 'CONFIRMED_POST_VISIT'
+  | 'CANCELLED_NO_SHOW';
+
 export type VisitEvidenceMethod =
   | 'DYNAMIC_QR'
   | 'DYNAMIC_QR_GEO'

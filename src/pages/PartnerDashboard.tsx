@@ -77,6 +77,7 @@ import {
   createInvoiceCheckoutSession,
   type GatewayPaymentMethod,
 } from '../services/billingGateway';
+import { PartnerIntegritySection } from '../components/partner/PartnerIntegritySection';
 import { PartnerVipInviteSection } from '../components/partner/PartnerVipInviteSection';
 import {
   createPartnerReward,
@@ -145,6 +146,7 @@ type PartnerTab =
   | 'nightlife'
   | 'checkin'
   | 'billing'
+  | 'integrity'
   | 'profile';
 
 const PARTNER_SESSION_KEY = 'borario_partner_tenant_v1';
@@ -1544,6 +1546,11 @@ export function PartnerDashboard({
                   id: 'billing' as const,
                   label: 'Financeiro',
                   icon: ReceiptText,
+                },
+                {
+                  id: 'integrity' as const,
+                  label: 'Integridade',
+                  icon: ShieldCheck,
                 },
                 {
                   id: 'rewards' as const,
@@ -5258,6 +5265,14 @@ export function PartnerDashboard({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* TAB INTEGRIDADE E CONFORMIDADE */}
+            {activeTab === 'integrity' && (
+              <PartnerIntegritySection
+                restaurantId={activeTenant.id}
+                restaurantName={activeTenant.name}
+              />
             )}
 
             {/* TAB 6: DADOS OFICIAIS E GALERIA DO ESTABELECIMENTO */}

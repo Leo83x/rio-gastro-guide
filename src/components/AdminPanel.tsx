@@ -69,6 +69,7 @@ import type {
 } from '../types/restaurant';
 import { B2BPartnerView } from './B2BPartnerView';
 import { NightlifeAdminTab } from './NightlifeAdminTab';
+import { IntegrityAdminTab } from './admin/IntegrityAdminTab';
 import { ReferralRulesAdminTab } from './admin/ReferralRulesAdminTab';
 import { SmartImage } from './SmartImage';
 
@@ -83,7 +84,7 @@ interface AdminPanelProps {
   onLogout?: () => void;
 }
 
-export type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b' | 'nightlife' | 'referrals';
+export type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b' | 'nightlife' | 'referrals' | 'integrity';
 type LiveSource = 'outscraper_api' | 'openstreetmap' | 'google_places_api';
 type StatusFilter = 'ALL' | ValidationStatus;
 
@@ -834,9 +835,26 @@ export function AdminPanel({
           <Sparkles className="h-4 w-4" />
           Indicações &amp; Pontos
         </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('integrity');
+            setStaged([]);
+          }}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+            activeTab === 'integrity'
+              ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
+              : 'border border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Integridade
+        </button>
       </div>
 
       {activeTab === 'referrals' && <ReferralRulesAdminTab />}
+      {activeTab === 'integrity' && <IntegrityAdminTab />}
 
       {activeTab === 'b2b' && (
         <B2BPartnerView experiences={restaurants} reservations={reservations} />

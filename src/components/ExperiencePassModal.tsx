@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  AlertTriangle,
   Camera,
   Check,
   CheckCircle2,
@@ -15,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { CheckinProblemModal } from './CheckinProblemModal';
 import { formatOfferingSchedule } from '../services/opportunityStore';
 import {
   fetchReferralSummaryFromServer,
@@ -59,6 +61,7 @@ export function ExperiencePassModal({
   const [copiedVipCode, setCopiedVipCode] = useState<string | null>(null);
   const [isCelebrationActive, setIsCelebrationActive] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [showProblemModal, setShowProblemModal] = useState(false);
   const [vipConfig, setVipConfig] = useState<PartnerVipInviteConfig | null>(null);
   const [vipInvites, setVipInvites] = useState<VipInviteRecord[]>([]);
 
@@ -102,14 +105,14 @@ export function ExperiencePassModal({
 
     let pin = (codeOrPinToUse || pinInput).trim().toUpperCase();
     if (!pin) {
-      let activeToken = getActiveVenueQrToken(venueId);
+      const activeToken = getActiveVenueQrToken(venueId);
       if (!activeToken) {
-        activeToken = issueDynamicVenueQrToken({
-          restaurantId: venueId,
-          ttlSeconds: 900,
-          maxUses: 10,
-          issuedByLabel: venueName,
+        setCheckinFeedback({
+          ok: false,
+          msg: 'Nenhum QR ativo foi detectado. Peça o código/PIN ao atendente ou clique em "Tive um problema para fazer check-in".',
         });
+        setCheckinLoading(false);
+        return;
       }
       pin = activeToken.contingency_pin || activeToken.token_code;
     }
@@ -520,6 +523,15 @@ export function ExperiencePassModal({
                   )}
                 </div>
               )}
+
+              <button
+                type="button"
+                onClick={() => setShowProblemModal(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-500/20 transition"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span>Tive um problema para fazer check-in</span>
+              </button>
             </div>
           ) : (
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-800 dark:text-emerald-200">
@@ -795,6 +807,22 @@ export function ExperiencePassModal({
           )}
         </div>
       </div>
+
+      {showProblemModal && (
+        <CheckinProblemModal
+          reservation={currentRes}
+          restaurantId={venueId}
+          restaurantName={venueName}
+          onClose={() => setShowProblemModal(false)}
+          onPinValidated={(updated) => {
+            setCurrentRes(updated);
+            setIsCelebrationActive(true);
+            setShowProblemModal(false);
+            onReservationsUpdated?.(getReservations());
+            onCheckinSuccess?.(updated);
+          }}
+        />
+      )}
     </div>
   );
 }

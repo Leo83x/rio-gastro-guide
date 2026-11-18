@@ -37,6 +37,10 @@
       "destination": "/api/referrals?__action=:action*"
     },
     {
+      "source": "/api/integrity/:action*",
+      "destination": "/api/integrity?__action=:action*"
+    },
+    {
       "source": "/((?!api/|assets/|brand/|sw\\.js$|manifest\\.webmanifest$|favicon\\.svg$|icons\\.svg$|robots\\.txt$).*)",
       "destination": "/index.html"
     }
