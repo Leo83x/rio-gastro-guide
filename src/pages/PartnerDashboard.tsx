@@ -77,6 +77,7 @@ import {
   createInvoiceCheckoutSession,
   type GatewayPaymentMethod,
 } from '../services/billingGateway';
+import { PartnerVipInviteSection } from '../components/partner/PartnerVipInviteSection';
 import {
   createPartnerReward,
   getPartnerLoyaltyEconomics,
@@ -2664,6 +2665,11 @@ export function PartnerDashboard({
             {/* TAB 4: CONDIÇÃO 2 — MINHA RECOMPENSA BORARIO (COMISSÃO ZERO) */}
             {activeTab === 'rewards' && (
               <div className="space-y-6">
+                <PartnerVipInviteSection
+                  restaurantId={activeTenant.id}
+                  restaurantName={activeTenant.name}
+                />
+
                 {/* Banner de Regra Econômica Permanente: 0% de comissão */}
                 <section className="rounded-3xl border border-[#397B68]/35 bg-gradient-to-r from-[#397B68]/12 via-[#123B56]/8 to-[#FF6B35]/10 p-6">
                   <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">

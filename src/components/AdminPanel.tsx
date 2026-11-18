@@ -69,6 +69,7 @@ import type {
 } from '../types/restaurant';
 import { B2BPartnerView } from './B2BPartnerView';
 import { NightlifeAdminTab } from './NightlifeAdminTab';
+import { ReferralRulesAdminTab } from './admin/ReferralRulesAdminTab';
 import { SmartImage } from './SmartImage';
 
 interface AdminPanelProps {
@@ -82,7 +83,7 @@ interface AdminPanelProps {
   onLogout?: () => void;
 }
 
-export type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b' | 'nightlife';
+export type AdminTab = 'overpass' | 'csv' | 'seed' | 'claims' | 'b2b' | 'nightlife' | 'referrals';
 type LiveSource = 'outscraper_api' | 'openstreetmap' | 'google_places_api';
 type StatusFilter = 'ALL' | ValidationStatus;
 
@@ -817,7 +818,25 @@ export function AdminPanel({
             : `${nightlifeEvents.length}`}
           )
         </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('referrals');
+            setStaged([]);
+          }}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+            activeTab === 'referrals'
+              ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
+              : 'border border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          Indicações &amp; Pontos
+        </button>
       </div>
+
+      {activeTab === 'referrals' && <ReferralRulesAdminTab />}
 
       {activeTab === 'b2b' && (
         <B2BPartnerView experiences={restaurants} reservations={reservations} />
