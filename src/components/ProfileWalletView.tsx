@@ -117,6 +117,7 @@ interface ProfileWalletViewProps {
   focusTarget?: ProfileFocusTarget;
   deepLinkNonce?: number;
   onOpenActivePass?: (reservation: ReservationRequest) => void;
+  onOpenInvitePage?: () => void;
 }
 
 interface BarcodeDetectorLike {
@@ -229,6 +230,7 @@ export function ProfileWalletView({
   focusTarget = null,
   deepLinkNonce = 0,
   onOpenActivePass,
+  onOpenInvitePage,
 }: ProfileWalletViewProps) {
   const [sectionTab, setSectionTab] = useState<ProfileSectionTab>(initialSectionTab);
 
@@ -1002,19 +1004,19 @@ export function ProfileWalletView({
             </div>
           </div>
 
-          {/* Recomende e Ganhe (Rastreável & Antifraude) */}
+          {/* Convide e Ganhe (Rastreável & Antifraude) */}
           <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
             <div className="flex flex-col justify-between gap-4 border-b border-[var(--border-hairline)] pb-4 md:flex-row md:items-center">
               <div>
                 <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#397B68]">
                   <UserPlus className="h-4 w-4" />
-                  Recomende e Ganhe · Antifraude
+                  Convide e Ganhe · Antifraude
                 </p>
                 <h3 className="font-sans mt-1 text-xl font-bold text-[var(--text-primary)]">
-                  Recompensa apenas por visita validada (+200 RP)
+                  Recompensa apenas após ação válida do indicado
                 </h3>
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                  Zero pontos por clique ou cadastro isolado. Autoindicação bloqueada e estorno automático se a reserva for cancelada ou contestada.
+                  Zero pontos por clique ou cadastro isolado. Autoindicação bloqueada e estorno automático se a visita for cancelada ou contestada.
                 </p>
               </div>
 
@@ -1043,6 +1045,15 @@ export function ProfileWalletView({
                   )}
                   {copiedRefLink ? 'Link copiado!' : 'Copiar link'}
                 </button>
+                {onOpenInvitePage && (
+                  <button
+                    type="button"
+                    onClick={onOpenInvitePage}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] to-[#FF6B35] px-3 py-2 text-[11px] font-bold text-white shadow-xs hover:brightness-110"
+                  >
+                    Abrir Convide e Ganhe
+                  </button>
+                )}
               </div>
             </div>
 

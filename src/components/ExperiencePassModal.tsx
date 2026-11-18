@@ -14,9 +14,13 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatOfferingSchedule } from '../services/opportunityStore';
-import { getMyReferralCode, getMyReferralLink } from '../services/referralStore';
+import {
+  fetchReferralSummaryFromServer,
+  getCanonicalAppBaseUrl,
+  getMyReferralLink,
+} from '../services/referralStore';
 import {
   cancelReservation,
   completeReservationCheckin,
@@ -24,8 +28,10 @@ import {
   isReservationExpired,
   validateGroupCompanionCheckin,
 } from '../services/superappStore';
+import { fetchPartnerVipConfig } from '../services/vipInviteStore';
 import { getActiveVenueQrToken, issueDynamicVenueQrToken } from '../services/visitProofStore';
 import type { ReservationRequest } from '../types/experience';
+import type { PartnerVipInviteConfig, VipInviteRecord } from '../types/growth';
 import type { Restaurant } from '../types/restaurant';
 import { buildGoogleMapsUrl, buildUberUrl, launchNineNineRide } from '../utils/mobility';
 
@@ -50,8 +56,11 @@ export function ExperiencePassModal({
   const [checkinLoading, setCheckinLoading] = useState(false);
   const [checkinFeedback, setCheckinFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedVipCode, setCopiedVipCode] = useState<string | null>(null);
   const [isCelebrationActive, setIsCelebrationActive] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [vipConfig, setVipConfig] = useState<PartnerVipInviteConfig | null>(null);
+  const [vipInvites, setVipInvites] = useState<VipInviteRecord[]>([]);
 
   const isCheckedIn =
     currentRes.stage === 'CHECKED_IN' ||
@@ -181,11 +190,65 @@ export function ExperiencePassModal({
     }
   };
 
+  useEffect(() => {
+    let active = true;
+    if (!venueId) return;
+    void fetchPartnerVipConfig(venueId).then((cfg) => {
+      if (active) setVipConfig(cfg);
+    });
+    if (isCheckedIn) {
+      void fetchReferralSummaryFromServer().then((res) => {
+        if (active && res.ok && Array.isArray(res.vipInvites)) {
+          setVipInvites(res.vipInvites);
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [venueId, isCheckedIn]);
+
+  const validVipInvites = vipInvites.filter(
+    (inv) =>
+      inv.restaurant_id === venueId &&
+      (!inv.source_reservation_id || inv.source_reservation_id === currentRes.id) &&
+      inv.status !== 'EXPIRED' &&
+      new Date(inv.expires_at).getTime() > Date.now()
+  );
+
+  const hasVipQuota =
+    Boolean(vipConfig?.enabled && vipConfig?.active) &&
+    (vipConfig?.total_quota === null ||
+      vipConfig?.total_quota === undefined ||
+      vipConfig.used_count < vipConfig.total_quota);
+
+  const canShowVipInviteSection =
+    isCheckedIn && hasVipQuota && validVipInvites.length > 0;
+
   const handleShareWhatsApp = () => {
     const venueLink = getMyReferralLink(venueId);
-    const myCode = getMyReferralCode();
-    const text = `🎁 *Convite VIP BoraRio (+250 RP)*\nBora comigo no *${venueName}* (${neighborhood})?\nAtivei no BoraRio: *${offeringTitle}*!\n\nEntre pelo meu link VIP para ganhar +250 Rio Points no seu 1º check-in (e eu ganho +300 RP quando você validar sua 1ª visita no Rio):\n${venueLink}\n\nCódigo VIP: *${myCode}*`;
+    const text = `Bora comigo em *${venueName}* (${neighborhood})?\nAtivei minha ida no BoraRio (*${offeringTitle}*).\n\nCada pessoa precisa ativar seu próprio passe pelo link abaixo para receber o benefício individual:\n${venueLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const buildVipInviteLink = (inviteCode: string) => {
+    const base = getCanonicalAppBaseUrl();
+    return `${base}/app?vip=${encodeURIComponent(inviteCode)}&venue=${encodeURIComponent(venueId)}`;
+  };
+
+  const handleShareVipInvite = (inv: VipInviteRecord) => {
+    const link = buildVipInviteLink(inv.invite_code);
+    const benefitLabel = vipConfig?.benefit_title || inv.benefit_title || 'Convite VIP autorizado';
+    const text = `🎁 *Convite VIP BoraRio — ${venueName}*\nBenefício autorizado pelo estabelecimento: *${benefitLabel}*\n\nUse seu link individual para reivindicar antes de expirar:\n${link}\nCódigo do convite: *${inv.invite_code}*`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCopyVipInvite = (inviteCode: string) => {
+    const link = buildVipInviteLink(inviteCode);
+    void navigator.clipboard?.writeText(link).then(() => {
+      setCopiedVipCode(inviteCode);
+      setTimeout(() => setCopiedVipCode(null), 2500);
+    });
   };
 
   const handleCopyShareLink = () => {
@@ -465,8 +528,8 @@ export function ExperiencePassModal({
             </div>
           )}
 
-          {/* 4. SEU GRUPO */}
-          {totalGuests > 1 && (
+          {/* 4. SEU GRUPO & ACOMPANHANTES */}
+          {totalGuests > 1 ? (
             <div className="space-y-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-4 sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
@@ -474,13 +537,13 @@ export function ExperiencePassModal({
                   Participantes da Mesa (
                   {currentRes.group_validated_slots?.length || (isCheckedIn ? 1 : 0)} de {totalGuests})
                 </span>
-                <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-300">
-                  +100 RP por amigo
+                <span className="rounded-full bg-sky-500/15 px-3 py-1 text-[11px] font-bold text-sky-700 dark:text-sky-300">
+                  Passe individual obrigatório
                 </span>
               </div>
 
-              <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                Cada amigo que validar o QR no local ganha <strong>+250 RP</strong> e você ganha <strong>+100 RP</strong>.
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                Vai acompanhado? Cada pessoa precisa ativar seu próprio passe para receber o benefício. Acompanhantes sem conta registram apenas presença física (0 RP e sem cobrança).
               </p>
 
               <div className="space-y-2">
@@ -488,7 +551,7 @@ export function ExperiencePassModal({
                   <span className="font-semibold text-[var(--text-primary)]">1. Você (Anfitrião)</span>
                   {isCheckedIn ? (
                     <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="h-4 w-4" /> Validado (+250 RP)
+                      <CheckCircle2 className="h-4 w-4" /> Validado
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 font-semibold text-amber-500">
@@ -513,7 +576,7 @@ export function ExperiencePassModal({
 
                       {validatedSlot ? (
                         <span className="inline-flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="h-4 w-4" /> Validado
+                          <CheckCircle2 className="h-4 w-4" /> Presença registrada
                         </span>
                       ) : (
                         <div className="flex flex-wrap items-center gap-2">
@@ -522,7 +585,7 @@ export function ExperiencePassModal({
                             onClick={handleShareWhatsApp}
                             className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-300"
                           >
-                            Convidar no WhatsApp
+                            Convidar acompanhantes pelo WhatsApp
                           </button>
                           <button
                             type="button"
@@ -530,7 +593,7 @@ export function ExperiencePassModal({
                             onClick={() => handleValidateCompanionSlot(slotNumber)}
                             className="rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#0077B6] disabled:opacity-50"
                           >
-                            Validar QR Individual
+                            Registrar presença
                           </button>
                         </div>
                       )}
@@ -539,41 +602,119 @@ export function ExperiencePassModal({
                 })}
               </div>
             </div>
+          ) : (
+            !isClosedPass &&
+            !isCheckedIn && (
+              <div className="rounded-2xl border border-sky-500/25 bg-sky-500/10 p-4 sm:p-5">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div className="space-y-1">
+                    <p className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+                      <Users className="h-4 w-4 text-[#0077B6]" />
+                      Vai acompanhado?
+                    </p>
+                    <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                      Cada pessoa precisa ativar seu próprio passe para receber o benefício.
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleShareWhatsApp}
+                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      Convidar acompanhantes pelo WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopyShareLink}
+                      className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                      title="Copiar link da oferta"
+                    >
+                      {copiedLink ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
           )}
 
-          {/* 5. CONVIDAR AMIGO */}
-          <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-[var(--bg-subtle)] to-transparent p-4 sm:p-5">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          {/* 5. CONVITE VIP PÓS-CHECK-IN (Somente se autorizado pelo parceiro, após check-in, dentro da cota e validade) */}
+          {canShowVipInviteSection && vipConfig && (
+            <div className="space-y-3 rounded-2xl border border-emerald-500/35 bg-gradient-to-r from-emerald-500/10 via-[var(--bg-subtle)] to-transparent p-4 sm:p-5">
               <div className="space-y-1">
                 <p className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
                   <Gift className="h-4 w-4 text-emerald-500" />
-                  Convite VIP (+300 RP para você)
+                  Convite VIP Autorizado pelo Estabelecimento
                 </p>
-                <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
-                  No 1º check-in do seu amigo, ele ganha <strong>+250 RP</strong> e você <strong>+300 RP</strong>.
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                  {vipConfig.benefit_title}
+                </p>
+                {vipConfig.conditions_text && (
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {vipConfig.conditions_text}
+                  </p>
+                )}
+                <p className="text-[11px] text-[var(--text-tertiary)]">
+                  Enviar o convite não gera pontos por si só. Cada convite possui código individual rastreável.
                 </p>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleShareWhatsApp}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700"
-                >
-                  <Share2 className="h-4 w-4" />
-                  Enviar Convite
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopyShareLink}
-                  className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2.5 text-sm font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
-                  title="Copiar link de convite"
-                >
-                  {copiedLink ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                </button>
+              <div className="space-y-2">
+                {validVipInvites.map((inv) => {
+                  const expiresLabel = new Date(inv.expires_at).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                  });
+                  return (
+                    <div
+                      key={inv.id}
+                      className="flex flex-col justify-between gap-2.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3 sm:flex-row sm:items-center"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-extrabold text-[#FF6B35]">
+                            {inv.invite_code}
+                          </span>
+                          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
+                            {inv.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[var(--text-secondary)]">
+                          Válido até {expiresLabel}
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleShareVipInvite(inv)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700"
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          Enviar Convite VIP
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyVipInvite(inv.invite_code)}
+                          className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-subtle)] p-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[#FF6B35]"
+                          title="Copiar link do Convite VIP"
+                        >
+                          {copiedVipCode === inv.invite_code ? (
+                            <Check className="h-4 w-4 text-emerald-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
+          )}
 
           {/* 6. COMO CHEGAR */}
           <div className="pt-1">

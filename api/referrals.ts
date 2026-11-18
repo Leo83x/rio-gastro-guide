@@ -477,6 +477,113 @@ export default async function handler(req: Request): Promise<Response> {
       return jsonResponse(200, { ok: true, summary: data });
     }
 
+    // 8. GET /api/referrals/vip-config?restaurantId=...
+    if (req.method === 'GET' && action === 'vip-config') {
+      const url = new URL(req.url);
+      const restaurantId = url.searchParams.get('restaurantId')?.trim();
+      if (!restaurantId) {
+        return jsonResponse(400, {
+          error: 'MISSING_RESTAURANT_ID',
+          message: 'restaurantId obrigatório.',
+        });
+      }
+
+      const { data, error } = await admin
+        .from('partner_vip_invite_configs')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .eq('active', true)
+        .maybeSingle();
+
+      if (error) {
+        return jsonResponse(400, { error: 'VIP_CONFIG_READ_FAILED', message: error.message });
+      }
+      return jsonResponse(200, { ok: true, config: data || null });
+    }
+
+    // 9. POST /api/referrals/vip-config (somente membro autorizado do parceiro ou ADMIN)
+    if (req.method === 'POST' && action === 'vip-config') {
+      const { user, role } = await authenticateRequest(req, admin);
+      if (!user) return jsonResponse(401, { error: 'UNAUTHORIZED', message: 'Login obrigatório.' });
+
+      const body = (await req.json()) as {
+        restaurantId?: string;
+        offeringId?: string | null;
+        enabled?: boolean;
+        benefitTitle?: string;
+        conditionsText?: string;
+        maxInvitesPerCheckin?: number;
+        totalQuota?: number | null;
+        validDaysAfterCheckin?: number;
+      };
+
+      const restaurantId = (body.restaurantId || '').trim();
+      if (!restaurantId) {
+        return jsonResponse(400, {
+          error: 'MISSING_RESTAURANT_ID',
+          message: 'restaurantId obrigatório.',
+        });
+      }
+
+      if (role !== 'ADMIN') {
+        const { data: membership } = await admin
+          .from('partner_memberships')
+          .select('id, role')
+          .eq('restaurant_id', restaurantId)
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .in('role', ['OWNER', 'MANAGER'])
+          .maybeSingle();
+
+        if (!membership) {
+          return jsonResponse(403, {
+            error: 'FORBIDDEN',
+            message: 'Apenas gestores autorizados deste estabelecimento podem configurar Convites VIP.',
+          });
+        }
+      }
+
+      const benefitTitle = (body.benefitTitle || '').trim();
+      if (body.enabled && benefitTitle.length < 3) {
+        return jsonResponse(400, {
+          error: 'INVALID_BENEFIT_TITLE',
+          message: 'Informe o benefício oferecido no Convite VIP (mínimo 3 caracteres).',
+        });
+      }
+
+      const maxPerCheckin = Math.min(3, Math.max(1, Math.round(Number(body.maxInvitesPerCheckin ?? 3))));
+      const validDays = Math.max(1, Math.round(Number(body.validDaysAfterCheckin ?? 14)));
+      const totalQuota =
+        body.totalQuota === null || body.totalQuota === undefined || body.totalQuota === ('' as unknown)
+          ? null
+          : Math.max(0, Math.round(Number(body.totalQuota)));
+
+      const { data, error } = await admin
+        .from('partner_vip_invite_configs')
+        .upsert(
+          {
+            restaurant_id: restaurantId,
+            offering_id: body.offeringId || null,
+            enabled: Boolean(body.enabled),
+            benefit_title: benefitTitle || 'Benefício VIP autorizado pelo estabelecimento',
+            conditions_text: body.conditionsText?.trim() || null,
+            max_invites_per_checkin: maxPerCheckin,
+            total_quota: totalQuota,
+            valid_days_after_checkin: validDays,
+            active: true,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'restaurant_id' }
+        )
+        .select('*')
+        .single();
+
+      if (error) {
+        return jsonResponse(400, { error: 'VIP_CONFIG_SAVE_FAILED', message: error.message });
+      }
+      return jsonResponse(200, { ok: true, config: data });
+    }
+
     return jsonResponse(404, { error: 'UNKNOWN_ACTION', message: `Rota /api/referrals/${action} não encontrada.` });
   } catch (err) {
     return jsonResponse(500, {

@@ -6,12 +6,14 @@ import {
   Gift,
   Info,
   MapPin,
+  Share2,
   Sparkles,
   Users,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { formatOfferingSchedule } from '../services/opportunityStore';
+import { getMyReferralLink } from '../services/referralStore';
 import { createReservationRequest } from '../services/superappStore';
 import type { ReservationRequest } from '../types/experience';
 import type { PartnerOffering } from '../types/marketplace';
@@ -263,15 +265,29 @@ export function BenefitActivationModal({
             </span>
           </div>
 
-          {/* Aviso Pedagógico para Casais & Grupos */}
-          <div className="flex items-start gap-2.5 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-3.5 text-xs text-sky-950 dark:text-sky-200">
-            <Users className="h-4 w-4 shrink-0 text-[#0077B6] mt-0.5" />
-            <div className="space-y-0.5">
-              <p className="font-bold text-[var(--text-primary)]">Vai em casal ou grupo?</p>
-              <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
-                Cada pessoa precisa ter o BoraRio e validar sua própria presença no balcão para receber seus 250 Rio Points e carimbar a visita no Passaporte.
-              </p>
+          {/* Aviso Pedagógico e Convite para Acompanhantes */}
+          <div className="space-y-2.5 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-3.5 text-xs text-sky-950 dark:text-sky-200">
+            <div className="flex items-start gap-2.5">
+              <Users className="h-4 w-4 shrink-0 text-[#0077B6] mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold text-[var(--text-primary)]">Vai acompanhado?</p>
+                <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                  Cada pessoa precisa ativar seu próprio passe para receber o benefício e validar sua presença no local.
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                const link = getMyReferralLink(offering.restaurant_id);
+                const text = `Bora comigo em *${venueName}* (${neighborhood})?\nAtive seu próprio passe no BoraRio para garantir o benefício individual (*${offering.title}*):\n${link}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+              }}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 transition"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Convidar acompanhantes pelo WhatsApp
+            </button>
           </div>
 
           {errorMsg && (

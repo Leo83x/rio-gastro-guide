@@ -387,15 +387,15 @@ export function RestaurantDetailModal({
             </div>
           </div>
 
-          {/* AÇÃO DEDICADA: INDICAR ESTABELECIMENTO / COMPARTILHAR LINK DO APP */}
+          {/* AÇÃO DEDICADA: ENVIAR PARA UM AMIGO / COMPARTILHAR LINK DO APP */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-[#397B68]/30 bg-[#397B68]/10 p-4">
             <div className="space-y-0.5">
               <span className="text-xs font-bold uppercase tracking-wider text-[#397B68] dark:text-[#4CA188] flex items-center gap-1.5">
                 <Share2 className="h-3.5 w-3.5" />
-                Indicar para um Amigo (+200 Rio Points)
+                Enviar para um amigo
               </span>
               <p className="text-[11px] text-[var(--text-secondary)]">
-                Compartilhe o link oficial do BoraRio com amigos e acumule pontos quando a visita for validada.
+                Compartilhe este lugar pelo link oficial do BoraRio. O envio em si não gera pontos; recompensas seguem as regras ativas após ação válida.
               </p>
             </div>
 
@@ -405,7 +405,7 @@ export function RestaurantDetailModal({
                 onClick={handleShareApp}
                 className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition"
               >
-                <span>WhatsApp</span>
+                <span>Enviar para um amigo</span>
               </button>
 
               <button

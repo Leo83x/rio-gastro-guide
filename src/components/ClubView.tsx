@@ -10,6 +10,7 @@ import {
   MapPin,
   ReceiptText,
   Search,
+  Share2,
   Sparkles,
   Store,
   Ticket,
@@ -677,26 +678,76 @@ export function ClubView({
                         {/* Action Buttons: Clean & Direct */}
                         <div className="mt-4 border-t border-[var(--border-hairline)] pt-3 flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                            +250 Rio Points no check-in individual
+                            Pontos apenas após check-in individual validado
                           </span>
 
                           <div className="flex flex-wrap items-center gap-2">
-                            {isDemand && (
+                            {isDemand ? (
                               <button
                                 type="button"
                                 onClick={() => {
                                   const link = getMyReferralLink(off.restaurant_id);
                                   const code = getMyReferralCode();
-                                  const txt = `🔥 Bora destravar a próxima faixa no *${off.restaurant_name}* (${off.neighborhood})?\n\nMissão Coletiva BoraRio: *${off.title}*\nJá temos *${tierInfo.currentAdhesions} adesões* e benefício garantido desde já (cada um usa individualmente quando for, sem dividir mesa)!\n\nAdicione sua adesão grátis aqui e ganhe +250 RP no check-in:\n${link}\nCódigo VIP: *${code}*`;
+                                  const txt = `🔥 Bora destravar a próxima faixa no *${off.restaurant_name}* (${off.neighborhood})?\n\nMissão Coletiva BoraRio: *${off.title}*\nJá temos *${tierInfo.currentAdhesions} adesões* e benefício garantido desde já (cada participante ativa e usa individualmente, sem precisar dividir mesa)!\n\nParticipe aqui:\n${link}\nCódigo: *${code}*`;
+                                  if (typeof navigator !== 'undefined' && navigator.share) {
+                                    void navigator
+                                      .share({
+                                        title: `${off.restaurant_name} · Missão Coletiva BoraRio`,
+                                        text: txt,
+                                        url: link,
+                                      })
+                                      .catch(() => {
+                                        window.open(
+                                          `https://wa.me/?text=${encodeURIComponent(txt)}`,
+                                          '_blank',
+                                          'noopener,noreferrer'
+                                        );
+                                      });
+                                    return;
+                                  }
                                   window.open(
                                     `https://wa.me/?text=${encodeURIComponent(txt)}`,
                                     '_blank',
                                     'noopener,noreferrer'
                                   );
                                 }}
-                                className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20 transition"
                               >
-                                Convidar Amigos (+300 RP)
+                                <Share2 className="h-3.5 w-3.5" />
+                                Chamar amigos para melhorar o benefício
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const link = getMyReferralLink(off.restaurant_id);
+                                  const txt = `Olha essa experiência no BoraRio: *${off.title}* em *${off.restaurant_name}* (${off.neighborhood}).\n\nCada pessoa ativa seu próprio passe individual pelo link:\n${link}`;
+                                  if (typeof navigator !== 'undefined' && navigator.share) {
+                                    void navigator
+                                      .share({
+                                        title: `${off.title} · BoraRio`,
+                                        text: txt,
+                                        url: link,
+                                      })
+                                      .catch(() => {
+                                        window.open(
+                                          `https://wa.me/?text=${encodeURIComponent(txt)}`,
+                                          '_blank',
+                                          'noopener,noreferrer'
+                                        );
+                                      });
+                                    return;
+                                  }
+                                  window.open(
+                                    `https://wa.me/?text=${encodeURIComponent(txt)}`,
+                                    '_blank',
+                                    'noopener,noreferrer'
+                                  );
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-[#397B68]/40 bg-[#397B68]/10 px-3 py-2 text-xs font-bold text-[#397B68] dark:text-[#4CA188] hover:bg-[#397B68]/20 transition"
+                              >
+                                <Share2 className="h-3.5 w-3.5" />
+                                Enviar para um amigo
                               </button>
                             )}
 

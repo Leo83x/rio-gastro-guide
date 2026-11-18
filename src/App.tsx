@@ -12,6 +12,7 @@ import { BenefitActivationModal } from './components/BenefitActivationModal';
 import { ExperiencePassModal } from './components/ExperiencePassModal';
 import type { PartnerOffering } from './types/marketplace';
 import { HeroSection, type FilterState } from './components/HeroSection';
+import { InviteFriendsPage } from './components/InviteFriendsPage';
 import { Navbar, type AppTab } from './components/Navbar';
 import { NightlifeEventModal } from './components/NightlifeEventModal';
 import { NightlifeSection } from './components/NightlifeSection';
@@ -712,6 +713,11 @@ export function App() {
     );
   }
 
+  // 5. Página Dedicada Convide e Ganhe (/convide)
+  if (route === '/convide') {
+    return <InviteFriendsPage onBack={() => navigate('/app')} />;
+  }
+
   const effectiveTab: AppTab = route === '/admin' ? 'admin' : activeTab;
   const showEditorialDiscover =
     effectiveTab === 'discover' &&
@@ -855,6 +861,7 @@ export function App() {
                 onSaveNightlifeToVault={handleSaveNightlifeToVault}
                 onAskBoraIa={(intentText) => setPendingBoraIaPrompt(intentText)}
                 onGoToAdminNightlife={isAdminAuthenticated ? navigateToAdminNightlife : undefined}
+                onOpenInvitePage={() => navigate('/convide')}
                 onRequestLocation={handleRequestLocation}
                 onScrollToCatalog={() =>
                   document
@@ -1195,6 +1202,7 @@ export function App() {
           onOpenConfiaHub={() => {
             setActiveTab('wishes');
           }}
+          onOpenInvitePage={() => navigate('/convide')}
           onPointsChanged={() => {
             setPointsBalance(getPointsBalance());
             setNotifications(getNotifications());

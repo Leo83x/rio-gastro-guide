@@ -26,17 +26,19 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { calculateMatchScore, getMatchReasonLabel } from '../services/matchService';
 import { computeMissionSummary } from '../services/missionStore';
 import { getPartnerOfferings } from '../services/opportunityStore';
 import { computePassportSummary } from '../services/passportStore';
+import { fetchActiveReferralProgramRule } from '../services/pointRulesStore';
 import { getWalletSummary } from '../services/pointsLedger';
-import { getMyReferralLink } from '../services/referralStore';
+import { getMyReferralLink, getReferralAttributions } from '../services/referralStore';
 import { getPartnerRewards } from '../services/rewardMarketplaceStore';
 import { computeSavingsSummary, formatBrl } from '../services/savingsLedgerStore';
 import type { ConfiaRecommendation } from '../types/confia';
 import type { UserPreferences } from '../types/experience';
+import type { ReferralProgramRule } from '../types/growth';
 import type { PartnerOffering } from '../types/marketplace';
 import type { NightlifeDateFilter, NightlifeEvent, NightlifeSubArea } from '../types/nightlife';
 import type { CommercialModality } from '../types/partnerCommercial';
@@ -70,6 +72,7 @@ interface DiscoverEditorialSectionsProps {
   onSaveNightlifeToVault?: (event: NightlifeEvent) => void;
   onAskBoraIa?: (promptText: string) => void;
   onGoToAdminNightlife?: () => void;
+  onOpenInvitePage?: () => void;
   onRequestLocation?: () => void;
   onScrollToCatalog?: () => void;
   onGoToExploreMap: () => void;
@@ -148,6 +151,7 @@ export function DiscoverEditorialSections({
   onSaveNightlifeToVault,
   onAskBoraIa,
   onGoToAdminNightlife,
+  onOpenInvitePage,
   onRequestLocation,
   onScrollToCatalog,
   onGoToExploreMap,
@@ -165,6 +169,32 @@ export function DiscoverEditorialSections({
   const [showPassportList, setShowPassportList] = useState(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
+  const [referralRule, setReferralRule] = useState<ReferralProgramRule | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetchActiveReferralProgramRule().then((r) => {
+      if (active) setReferralRule(r);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const referralCounts = useMemo(() => {
+    const attrs = getReferralAttributions();
+    const valid = attrs.filter(
+      (a) => a.current_stage === 'REWARD_RELEASED' || a.status === 'CONVERTED'
+    ).length;
+    const pending = attrs.filter(
+      (a) =>
+        a.current_stage !== 'REWARD_RELEASED' &&
+        a.current_stage !== 'REWARD_CANCELLED' &&
+        a.status !== 'CONVERTED' &&
+        a.status !== 'REVERSED'
+    ).length;
+    return { valid, pending };
+  }, []);
 
   const spotlight = useMemo(
     () => experiences.find((e) => e.is_featured) || experiences[0],
@@ -648,51 +678,75 @@ export function DiscoverEditorialSections({
         </div>
       </section>
 
-      {/* SEÇÃO 05 · RETENÇÃO: CARD INDIQUE E GANHE RIO POINTS */}
+      {/* SEÇÃO 05 · RETENÇÃO: MÓDULO CONVIDE E GANHE */}
       <section
         aria-labelledby="home-block-referral"
         className="rounded-3xl border border-sky-400/25 bg-gradient-to-br from-[#0E2235] via-[#123B56] to-[#0077B6] p-5 text-white shadow-md sm:p-6"
       >
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
-              <Share2 className="h-3.5 w-3.5" />
-              Indique e Ganhe Rio Points
-            </span>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                <Share2 className="h-3.5 w-3.5" />
+                Convide e Ganhe
+              </span>
+              {referralRule?.active && referralRule.referrer_points > 0 && (
+                <span className="inline-flex items-center rounded-full bg-emerald-500/25 px-3 py-1 text-xs font-bold text-emerald-100">
+                  +{referralRule.referrer_points} RP por indicação válida
+                </span>
+              )}
+            </div>
+
             <h3
               id="home-block-referral"
-              className="mt-2 font-sans text-xl font-black text-white sm:text-2xl"
+              className="font-sans text-xl font-black text-white sm:text-2xl"
             >
-              Ganhe 200 Rio Points por cada primeira visita validada
+              Seus amigos também valem pontos.
             </h3>
-            <p className="mt-1.5 max-w-xl text-sm font-medium text-white leading-relaxed">
-              Convide amigos para o BoraRio. Seus pontos são creditados assim que seu amigo fizer o primeiro check-in presencial validado no parceiro.
+            <p className="max-w-xl text-sm font-medium text-white/95 leading-relaxed">
+              Convide alguém para descobrir o BoraRio. Quando seu amigo realizar uma ação válida,
+              vocês poderão ganhar Rio Points.
             </p>
+            {(referralCounts.valid > 0 || referralCounts.pending > 0) && (
+              <p className="text-xs font-semibold text-sky-100">
+                Seu histórico: {referralCounts.valid} válida(s) · {referralCounts.pending} pendente(s)
+              </p>
+            )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {onOpenInvitePage && (
+              <button
+                type="button"
+                onClick={onOpenInvitePage}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:brightness-105"
+              >
+                <Users className="h-4 w-4" />
+                Convidar amigos
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleCopyRef}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/15 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-white/25"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/30 bg-white/15 px-3.5 py-2.5 text-xs font-bold text-white transition hover:bg-white/25"
             >
               {copiedRef ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
-              {copiedRef ? 'Link Copiado!' : 'Copiar Link'}
+              {copiedRef ? 'Copiado!' : 'Copiar link'}
             </button>
 
-            <button
-              type="button"
-              onClick={handleShareWhatsAppRef}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:brightness-105"
-            >
-              <Share2 className="h-3.5 w-3.5" />
-              WhatsApp
-            </button>
+            {!onOpenInvitePage && (
+              <button
+                type="button"
+                onClick={handleShareWhatsAppRef}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:brightness-105"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                WhatsApp
+              </button>
+            )}
           </div>
         </div>
-        <p className="mt-3 text-xs font-medium text-white/90">
-          * Benefício não conversível em dinheiro. Proteção antifraude e autoindicação ativa.
-        </p>
       </section>
 
       {/* SEÇÃO 06 · EXPLORAÇÃO: PERTO DE VOCÊ NO RIO */}
