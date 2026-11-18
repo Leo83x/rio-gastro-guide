@@ -233,7 +233,7 @@ export function PartnerDashboard({
     }
   });
   const [draftTenantId, setDraftTenantId] = useState<string>(restaurants[0]?.id || '');
-  const [activeTab, setActiveTab] = useState<PartnerTab>('traditional');
+  const [activeTab, setActiveTab] = useState<PartnerTab>('offers');
   const [opFeedback, setOpFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [storeVersion, setStoreVersion] = useState(0);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
@@ -277,7 +277,7 @@ export function PartnerDashboard({
   const [offTitle, setOffTitle] = useState('');
   const [offBenefit, setOffBenefit] = useState('');
   const [offInitialGuaranteedBenefit, setOffInitialGuaranteedBenefit] = useState('');
-  const [offTier1Goal, setOffTier1Goal] = useState(5);
+  const [offTier1Goal] = useState(5);
   const [offTier2Goal, setOffTier2Goal] = useState(15);
   const [offTier2Benefit, setOffTier2Benefit] = useState('');
   const [offTier3Goal, setOffTier3Goal] = useState(25);
@@ -401,7 +401,7 @@ export function PartnerDashboard({
     if (!targetId) return;
     localStorage.setItem(PARTNER_SESSION_KEY, targetId);
     setSelectedTenantId(targetId);
-    setActiveTab('traditional');
+    setActiveTab('offers');
     const found = restaurants.find((r) => r.id === targetId);
     if (found) syncProfileForm(found);
   };
@@ -409,7 +409,7 @@ export function PartnerDashboard({
   const handleLogout = () => {
     localStorage.removeItem(PARTNER_SESSION_KEY);
     setSelectedTenantId('');
-    setActiveTab('traditional');
+    setActiveTab('offers');
     setEditingOfferingId(null);
     setEditingRewardId(null);
     setOpFeedback(null);
@@ -1248,100 +1248,105 @@ export function PartnerDashboard({
             </form>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Tenant Banner */}
-            <div className="flex flex-col justify-between gap-4 rounded-3xl bg-borario-day p-6 text-white sm:flex-row sm:items-center">
-              <div>
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                  <ShieldCheck className="h-3.5 w-3.5 text-[#A7E3CE]" />
-                  Tenant isolado · {partnerEmail}
+          <div className="space-y-8">
+            {/* Banner Principal Limpo e Arejado */}
+            <div className="flex flex-col justify-between gap-6 rounded-3xl bg-borario-day p-7 text-white shadow-lg sm:flex-row sm:items-center sm:p-9">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-sm font-semibold">
+                  <ShieldCheck className="h-4 w-4 text-[#A7E3CE]" />
+                  <span>Painel Oficial · {activeTenant.neighborhood}</span>
                 </div>
-                <h1 className="font-sans tracking-tight mt-2 text-2xl font-bold sm:text-3xl">
+                <h1 className="font-sans text-3xl font-extrabold tracking-tight sm:text-4xl">
                   {activeTenant.name}
                 </h1>
-                <p className="text-xs text-[#F1E8D8]">
-                  {activeTenant.category} · {activeTenant.neighborhood} · Pagamento do cliente direto no caixa (0% no app)
+                <p className="text-sm text-[#F1E8D8] sm:text-base">
+                  {activeTenant.category} · O cliente paga 100% da conta direto no seu caixa (0% comissão)
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="inline-flex items-center gap-1.5 self-start rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/20 sm:self-auto"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                Trocar / Sair
-              </button>
+              <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+                <span className="rounded-2xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-xs">
+                  Tarifa ativa: R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2).replace('.', ',')} / pessoa validada
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Trocar / Sair
+                </button>
+              </div>
             </div>
 
-            {/* Jornada Simplificada em 3 Etapas + 4 Momentos Progressivos */}
-            <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
-              <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#FF6B35]/15 px-3 py-1 text-xs font-bold text-[#FF6B35]">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Entrada Simplificada em 3 Etapas · Sem Fricção
-                    </span>
-                    <span className="rounded-full bg-[#397B68]/15 px-3 py-1 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
-                      R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2).replace('.', ',')} por participante validado · 0% sobre a conta
-                    </span>
-                    {currentPlan?.onboarding_mode === 'ASSISTED_BY_BORARIO' && (
-                      <span className="rounded-full bg-[#123B56]/15 px-3 py-1 text-xs font-bold text-[#123B56] dark:text-[#8DC4EA]">
-                        🤝 Cadastro Assistido BoraRio
-                      </span>
-                    )}
-                  </div>
-                  <h2 className="text-lg font-bold text-[var(--text-primary)]">
-                    Comece apenas com seu perfil e sua primeira oferta. Evolua no seu ritmo.
-                  </h2>
-                  <p className="text-xs text-[var(--text-secondary)] max-w-3xl">
-                    Você não precisa cadastrar recompensa de fidelidade nem campanha patrocinada para entrar no BoraRio. Só paga quando um participante identificado valida presença por QR Code no seu balcão.
-                  </p>
-                </div>
-
-                {/* Funil Resumido Etapa 3 */}
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 shrink-0">
-                  <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-center">
-                    <span className="block text-[10px] font-bold uppercase text-[var(--text-secondary)]">
-                      Visualizações
-                    </span>
-                    <span className="text-base font-black text-[var(--text-primary)]">{totalViews}</span>
-                  </div>
-                  <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-center">
-                    <span className="block text-[10px] font-bold uppercase text-[var(--text-secondary)]">
-                      Adesões / Reservas
-                    </span>
-                    <span className="text-base font-black text-[#123B56] dark:text-[#8DC4EA]">
-                      {Math.max(totalValidAdhesions, totalActiveReservations)}
-                    </span>
-                  </div>
-                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-center">
-                    <span className="block text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-300">
-                      Visitas Faturáveis
-                    </span>
-                    <span className="text-base font-black text-emerald-700 dark:text-emerald-300">
-                      {totalGuestsBilled}
-                    </span>
-                  </div>
-                  <div className="rounded-2xl border border-[#FF6B35]/30 bg-[#FF6B35]/10 px-3 py-2 text-center">
-                    <span className="block text-[10px] font-bold uppercase text-[#FF6B35]">
-                      Líquido Devido
-                    </span>
-                    <span className="text-base font-black text-[#FF6B35]">
-                      R$ {accruedBrl.toFixed(0)}
-                    </span>
-                    {creditsAbatedBrl > 0 && (
-                      <span className="block text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
-                        (-R$ {creditsAbatedBrl.toFixed(0)} crédito)
-                      </span>
-                    )}
-                  </div>
-                </div>
+            {/* 4 Indicadores Principais — Grandes, Limpos e Fáceis de Ler */}
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
+                <span className="text-sm font-semibold text-[var(--text-secondary)]">
+                  Visualizações nas Ofertas
+                </span>
+                <p className="mt-2 text-3xl font-black text-[var(--text-primary)]">{totalViews}</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                  Interesse gerado no app
+                </p>
               </div>
 
-              {/* 4 Momentos Progressivos da Jornada do Parceiro */}
-              <div className="grid gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-xs">
+                <span className="text-sm font-semibold text-[var(--text-secondary)]">
+                  Reservas &amp; Adesões
+                </span>
+                <p className="mt-2 text-3xl font-black text-[#123B56] dark:text-[#8DC4EA]">
+                  {Math.max(totalValidAdhesions, totalActiveReservations)}
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                  Clientes que ativaram ofertas
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-xs">
+                <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                  Clientes Atendidos (QR)
+                </span>
+                <p className="mt-2 text-3xl font-black text-emerald-700 dark:text-emerald-300">
+                  {totalGuestsBilled}
+                </p>
+                <p className="mt-1 text-sm text-emerald-800/80 dark:text-emerald-200/80">
+                  Presenças validadas no balcão
+                </p>
+              </div>
+
+              <div className="rounded-3xl border border-[#FF6B35]/30 bg-[#FF6B35]/10 p-6 shadow-xs">
+                <span className="text-sm font-bold text-[#FF6B35]">
+                  Total do Mês
+                </span>
+                <p className="mt-2 text-3xl font-black text-[#FF6B35]">
+                  R$ {accruedBrl.toFixed(2).replace('.', ',')}
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                  Apenas clientes com check-in
+                </p>
+              </div>
+            </section>
+
+            {/* Jornada Simplificada em 3 Passos Claros */}
+            <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs">
+              <div className="mb-6 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                <div>
+                  <h2 className="text-xl font-bold text-[var(--text-primary)]">
+                    Sua Jornada no BoraRio em 3 Passos Simples
+                  </h2>
+                  <p className="mt-1 text-sm sm:text-base text-[var(--text-secondary)]">
+                    Configure apenas o essencial para começar a receber clientes e evolua quando quiser.
+                  </p>
+                </div>
+                {currentPlan?.onboarding_mode === 'ASSISTED_BY_BORARIO' && (
+                  <span className="self-start rounded-full bg-[#123B56]/15 px-4 py-1.5 text-sm font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                    🤝 Cadastro Assistido BoraRio
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -1349,7 +1354,7 @@ export function PartnerDashboard({
                     setOffDistributionMode('INDIVIDUAL');
                     setOpFeedback(null);
                   }}
-                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                  className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition ${
                     activeTab === 'offers' && offDistributionMode === 'INDIVIDUAL'
                       ? 'border-[#FF6B35] bg-[#FF6B35]/10'
                       : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[#FF6B35]/60'
@@ -1357,24 +1362,24 @@ export function PartnerDashboard({
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#FF6B35]">
-                        1. Começar · Essencial
+                      <span className="rounded-full bg-[#FF6B35]/15 px-3 py-1 text-xs font-extrabold uppercase text-[#FF6B35]">
+                        Passo 1 · Começar
                       </span>
                       <CheckCircle2
-                        className={`h-4 w-4 ${
+                        className={`h-5 w-5 ${
                           hasCondition1Configured ? 'text-emerald-500' : 'text-[var(--text-secondary)]'
                         }`}
                       />
                     </div>
-                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                      Perfil &amp; Primeira Oferta
+                    <h3 className="mt-3 text-lg font-bold text-[var(--text-primary)]">
+                      Sua Primeira Oferta
                     </h3>
-                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                      Revise fotos/horários e publique sua 1ª oferta para receber clientes com QR Code.
+                    <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Crie uma condição atrativa para atrair clientes ao salão com validação simples por QR Code.
                     </p>
                   </div>
-                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-[#FF6B35]">
-                    {hasCondition1Configured ? 'Gerenciar ofertas →' : 'Criar 1ª oferta agora →'}
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#FF6B35]">
+                    {hasCondition1Configured ? 'Ver minhas ofertas →' : 'Criar 1ª oferta agora →'}
                   </span>
                 </button>
 
@@ -1385,29 +1390,28 @@ export function PartnerDashboard({
                     setOffDistributionMode('COLLECTIVE_MISSION');
                     setOpFeedback(null);
                   }}
-                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
-                    (activeTab === 'offers' && offDistributionMode === 'COLLECTIVE_MISSION') ||
-                    activeTab === 'demand'
+                  className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition ${
+                    activeTab === 'offers' && offDistributionMode === 'COLLECTIVE_MISSION'
                       ? 'border-[#123B56] bg-[#123B56]/10 dark:border-[#8DC4EA]'
                       : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[#123B56]/60'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-[#123B56]/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#123B56] dark:text-[#8DC4EA]">
-                        2. Gerar mais demanda
+                      <span className="rounded-full bg-[#123B56]/15 px-3 py-1 text-xs font-extrabold uppercase text-[#123B56] dark:text-[#8DC4EA]">
+                        Passo 2 · Gerar Demanda
                       </span>
-                      <Users className="h-4 w-4 text-[#123B56] dark:text-[#8DC4EA]" />
+                      <Users className="h-5 w-5 text-[#123B56] dark:text-[#8DC4EA]" />
                     </div>
-                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
+                    <h3 className="mt-3 text-lg font-bold text-[var(--text-primary)]">
                       Missão Coletiva Progressiva
                     </h3>
-                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                      Mesma oferta com benefício inicial garantido e faixas que destravam com mais adesões.
+                    <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Distribuída com benefício inicial garantido e faixas extras destravadas conforme novas adesões.
                     </p>
                   </div>
-                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-[#123B56] dark:text-[#8DC4EA]">
-                    Ativar modalidade coletiva →
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                    Configurar missão coletiva →
                   </span>
                 </button>
 
@@ -1417,7 +1421,7 @@ export function PartnerDashboard({
                     setActiveTab('rewards');
                     setOpFeedback(null);
                   }}
-                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
+                  className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition ${
                     activeTab === 'rewards'
                       ? 'border-[#397B68] bg-[#397B68]/10'
                       : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[#397B68]/60'
@@ -1425,90 +1429,42 @@ export function PartnerDashboard({
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-[#397B68]/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-[#397B68] dark:text-[#4CA188]">
-                        3. Fidelizar · Opcional
+                      <span className="rounded-full bg-[#397B68]/15 px-3 py-1 text-xs font-extrabold uppercase text-[#397B68] dark:text-[#4CA188]">
+                        Passo 3 · Opcional
                       </span>
-                      <Ticket className="h-4 w-4 text-[#397B68] dark:text-[#4CA188]" />
+                      <Ticket className="h-5 w-5 text-[#397B68] dark:text-[#4CA188]" />
                     </div>
-                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                      Recompensas Rio Points
+                    <h3 className="mt-3 text-lg font-bold text-[var(--text-primary)]">
+                      Fidelidade Rio Points
                     </h3>
-                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                      Cadastre cortesias ou experiências para troca por pontos (0% comissão e R$ 0 taxa).
+                    <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Ofereça uma cortesia para troca por pontos quando quiser, com 0% de comissão e R$ 0 de taxa.
                     </p>
                   </div>
-                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-[#397B68] dark:text-[#4CA188]">
-                    {hasCondition2Configured ? `${tenantRewards.length} recompensa(s) ativa(s) →` : 'Configurar quando quiser →'}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('campaigns');
-                    setOpFeedback(null);
-                  }}
-                  className={`flex flex-col justify-between rounded-2xl border p-3.5 text-left transition ${
-                    activeTab === 'campaigns'
-                      ? 'border-amber-500 bg-amber-500/10'
-                      : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-amber-500/60'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-extrabold uppercase text-amber-700 dark:text-amber-300">
-                        4. Acelerar · Opcional
-                      </span>
-                      <Sparkles className="h-4 w-4 text-amber-500" />
-                    </div>
-                    <h3 className="mt-2 text-sm font-bold text-[var(--text-primary)]">
-                      Campanha &amp; Crédito (50%)
-                    </h3>
-                    <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                      Impulsione uma oferta existente e receba 50% do valor em crédito para abater visitas.
-                    </p>
-                  </div>
-                  <span className="mt-2.5 inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                    {tenantCreditSummary.totalRemainingCreditBrl > 0
-                      ? `R$ ${tenantCreditSummary.totalRemainingCreditBrl.toFixed(0)} em crédito disponível →`
-                      : 'Impulsionar oferta existente →'}
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#397B68] dark:text-[#4CA188]">
+                    {hasCondition2Configured ? `${tenantRewards.length} cortesia(s) ativa(s) →` : 'Conhecer fidelidade →'}
                   </span>
                 </button>
               </div>
             </section>
 
-            {/* Operational Tabs */}
-            <nav className="flex flex-wrap gap-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2">
+            {/* Menu de Navegação Principal — Botões Amplos e Intuitivos */}
+            <nav className="flex flex-wrap gap-2.5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3 shadow-xs">
               {[
+                {
+                  id: 'offers' as const,
+                  label: `Ofertas & Missões (${individualAndLastMinute.length + demandOfferings.length})`,
+                  icon: Gift,
+                },
+                {
+                  id: 'checkin' as const,
+                  label: 'QR Code & Check-in',
+                  icon: QrCode,
+                },
                 {
                   id: 'traditional' as const,
                   label: `Reservas (${tenantReservations.length})`,
                   icon: CalendarCheck,
-                },
-                {
-                  id: 'offers' as const,
-                  label: `1. Ofertas & Missões (${individualAndLastMinute.length + demandOfferings.length})`,
-                  icon: Gift,
-                },
-                {
-                  id: 'demand' as const,
-                  label: `2. Painel Coletivo (${demandOfferings.length})`,
-                  icon: Users,
-                },
-                {
-                  id: 'rewards' as const,
-                  label: `3. Recompensas (${tenantRewards.length})`,
-                  icon: Ticket,
-                },
-                {
-                  id: 'campaigns' as const,
-                  label: `4. Impulsionar & Créditos (${tenantSponsoredCampaigns.length})`,
-                  icon: Sparkles,
-                },
-                {
-                  id: 'checkin' as const,
-                  label: `Validação & QR (${tenantContingencies.length})`,
-                  icon: QrCode,
                 },
                 {
                   id: 'billing' as const,
@@ -1516,8 +1472,13 @@ export function PartnerDashboard({
                   icon: ReceiptText,
                 },
                 {
+                  id: 'rewards' as const,
+                  label: `Fidelidade (${tenantRewards.length})`,
+                  icon: Ticket,
+                },
+                {
                   id: 'profile' as const,
-                  label: `Fotos & Perfil`,
+                  label: 'Perfil & Fotos',
                   icon: Building2,
                 },
                 {
@@ -1536,9 +1497,9 @@ export function PartnerDashboard({
                       setActiveTab(tab.id);
                       setOpFeedback(null);
                     }}
-                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition sm:text-sm ${
+                    className={`inline-flex items-center gap-2.5 rounded-2xl px-4 py-3 text-sm font-bold transition ${
                       active
-                        ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-xs'
+                        ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
                         : 'text-[var(--text-secondary)] hover:bg-[var(--bg-canvas)] hover:text-[var(--text-primary)]'
                     }`}
                   >
@@ -1551,122 +1512,132 @@ export function PartnerDashboard({
 
             {opFeedback && (
               <div
-                className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-xs font-semibold ${
+                className={`flex items-center justify-between gap-4 rounded-2xl border px-5 py-4 text-sm font-semibold ${
                   opFeedback.ok
                     ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                     : 'border-red-500/35 bg-red-500/10 text-red-600 dark:text-red-300'
                 }`}
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2.5">
                   {opFeedback.ok ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
                   ) : (
-                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <AlertCircle className="h-5 w-5 shrink-0" />
                   )}
                   {opFeedback.msg}
                 </span>
                 <button
                   type="button"
                   onClick={() => setOpFeedback(null)}
-                  className="rounded px-2 py-0.5 text-xs font-bold hover:bg-black/5"
+                  className="rounded-lg px-3 py-1 text-sm font-bold hover:bg-black/5"
                 >
                   Fechar
                 </button>
               </div>
             )}
 
-            {/* TAB 1: RESERVAS TRADICIONAIS */}
+            {/* TAB 1: RESERVAS RECEBIDAS */}
             {activeTab === 'traditional' && (
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-8 lg:grid-cols-12">
                 <form
                   onSubmit={handleCreateTraditionalSlot}
-                  className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
+                  className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs lg:col-span-5"
                 >
-                  <div className="flex items-center gap-2">
-                    <CalendarCheck className="h-5 w-5 text-[#123B56] dark:text-[#FF6B35]" />
-                    <h2 className="font-sans text-lg font-bold">
-                      Abrir Janela de Reserva Tradicional
-                    </h2>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <CalendarCheck className="h-6 w-6 text-[#123B56] dark:text-[#FF6B35]" />
+                      <h2 className="font-sans text-xl font-bold sm:text-2xl">
+                        Abrir Horário de Reserva
+                      </h2>
+                    </div>
+                    <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Receba reservas comuns no salão sem desconto obrigatório. Você define apenas dias, horários e vagas.
+                    </p>
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    Sem desconto obrigatório. Você define apenas horários, capacidade e regras do salão.
-                  </p>
                   <div>
-                    <label className="text-xs font-bold">Título da janela</label>
+                    <label className="block text-sm font-bold text-[var(--text-primary)]">
+                      Nome do turno ou ambiente
+                    </label>
                     <input
                       type="text"
                       required
                       value={tradTitle}
                       onChange={(e) => setTradTitle(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold">Data</label>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">
+                        Data
+                      </label>
                       <input
                         type="date"
                         value={tradDate}
                         onChange={(e) => setTradDate(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold">Horário</label>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">
+                        Horário
+                      </label>
                       <input
                         type="text"
                         value={tradTime}
                         onChange={(e) => setTradTime(e.target.value)}
                         placeholder="20:00"
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold">Capacidade disponível (lugares)</label>
+                    <label className="block text-sm font-bold text-[var(--text-primary)]">
+                      Vagas disponíveis (lugares)
+                    </label>
                     <input
                       type="number"
                       min={1}
                       value={tradCapacity}
                       onChange={(e) => setTradCapacity(Number(e.target.value))}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base font-bold"
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full rounded-xl bg-[#123B56] py-2.5 text-xs font-bold text-white hover:bg-[#102F46]"
+                    className="w-full rounded-2xl bg-[#123B56] py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-[#102F46]"
                   >
-                    Publicar Disponibilidade Tradicional
+                    Publicar Horário de Reserva
                   </button>
 
                   {traditionalOfferings.length > 0 && (
-                    <div className="space-y-2 border-t border-[var(--border-hairline)] pt-3">
-                      <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
-                        Janelas publicadas ({traditionalOfferings.length})
+                    <div className="space-y-3 border-t border-[var(--border-hairline)] pt-5">
+                      <p className="text-sm font-bold text-[var(--text-secondary)]">
+                        Horários publicados ({traditionalOfferings.length})
                       </p>
                       {traditionalOfferings.map((off) => (
                         <div
                           key={off.id}
-                          className="flex items-center justify-between gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-2.5 text-xs"
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-sm"
                         >
                           <div>
-                            <p className="font-bold">{off.title}</p>
-                            <p className="text-xs text-[var(--text-secondary)]">
-                              {off.service_date} · {off.time_slot_label} ({off.reserved_count}/{off.capacity_total})
+                            <p className="font-bold text-[var(--text-primary)]">{off.title}</p>
+                            <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                              {off.service_date} · {off.time_slot_label} ({off.reserved_count}/{off.capacity_total} vagas)
                             </p>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleToggleOffering(off)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] px-2.5 py-1 text-xs font-semibold"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2 text-sm font-semibold"
                           >
                             {off.partner_managed_active ? (
                               <>
-                                <PauseCircle className="h-3.5 w-3.5 text-amber-500" /> Pausar
+                                <PauseCircle className="h-4 w-4 text-amber-500" /> Pausar
                               </>
                             ) : (
                               <>
-                                <PlayCircle className="h-3.5 w-3.5 text-emerald-500" /> Ativar
+                                <PlayCircle className="h-4 w-4 text-emerald-500" /> Ativar
                               </>
                             )}
                           </button>
@@ -1677,22 +1648,33 @@ export function PartnerDashboard({
                 </form>
 
                 {/* Gestão de Reservas Recebidas */}
-                <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-5 w-5 text-[#397B68]" />
-                      <h2 className="font-sans text-lg font-bold">
-                        Solicitações &amp; Reservas Individuais ({tenantReservations.length})
-                      </h2>
+                <section className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs lg:col-span-7">
+                  <div className="flex items-center justify-between gap-3 border-b border-[var(--border-hairline)] pb-4">
+                    <div className="flex items-center gap-2.5">
+                      <CalendarDays className="h-6 w-6 text-[#397B68]" />
+                      <div>
+                        <h2 className="font-sans text-xl font-bold sm:text-2xl">
+                          Reservas &amp; Adesões Recebidas ({tenantReservations.length})
+                        </h2>
+                        <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+                          Confirme solicitações ou acompanhe os clientes esperados na casa.
+                        </p>
+                      </div>
                     </div>
                   </div>
 
                   {tenantReservations.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-[var(--border-hairline)] p-6 text-center text-xs text-[var(--text-secondary)]">
-                      Nenhuma solicitação de reserva recebida ainda para {activeTenant.name}.
-                    </p>
+                    <div className="rounded-3xl border border-dashed border-[var(--border-hairline)] p-10 text-center">
+                      <CalendarDays className="mx-auto h-10 w-10 text-[var(--text-secondary)] opacity-60" />
+                      <p className="mt-3 text-base font-bold text-[var(--text-primary)]">
+                        Nenhuma reserva recebida ainda
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        Assim que um cliente reservar ou aderir a uma oferta de {activeTenant.name}, ela aparecerá aqui.
+                      </p>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {tenantReservations.map((res) => {
                         const stage = getEffectiveStage(res);
                         const meta = STAGE_BADGE[stage];
@@ -1706,40 +1688,37 @@ export function PartnerDashboard({
                         return (
                           <div
                             key={res.id}
-                            className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs"
+                            className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-5 sm:p-6"
                           >
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                              <div className="space-y-1.5">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${meta.cls}`}>
+                                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${meta.cls}`}>
                                     {meta.label}
                                   </span>
-                                  <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">
-                                    {res.modality || 'TRADITIONAL_BOOKING'}
-                                  </span>
                                   {res.visit_proof_level && (
-                                    <span className="rounded bg-[#397B68]/15 px-2 py-0.5 text-xs font-bold text-[#397B68]">
-                                      Prova: {res.visit_proof_level}
+                                    <span className="rounded-full bg-[#397B68]/15 px-3 py-1 text-xs font-bold text-[#397B68]">
+                                      Check-in Validado
                                     </span>
                                   )}
                                 </div>
-                                <p className="mt-1.5 font-bold text-[var(--text-primary)]">
+                                <p className="pt-1 text-lg font-bold text-[var(--text-primary)]">
                                   {res.offering_title || res.experience_name}
                                 </p>
-                                <p className="mt-0.5 flex items-center gap-1 text-xs text-[var(--text-secondary)]">
-                                  <Clock className="h-3 w-3" />
-                                  {res.date} às {res.time} · {res.guests} pessoa(s) · Origem:{' '}
-                                  {res.attribution_origin || 'catalog'}
+                                <p className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+                                  <Clock className="h-4 w-4 text-[#FF6B35]" />
+                                  <strong>{res.date}</strong> às <strong>{res.time}</strong> ·{' '}
+                                  <strong>{res.guests} pessoa(s)</strong>
                                 </p>
                                 {res.snapshot_terms?.price_summary && (
-                                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                    Termo congelado: {res.snapshot_terms.price_summary}
+                                  <p className="text-sm text-[var(--text-secondary)]">
+                                    Condição: <strong>{res.snapshot_terms.price_summary}</strong>
                                   </p>
                                 )}
                               </div>
 
                               {!isClosed && (
-                                <div className="flex flex-wrap gap-1.5">
+                                <div className="flex flex-wrap gap-2">
                                   {stage === 'REQUESTED' && !isPendingDemand && (
                                     <button
                                       type="button"
@@ -1747,11 +1726,11 @@ export function PartnerDashboard({
                                         partnerConfirmSingleReservation(res.id);
                                         setOpFeedback({
                                           ok: true,
-                                          msg: `Reserva de ${res.guests} pessoa(s) confirmada com instruções de check-in enviadas ao cliente.`,
+                                          msg: `Reserva de ${res.guests} pessoa(s) confirmada com sucesso!`,
                                         });
                                         bumpStore(true);
                                       }}
-                                      className="rounded-lg bg-[#397B68] px-3 py-1.5 text-xs font-bold text-white hover:opacity-95"
+                                      className="rounded-xl bg-[#397B68] px-4 py-2.5 text-sm font-bold text-white shadow-xs hover:opacity-95"
                                     >
                                       Confirmar Reserva
                                     </button>
@@ -1764,13 +1743,13 @@ export function PartnerDashboard({
                                           markReservationNoShow(res.id);
                                           setOpFeedback({
                                             ok: true,
-                                            msg: 'Marcada como No-Show (sem cobrança de taxa ao parceiro).',
+                                            msg: 'Marcada como Não Compareceu (R$ 0,00 de cobrança).',
                                           });
                                           bumpStore(true);
                                         }}
-                                        className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300"
+                                        className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-sm font-bold text-amber-700 dark:text-amber-300"
                                       >
-                                        No-Show
+                                        Não Compareceu
                                       </button>
                                       <button
                                         type="button"
@@ -1778,11 +1757,11 @@ export function PartnerDashboard({
                                           cancelReservation(res.id);
                                           setOpFeedback({
                                             ok: true,
-                                            msg: 'Reserva cancelada sem cobrança de taxa.',
+                                            msg: 'Reserva cancelada sem cobrança.',
                                           });
                                           bumpStore(true);
                                         }}
-                                        className="rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
+                                        className="rounded-xl border border-red-500/35 bg-red-500/10 px-3.5 py-2 text-sm font-bold text-red-600 dark:text-red-300"
                                       >
                                         Cancelar
                                       </button>
@@ -1791,12 +1770,6 @@ export function PartnerDashboard({
                                 </div>
                               )}
                             </div>
-
-                            {isPendingDemand && (
-                              <p className="mt-2 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-200">
-                                Participante em <strong>Reserva por Demanda</strong>. Confirme a campanha consolidada na aba <strong>Reserva por Demanda</strong>.
-                              </p>
-                            )}
                           </div>
                         );
                       })}
@@ -1808,56 +1781,58 @@ export function PartnerDashboard({
 
             {/* TAB 2: OFERTA ÚNICA COM DUAS MODALIDADES DE DISTRIBUIÇÃO (INDIVIDUAL OU MISSÃO COLETIVA PROGRESSIVA) */}
             {activeTab === 'offers' && (
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-8 lg:grid-cols-12">
                 <form
                   onSubmit={handleCreateIndividualOrLastMinute}
-                  className="space-y-3 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
+                  className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs lg:col-span-5"
                 >
-                  <div className="space-y-1">
-                    <span className="inline-block rounded-full bg-[#FF6B35]/15 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
+                  <div className="space-y-1.5">
+                    <span className="inline-block rounded-full bg-[#FF6B35]/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">
                       Uma Oferta · Duas Modalidades
                     </span>
-                    <div className="flex items-center gap-2">
-                      <Gift className="h-5 w-5 text-[#FF6B35]" />
-                      <h2 className="font-sans text-lg font-bold">
-                        Criar Oferta de Atração
+                    <div className="flex items-center gap-2.5">
+                      <Gift className="h-6 w-6 text-[#FF6B35]" />
+                      <h2 className="font-sans text-xl font-bold sm:text-2xl">
+                        Criar Nova Oferta
                       </h2>
                     </div>
+                    <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Cadastre sua oferta uma única vez e escolha como deseja distribuí-la aos clientes.
+                    </p>
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    Configure uma única oferta e escolha como distribuí-la: uso individual imediato ou missão coletiva com benefício progressivo.
-                  </p>
 
                   {/* Seletor de Modalidade de Distribuição: Modalidade A vs Modalidade B */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold">Como deseja distribuir esta oferta?</label>
-                    <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-[var(--text-primary)]">
+                      Como deseja distribuir esta oferta?
+                    </label>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <button
                         type="button"
                         onClick={() => setOffDistributionMode('INDIVIDUAL')}
-                        className={`rounded-xl border p-2.5 text-left transition ${
+                        className={`rounded-2xl border p-4 text-left transition ${
                           offDistributionMode === 'INDIVIDUAL'
                             ? 'border-[#FF6B35] bg-[#FF6B35]/10 text-[#FF6B35]'
                             : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)]'
                         }`}
                       >
-                        <span className="block text-xs font-extrabold">Modalidade A · Individual</span>
-                        <span className="mt-0.5 block text-[11px] opacity-85">
-                          Condição direta por participante sem metas coletivas.
+                        <span className="block text-sm font-extrabold">Oferta Individual</span>
+                        <span className="mt-1 block text-xs leading-relaxed opacity-90">
+                          Benefício direto por pessoa, sem metas coletivas.
                         </span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setOffDistributionMode('COLLECTIVE_MISSION')}
-                        className={`rounded-xl border p-2.5 text-left transition ${
+                        className={`rounded-2xl border p-4 text-left transition ${
                           offDistributionMode === 'COLLECTIVE_MISSION'
                             ? 'border-[#123B56] bg-[#123B56]/10 text-[#123B56] dark:border-[#8DC4EA] dark:text-[#8DC4EA]'
                             : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)]'
                         }`}
                       >
-                        <span className="block text-xs font-extrabold">Modalidade B · Missão Coletiva</span>
-                        <span className="mt-0.5 block text-[11px] opacity-85">
+                        <span className="block text-sm font-extrabold">Missão Coletiva</span>
+                        <span className="mt-1 block text-xs leading-relaxed opacity-90">
                           Benefício inicial garantido + faixas progressivas.
                         </span>
                       </button>
@@ -1866,41 +1841,45 @@ export function PartnerDashboard({
 
                   {offDistributionMode === 'INDIVIDUAL' && (
                     <div>
-                      <label className="text-xs font-bold">Tipo de janela individual</label>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">
+                        Tipo de janela
+                      </label>
                       <select
                         value={offModality}
                         onChange={(e) =>
                           setOffModality(e.target.value as 'INDIVIDUAL_OFFER' | 'LAST_MINUTE')
                         }
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                       >
                         <option value="INDIVIDUAL_OFFER">
-                          Oferta Individual (programada na semana)
+                          Oferta Programada na Semana
                         </option>
                         <option value="LAST_MINUTE">
-                          Oportunidade de Última Hora (mesas ociosas hoje)
+                          Oportunidade de Última Hora (Hoje)
                         </option>
                       </select>
                     </div>
                   )}
 
                   <div>
-                    <label className="text-xs font-bold">Título da Oferta</label>
+                    <label className="block text-sm font-bold text-[var(--text-primary)]">
+                      Nome da Oferta
+                    </label>
                     <input
                       type="text"
                       required
                       value={offTitle}
                       onChange={(e) => setOffTitle(e.target.value)}
-                      placeholder="Ex: Menu executivo em 2 tempos / Quinta de Jazz & Drinks"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      placeholder="Ex: Menu executivo em 2 tempos / Quinta de Drinks"
+                      className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold">
+                    <label className="block text-sm font-bold text-[var(--text-primary)]">
                       {offDistributionMode === 'COLLECTIVE_MISSION'
-                        ? 'Benefício Inicial Garantido (Faixa 1 — desde a 1ª adesão)'
-                        : 'Condição ou benefício'}
+                        ? 'Benefício Inicial Garantido (desde a 1ª pessoa)'
+                        : 'Qual é o benefício ou condição especial?'}
                     </label>
                     <input
                       type="text"
@@ -1912,182 +1891,173 @@ export function PartnerDashboard({
                           setOffInitialGuaranteedBenefit(e.target.value);
                         }
                       }}
-                      placeholder="Ex: Welcome drink garantido ou Menu especial a R$ 135"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      placeholder="Ex: Drink de boas-vindas ou Menu especial a R$ 135"
+                      className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                     />
                   </div>
 
                   {/* Faixas Progressivas da Missão Coletiva (Modalidade B) */}
                   {offDistributionMode === 'COLLECTIVE_MISSION' && (
-                    <div className="space-y-2.5 rounded-2xl border border-[#123B56]/30 bg-[#123B56]/5 p-3.5 dark:border-[#8DC4EA]/30">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-extrabold text-[#123B56] dark:text-[#8DC4EA]">
-                          🎯 Faixas Progressivas de Adesão
+                    <div className="space-y-4 rounded-2xl border border-[#123B56]/30 bg-[#123B56]/5 p-4 dark:border-[#8DC4EA]/30">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-extrabold text-[#123B56] dark:text-[#8DC4EA]">
+                          🎯 Faixas Extras da Missão Coletiva
                         </span>
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                          Nunca cancela a oferta
+                        <span className="rounded-full bg-emerald-500/15 px-3 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                          Uso 100% individual
                         </span>
                       </div>
-                      <p className="text-[11px] text-[var(--text-secondary)]">
-                        O cliente sempre tem o benefício inicial garantido e usa individualmente. Conforme mais pessoas aderem, as próximas faixas destravam para todos:
+                      <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                        Conforme mais clientes aderem à oferta no app, novas vantagens são liberadas para todos:
                       </p>
 
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-3">
                         <div>
-                          <label className="text-[10px] font-bold">Meta Faixa 1</label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={offTier1Goal}
-                            onChange={(e) => setOffTier1Goal(Number(e.target.value))}
-                            className="mt-0.5 w-full rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="text-[10px] font-bold">Faixa 2 · Meta &amp; Benefício Extra</label>
-                          <div className="mt-0.5 flex gap-1.5">
+                          <label className="block text-xs font-bold text-[var(--text-primary)]">
+                            Faixa 2 · Quantas adesões e qual benefício extra?
+                          </label>
+                          <div className="mt-1 flex gap-2">
                             <input
                               type="number"
                               min={2}
                               value={offTier2Goal}
                               onChange={(e) => setOffTier2Goal(Number(e.target.value))}
-                              className="w-16 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2 py-1.5 text-xs"
+                              className="w-20 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2.5 text-sm font-bold"
                               title="Adesões para Faixa 2"
                             />
                             <input
                               type="text"
                               value={offTier2Benefit}
                               onChange={(e) => setOffTier2Benefit(e.target.value)}
-                              placeholder="+ Sobremesa cortesia"
-                              className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                              placeholder="Ex: + Sobremesa cortesia"
+                              className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                             />
                           </div>
                         </div>
-                      </div>
 
-                      <div>
-                        <label className="text-[10px] font-bold">Faixa 3 (Máxima) · Meta &amp; Benefício Completo</label>
-                        <div className="mt-0.5 flex gap-1.5">
-                          <input
-                            type="number"
-                            min={3}
-                            value={offTier3Goal}
-                            onChange={(e) => setOffTier3Goal(Number(e.target.value))}
-                            className="w-16 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2 py-1.5 text-xs"
-                            title="Adesões para Faixa 3"
-                          />
-                          <input
-                            type="text"
-                            value={offTier3Benefit}
-                            onChange={(e) => setOffTier3Benefit(e.target.value)}
-                            placeholder="+ Drink + Sobremesa + 50 RP"
-                            className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
-                          />
+                        <div>
+                          <label className="block text-xs font-bold text-[var(--text-primary)]">
+                            Faixa 3 (Máxima) · Quantas adesões e qual benefício completo?
+                          </label>
+                          <div className="mt-1 flex gap-2">
+                            <input
+                              type="number"
+                              min={3}
+                              value={offTier3Goal}
+                              onChange={(e) => setOffTier3Goal(Number(e.target.value))}
+                              className="w-20 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-2.5 text-sm font-bold"
+                              title="Adesões para Faixa 3"
+                            />
+                            <input
+                              type="text"
+                              value={offTier3Benefit}
+                              onChange={(e) => setOffTier3Benefit(e.target.value)}
+                              placeholder="Ex: + Drink + Sobremesa + 50 RP"
+                              className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  <div>
-                    <label className="text-xs font-bold">Produto ou serviço elegível</label>
-                    <input
-                      type="text"
-                      value={offEligibleItem}
-                      onChange={(e) => setOffEligibleItem(e.target.value)}
-                      placeholder="Ex: Entrada + Prato Principal / Passeio de Barco"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold">Dias e horários elegíveis</label>
-                    <input
-                      type="text"
-                      value={offValidDaysHours}
-                      onChange={(e) => setOffValidDaysHours(e.target.value)}
-                      placeholder="Ex: Terça a Quinta · 19h às 22h"
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="text-xs font-bold">Preço ref. (R$)</label>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">
+                        Preço normal (R$)
+                      </label>
                       <input
                         type="number"
                         min={0}
                         value={offBasePrice}
                         onChange={(e) => setOffBasePrice(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold">Condição local (R$)</label>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">
+                        Preço na oferta (R$)
+                      </label>
                       <input
                         type="number"
                         min={0}
                         value={offCondPrice}
                         onChange={(e) => setOffCondPrice(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="text-xs font-bold">Data</label>
-                      <input
-                        type="date"
-                        value={offDate}
-                        onChange={(e) => setOffDate(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold">Hora</label>
-                      <input
-                        type="text"
-                        value={offTime}
-                        onChange={(e) => setOffTime(e.target.value)}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold">Vagas</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={offCapacity}
-                        onChange={(e) => setOffCapacity(Number(e.target.value))}
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm"
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base font-bold text-emerald-700 dark:text-emerald-400"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold">Regras de uso</label>
+                    <label className="block text-sm font-bold text-[var(--text-primary)]">
+                      Dias e horários válidos
+                    </label>
+                    <input
+                      type="text"
+                      value={offValidDaysHours}
+                      onChange={(e) => setOffValidDaysHours(e.target.value)}
+                      placeholder="Ex: Terça a Quinta · 19h às 22h"
+                      className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">Data</label>
+                      <input
+                        type="date"
+                        value={offDate}
+                        onChange={(e) => setOffDate(e.target.value)}
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-3 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">Horário</label>
+                      <input
+                        type="text"
+                        value={offTime}
+                        onChange={(e) => setOffTime(e.target.value)}
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-3 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">Vagas</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={offCapacity}
+                        onChange={(e) => setOffCapacity(Number(e.target.value))}
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-3 text-sm font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-[var(--text-primary)]">
+                      Regras simples de utilização
+                    </label>
                     <textarea
                       rows={2}
                       value={offRules}
                       onChange={(e) => setOffRules(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                      className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-sm"
                     />
                   </div>
 
                   {/* Foto da Oferta */}
-                  <div className="space-y-1.5 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="flex items-center gap-1.5">
-                        <Camera className="h-3.5 w-3.5 text-[#FF6B35]" />
+                  <div className="space-y-2 rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                    <div className="flex items-center justify-between text-sm font-bold">
+                      <span className="flex items-center gap-2">
+                        <Camera className="h-4 w-4 text-[#FF6B35]" />
                         Foto da Oferta (Opcional)
                       </span>
                       {offImage && (
                         <button
                           type="button"
                           onClick={() => setOffImage('')}
-                          className="text-xs text-red-500 hover:underline"
+                          className="text-xs font-bold text-red-500 hover:underline"
                         >
-                          Remover
+                          Remover foto
                         </button>
                       )}
                     </div>
@@ -2099,23 +2069,13 @@ export function PartnerDashboard({
                           alt="Pré-visualização da Oferta"
                           className="h-full w-full object-cover"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setOffImage('')}
-                          className="absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white hover:bg-red-600"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--border-hairline)] p-3 transition hover:border-[#FF6B35]/60 hover:bg-[var(--bg-surface)]">
+                      <div className="space-y-2.5">
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[var(--border-hairline)] p-4 transition hover:border-[#FF6B35]/60 hover:bg-[var(--bg-surface)]">
                           <ImagePlus className="h-6 w-6 text-[#FF6B35]" />
-                          <span className="mt-1 text-xs font-semibold text-[var(--text-primary)]">
-                            Clique para enviar foto do prato/espaço
-                          </span>
-                          <span className="text-xs text-[var(--text-secondary)]">
-                            PNG, JPG ou WEBP (até 5MB)
+                          <span className="mt-1.5 text-sm font-semibold text-[var(--text-primary)]">
+                            Enviar foto do prato ou ambiente
                           </span>
                           <input
                             type="file"
@@ -2128,61 +2088,69 @@ export function PartnerDashboard({
                           type="url"
                           value={offImage}
                           onChange={(e) => setOffImage(e.target.value)}
-                          placeholder="Ou cole a URL direta da imagem..."
-                          className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs"
+                          placeholder="Ou cole o link de uma foto..."
+                          className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2.5 text-sm"
                         />
                       </div>
                     )}
                   </div>
 
                   {/* Transparência de Cobrança antes da Publicação */}
-                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs">
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm">
                     <p className="font-bold text-emerald-800 dark:text-emerald-300">
-                      ✓ Condição Comercial transparente antes de publicar:
+                      ✓ Quando você paga:
                     </p>
-                    <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-200">
-                      Você pagará apenas <strong>R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2).replace('.', ',')}</strong> por participante elegível com presença validada por QR Code (tarifa padrão R$ 10,00 · condição de lançamento R$ 5,00). Acompanhantes não cadastrados e reservas não comparecidas custam <strong>R$ 0,00</strong>.
+                    <p className="mt-1 leading-relaxed text-emerald-800/90 dark:text-emerald-200">
+                      Apenas <strong>R$ {(currentPlan?.fixed_fee_per_guest_brl ?? 5).toFixed(2).replace('.', ',')}</strong> por cliente que comparecer e validar o QR Code no seu balcão. Acompanhantes sem app e reservas não comparecidas custam <strong>R$ 0,00</strong>.
                     </p>
                   </div>
 
-                  <label className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)] cursor-pointer">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-[var(--text-secondary)]">
                     <input
                       type="checkbox"
                       checked={offSaveAsDraft}
                       onChange={(e) => setOffSaveAsDraft(e.target.checked)}
-                      className="rounded border-[var(--border-hairline)]"
+                      className="h-4 w-4 rounded border-[var(--border-hairline)]"
                     />
-                    Salvar como rascunho (para revisão ou aprovação assistida antes de publicar)
+                    Salvar como rascunho para publicar depois
                   </label>
 
                   <button
                     type="submit"
-                    className="w-full rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-2.5 text-xs font-bold text-white"
+                    className="w-full rounded-2xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] py-3.5 text-base font-bold text-white shadow-md transition hover:opacity-95"
                   >
                     {offSaveAsDraft
-                      ? 'Salvar Rascunho da Oferta'
+                      ? 'Salvar Rascunho'
                       : offDistributionMode === 'COLLECTIVE_MISSION'
-                        ? 'Publicar Missão Coletiva Progressiva'
-                        : 'Publicar Oferta Individual no Bora Club'}
+                        ? 'Publicar Missão Coletiva'
+                        : 'Publicar Oferta'}
                   </button>
                 </form>
 
-                <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="font-sans text-lg font-bold">
-                      Ofertas &amp; Missões Coletivas ({individualAndLastMinute.length + demandOfferings.length})
-                    </h2>
-                    <span className="text-xs text-[var(--text-secondary)]">
-                      Termos com reservas confirmadas ficam protegidos contra alteração retroativa.
-                    </span>
+                <section className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 shadow-xs lg:col-span-7">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-hairline)] pb-4">
+                    <div>
+                      <h2 className="font-sans text-xl font-bold sm:text-2xl">
+                        Minhas Ofertas ({individualAndLastMinute.length + demandOfferings.length})
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        Acompanhe as reservas, adesões e presenças validadas de cada oferta.
+                      </p>
+                    </div>
                   </div>
 
                   {individualAndLastMinute.length + demandOfferings.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-[var(--border-hairline)] p-6 text-center text-xs text-[var(--text-secondary)]">
-                      Nenhuma oferta criada para {activeTenant.name}. Crie sua 1ª oferta ao lado para começar a receber clientes.
-                    </p>
+                    <div className="rounded-3xl border border-dashed border-[var(--border-hairline)] p-10 text-center">
+                      <Gift className="mx-auto h-10 w-10 text-[#FF6B35] opacity-70" />
+                      <p className="mt-3 text-base font-bold text-[var(--text-primary)]">
+                        Nenhuma oferta criada ainda
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        Preencha o formulário ao lado para publicar sua primeira oferta e começar a receber clientes.
+                      </p>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {[...individualAndLastMinute, ...demandOfferings].map((off) => {
                         const isCancelled = off.status === 'CANCELLED';
                         const isDraft = off.status === 'DRAFT';
@@ -2210,13 +2178,13 @@ export function PartnerDashboard({
                         return (
                           <div
                             key={off.id}
-                            className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs"
+                            className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-6 transition hover:border-[#FF6B35]/40"
                           >
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div>
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                              <div className="space-y-2 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span
-                                    className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                                    className={`rounded-full px-3 py-1 text-xs font-bold ${
                                       isCollective
                                         ? 'bg-[#123B56]/15 text-[#123B56] dark:text-[#8DC4EA]'
                                         : 'bg-[#FF6B35]/15 text-[#FF6B35]'
@@ -2224,15 +2192,10 @@ export function PartnerDashboard({
                                   >
                                     {isCollective
                                       ? '🎯 Missão Coletiva Progressiva'
-                                      : off.condition_badge}
+                                      : 'Oferta Individual'}
                                   </span>
-                                  {off.is_sponsored && (
-                                    <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-extrabold text-amber-700 dark:text-amber-300">
-                                      ⚡ Patrocinado
-                                    </span>
-                                  )}
                                   <span
-                                    className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                    className={`rounded-full px-3 py-1 text-xs font-bold ${
                                       isCancelled
                                         ? 'bg-red-500/15 text-red-600 dark:text-red-300'
                                         : isDraft
@@ -2247,12 +2210,13 @@ export function PartnerDashboard({
                                       : isDraft
                                         ? 'Rascunho (Aguardando Publicação)'
                                         : off.partner_managed_active
-                                          ? 'Ativa'
+                                          ? 'Ativa no App'
                                           : 'Pausada'}
                                   </span>
                                 </div>
+
                                 {off.image_url && (
-                                  <div className="mt-2.5 aspect-video w-full max-h-36 overflow-hidden rounded-xl border border-[var(--border-hairline)]">
+                                  <div className="mt-3 aspect-video w-full max-h-44 overflow-hidden rounded-2xl border border-[var(--border-hairline)]">
                                     <img
                                       src={off.image_url}
                                       alt={off.title}
@@ -2260,46 +2224,34 @@ export function PartnerDashboard({
                                     />
                                   </div>
                                 )}
-                                <h3 className="mt-1.5 text-sm font-bold">{off.title}</h3>
-                                <p className="text-xs text-[var(--text-secondary)]">
-                                  {off.benefit_summary} · {off.service_date} às {off.time_slot_label} ({off.reserved_count}/{off.capacity_total} vagas)
+
+                                <h3 className="pt-1 text-lg font-bold text-[var(--text-primary)] sm:text-xl">
+                                  {off.title}
+                                </h3>
+                                <p className="text-sm sm:text-base font-medium text-[var(--text-secondary)]">
+                                  {off.benefit_summary}
                                 </p>
+                                <p className="text-sm text-[var(--text-secondary)]">
+                                  Horário: <strong>{off.valid_days_hours || `${off.service_date} às ${off.time_slot_label}`}</strong> · Vagas: <strong>{off.reserved_count}/{off.capacity_total}</strong>
+                                </p>
+
                                 {progInfo && (
-                                  <div className="mt-2 rounded-xl border border-[#123B56]/25 bg-[#123B56]/5 p-2.5">
-                                    <p className="text-[11px] font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                                  <div className="mt-3 rounded-2xl border border-[#123B56]/25 bg-[#123B56]/5 p-4">
+                                    <p className="text-sm font-bold text-[#123B56] dark:text-[#8DC4EA]">
                                       Benefício Garantido Ativo: {progInfo.initialGuaranteedBenefit}
                                     </p>
-                                    <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
-                                      Adesões válidas: <strong>{progInfo.currentAdhesions}</strong>
+                                    <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                      Adesões confirmadas: <strong>{progInfo.currentAdhesions}</strong>
                                       {progInfo.nextTier
                                         ? ` · Próxima faixa (${progInfo.nextTier.min_adhesions} adesões): ${progInfo.nextTier.benefit_label}`
                                         : ' · Faixa máxima desbloqueada!'}
                                     </p>
                                   </div>
                                 )}
-                                {(off.eligible_item || off.valid_days_hours) && (
-                                  <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                                    {off.eligible_item ? `Item: ${off.eligible_item}` : ''}
-                                    {off.eligible_item && off.valid_days_hours ? ' · ' : ''}
-                                    {off.valid_days_hours ? `Janela: ${off.valid_days_hours}` : ''}
-                                  </p>
-                                )}
-                                <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold text-[var(--text-secondary)]">
-                                  <span className="inline-flex items-center gap-1">
-                                    <Eye className="h-3.5 w-3.5 text-[#123B56] dark:text-[#8DC4EA]" />
-                                    Visualizações: <strong>{off.views_count || 0}</strong>
-                                  </span>
-                                  <span>
-                                    Adesões / Reservas: <strong>{Math.max(off.valid_adhesions_count ?? off.reserved_count, linkedBookingsCount)}</strong>
-                                  </span>
-                                  <span className="text-emerald-700 dark:text-emerald-300">
-                                    Participantes Faturáveis Validados: <strong>{attendedCount}</strong>
-                                  </span>
-                                </div>
                               </div>
 
                               {!isCancelled && (
-                                <div className="flex flex-wrap gap-1.5">
+                                <div className="flex flex-wrap gap-2">
                                   {isDraft ? (
                                     <button
                                       type="button"
@@ -2314,7 +2266,7 @@ export function PartnerDashboard({
                                         });
                                         bumpStore();
                                       }}
-                                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"
+                                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-xs"
                                     >
                                       Aprovar &amp; Publicar
                                     </button>
@@ -2322,7 +2274,7 @@ export function PartnerDashboard({
                                     <button
                                       type="button"
                                       onClick={() => handleToggleOffering(off)}
-                                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
+                                      className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2 text-sm font-bold hover:border-[#FF6B35]"
                                     >
                                       {off.partner_managed_active ? 'Pausar' : 'Reativar'}
                                     </button>
@@ -2330,27 +2282,17 @@ export function PartnerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      setCampOfferingId(off.id);
-                                      setActiveTab('campaigns');
-                                    }}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300"
-                                  >
-                                    <Sparkles className="h-3 w-3" /> Impulsionar (50% Crédito)
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
                                       setEditingOfferingId(off.id);
                                       setEditBenefitDraft(off.benefit_summary);
                                     }}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-2.5 py-1.5 text-xs font-bold"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2 text-sm font-bold hover:border-[#FF6B35]"
                                   >
-                                    <Edit3 className="h-3 w-3" /> Editar termos
+                                    <Edit3 className="h-4 w-4" /> Editar
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleCloseOffering(off)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-2.5 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/35 bg-red-500/10 px-3.5 py-2 text-sm font-bold text-red-600 dark:text-red-300"
                                   >
                                     Encerrar
                                   </button>
@@ -2358,27 +2300,55 @@ export function PartnerDashboard({
                               )}
                             </div>
 
+                            {/* 3 Indicadores Claros da Oferta */}
+                            <div className="mt-4 grid grid-cols-3 gap-3 border-t border-[var(--border-hairline)] pt-4 text-center">
+                              <div className="rounded-2xl bg-[var(--bg-surface)] p-3">
+                                <span className="block text-xs font-semibold text-[var(--text-secondary)]">
+                                  Visualizações
+                                </span>
+                                <span className="mt-0.5 block text-lg font-extrabold text-[var(--text-primary)]">
+                                  {off.views_count || 0}
+                                </span>
+                              </div>
+                              <div className="rounded-2xl bg-[var(--bg-surface)] p-3">
+                                <span className="block text-xs font-semibold text-[var(--text-secondary)]">
+                                  Reservas / Adesões
+                                </span>
+                                <span className="mt-0.5 block text-lg font-extrabold text-[#123B56] dark:text-[#8DC4EA]">
+                                  {Math.max(off.valid_adhesions_count ?? off.reserved_count, linkedBookingsCount)}
+                                </span>
+                              </div>
+                              <div className="rounded-2xl bg-emerald-500/10 p-3">
+                                <span className="block text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                                  Clientes Validados
+                                </span>
+                                <span className="mt-0.5 block text-lg font-extrabold text-emerald-700 dark:text-emerald-300">
+                                  {attendedCount}
+                                </span>
+                              </div>
+                            </div>
+
                             {editingOfferingId === off.id && (
-                              <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border-hairline)] pt-3">
+                              <div className="mt-4 flex flex-wrap gap-2.5 border-t border-[var(--border-hairline)] pt-4">
                                 <input
                                   type="text"
                                   value={editBenefitDraft}
                                   onChange={(e) => setEditBenefitDraft(e.target.value)}
-                                  className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs"
+                                  className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-4 py-2.5 text-sm"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleSaveOfferingTermEdit(off.id)}
-                                  className="rounded-lg bg-[#123B56] px-3 py-1.5 text-xs font-bold text-white"
+                                  className="rounded-xl bg-[#123B56] px-4 py-2.5 text-sm font-bold text-white"
                                 >
-                                  Salvar alteração
+                                  Salvar
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setEditingOfferingId(null)}
-                                  className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
+                                  className="rounded-xl border border-[var(--border-hairline)] px-4 py-2.5 text-sm font-semibold"
                                 >
-                                  Fechar
+                                  Cancelar
                                 </button>
                               </div>
                             )}
@@ -3381,8 +3351,8 @@ export function PartnerDashboard({
               </div>
             )}
 
-            {/* TAB 4A (MOMENTO 4 · ACELERAR): CAMPANHAS PATROCINADAS & CRÉDITO DE AQUISIÇÃO */}
-            {activeTab === 'campaigns' && (
+            {/* EVOLUÇÃO FUTURA (OCULTA NO INÍCIO): CAMPANHAS PATROCINADAS */}
+            {false && activeTab === 'campaigns' && (
               <div className="space-y-6">
                 {/* Resumo de Crédito Comercial de Aquisição */}
                 <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -4458,37 +4428,37 @@ export function PartnerDashboard({
                       </div>
 
                       {/* 4 Garantias do Modelo de Cobrança BoraRio */}
-                      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 border-t border-white/10 pt-6">
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      <div className="mt-8 grid grid-cols-1 gap-4 border-t border-white/10 pt-6 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                             Zero Intermediação
                           </span>
-                          <p className="mt-1 text-xs font-bold text-white">Pagamento 100% no seu caixa</p>
-                          <p className="text-[10px] text-stone-300">Cliente consome e paga direto na sua maquininha.</p>
+                          <p className="mt-1.5 text-sm font-bold text-white">Pagamento 100% no seu caixa</p>
+                          <p className="mt-0.5 text-xs text-stone-300">Cliente consome e paga direto na sua maquininha.</p>
                         </div>
 
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
                             Zero No-Show
                           </span>
-                          <p className="mt-1 text-xs font-bold text-white">Sem cobrança se não comparecer</p>
-                          <p className="text-[10px] text-stone-300">Reserva cancelada ou no-show = R$ 0,00.</p>
+                          <p className="mt-1.5 text-sm font-bold text-white">Sem cobrança se não comparecer</p>
+                          <p className="mt-0.5 text-xs text-stone-300">Reserva cancelada ou no-show = R$ 0,00.</p>
                         </div>
 
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <span className="text-xs font-bold uppercase tracking-wider text-sky-400">
                             Por Pessoa Validada
                           </span>
-                          <p className="mt-1 text-xs font-bold text-white">Check-in individual por app</p>
-                          <p className="text-[10px] text-stone-300">Acompanhante só conta se validar seu próprio QR.</p>
+                          <p className="mt-1.5 text-sm font-bold text-white">Check-in individual por app</p>
+                          <p className="mt-0.5 text-xs text-stone-300">Acompanhante só conta se validar seu próprio QR.</p>
                         </div>
 
-                        <div className="rounded-2xl bg-white/5 border border-white/10 p-3.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <span className="text-xs font-bold uppercase tracking-wider text-purple-400">
                             Fidelidade Grátis
                           </span>
-                          <p className="mt-1 text-xs font-bold text-white">Comissão zero em resgates</p>
-                          <p className="text-[10px] text-stone-300">Resgates de Rio Points não geram taxa ao parceiro.</p>
+                          <p className="mt-1.5 text-sm font-bold text-white">Comissão zero em resgates</p>
+                          <p className="mt-0.5 text-xs text-stone-300">Resgates de Rio Points não geram taxa ao parceiro.</p>
                         </div>
                       </div>
                     </div>
@@ -4496,74 +4466,74 @@ export function PartnerDashboard({
                 })()}
 
                 {/* 2. Simulador de Retorno & Retorno sobre o Investimento (ROI) */}
-                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border-hairline)] pb-4">
+                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8">
+                  <div className="flex flex-col gap-3 border-b border-[var(--border-hairline)] pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
                         <TrendingUp className="h-4 w-4" />
                         Impacto Comercial na Casa
                       </span>
-                      <h3 className="mt-1 font-sans text-lg font-bold text-[var(--text-primary)]">
+                      <h3 className="mt-1 font-sans text-xl font-bold text-[var(--text-primary)]">
                         Retorno do Investimento (ROI)
                       </h3>
                     </div>
-                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-600 dark:text-emerald-400">
                       Custo de Aquisição (CAC): ~5,5% do consumo
                     </span>
                   </div>
 
-                  <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
-                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                  <div className="mt-6 grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
+                    <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-5">
+                      <span className="text-xs font-bold uppercase text-[var(--text-secondary)]">
                         Visitantes Trazidos
                       </span>
-                      <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">
+                      <p className="mt-1.5 text-3xl font-black text-[var(--text-primary)]">
                         {totalGuestsBilled > 0 ? totalGuestsBilled : 50}
                       </p>
-                      <p className="text-[10px] text-[var(--text-tertiary)]">Presenças validadas</p>
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">Presenças validadas</p>
                     </div>
 
-                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
-                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                    <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-5">
+                      <span className="text-xs font-bold uppercase text-[var(--text-secondary)]">
                         Ticket Médio Estimado
                       </span>
-                      <p className="mt-1 text-2xl font-black text-[var(--text-primary)]">R$ 90,00</p>
-                      <p className="text-[10px] text-[var(--text-tertiary)]">Gasto por cliente no local</p>
+                      <p className="mt-1.5 text-3xl font-black text-[var(--text-primary)]">R$ 90,00</p>
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">Gasto por cliente no local</p>
                     </div>
 
-                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
-                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                    <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-5">
+                      <span className="text-xs font-bold uppercase text-[var(--text-secondary)]">
                         Faturamento na Casa
                       </span>
-                      <p className="mt-1 text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                      <p className="mt-1.5 text-3xl font-black text-emerald-600 dark:text-emerald-400">
                         R${' '}
                         {((totalGuestsBilled > 0 ? totalGuestsBilled : 50) * 90)
                           .toFixed(2)
                           .replace('.', ',')}
                       </p>
-                      <p className="text-[10px] text-[var(--text-tertiary)]">100% recebido no caixa</p>
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">100% recebido no caixa</p>
                     </div>
 
-                    <div className="rounded-2xl bg-[var(--bg-canvas)] border border-[var(--border-hairline)] p-4">
-                      <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)]">
+                    <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-5">
+                      <span className="text-xs font-bold uppercase text-[var(--text-secondary)]">
                         Retorno Médio
                       </span>
-                      <p className="mt-1 text-2xl font-black text-[#FF6B35]">18x</p>
-                      <p className="text-[10px] text-[var(--text-tertiary)]">Retorno sobre taxa BoraRio</p>
+                      <p className="mt-1.5 text-3xl font-black text-[#FF6B35]">18x</p>
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">Retorno sobre taxa BoraRio</p>
                     </div>
                   </div>
                 </section>
 
                 {/* 3. Faturas Mensais Consolidadas */}
-                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6">
+                <section className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8">
                   <div className="flex items-center justify-between border-b border-[var(--border-hairline)] pb-4">
                     <div>
-                      <h3 className="font-sans text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
+                      <h3 className="flex items-center gap-2 font-sans text-xl font-bold text-[var(--text-primary)]">
                         <FileText className="h-5 w-5 text-[#FF6B35]" />
                         Faturas Mensais
                       </h3>
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        Demonstrativos consolidados mês a mês para conferência contábil e fiscal.
+                      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                        Demonstrativos consolidados mês a mês para conferência simples.
                       </p>
                     </div>
                   </div>
@@ -4572,15 +4542,15 @@ export function PartnerDashboard({
                     {tenantInvoices.map((inv) => (
                       <div
                         key={inv.id}
-                        className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                        className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-[var(--text-primary)]">
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <span className="text-base font-bold text-[var(--text-primary)]">
                               {inv.period_label}
                             </span>
                             <span
-                              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                              className={`rounded-full px-3 py-1 text-xs font-bold ${
                                 inv.status === 'PAID'
                                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                                   : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
@@ -4589,13 +4559,13 @@ export function PartnerDashboard({
                               {inv.status === 'PAID' ? 'Paga ✅' : 'Em Aberto ⏳'}
                             </span>
                             {inv.is_launch_promo && (
-                              <span className="rounded-full bg-[#FF6B35]/15 text-[#FF6B35] px-2 py-0.5 text-[10px] font-bold">
+                              <span className="rounded-full bg-[#FF6B35]/15 px-3 py-1 text-xs font-bold text-[#FF6B35]">
                                 50% OFF Lançamento
                               </span>
                             )}
                           </div>
 
-                          <p className="text-xs text-[var(--text-secondary)]">
+                          <p className="text-sm text-[var(--text-secondary)]">
                             {inv.valid_checkins_count} check-ins válidos ({inv.total_attended_guests} pessoas)
                             · Vencimento: {new Date(inv.due_date).toLocaleDateString('pt-BR')}
                             {inv.paid_at && (
@@ -4608,13 +4578,13 @@ export function PartnerDashboard({
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <p className="font-bold text-base text-[var(--text-primary)]">
+                            <p className="text-lg font-extrabold text-[var(--text-primary)]">
                               R$ {inv.total_brl.toFixed(2).replace('.', ',')}
                             </p>
                             {inv.discount_brl > 0 && (
-                              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold line-through">
+                              <p className="text-xs font-semibold text-emerald-600 line-through dark:text-emerald-400">
                                 De R$ {inv.subtotal_brl.toFixed(2)}
                               </p>
                             )}
@@ -4627,12 +4597,12 @@ export function PartnerDashboard({
                                 setSelectedInvoiceForPayment(inv);
                                 setPaymentFeedback(null);
                               }}
-                              className="rounded-xl bg-[#123B56] hover:bg-[#102F46] px-4 py-2 text-xs font-bold text-white transition"
+                              className="rounded-xl bg-[#123B56] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#102F46]"
                             >
                               Pagar Fatura
                             </button>
                           ) : (
-                            <span className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-1.5 text-xs font-bold text-[var(--text-secondary)]">
+                            <span className="rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2 text-xs font-bold text-[var(--text-secondary)]">
                               Comprovante Emitido
                             </span>
                           )}
@@ -4642,24 +4612,26 @@ export function PartnerDashboard({
                   </div>
                 </section>
 
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-8 lg:grid-cols-12">
                   <form
                     onSubmit={handleSavePlan}
-                    className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6"
+                    className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 lg:col-span-5"
                   >
-                    <div className="flex items-center gap-2">
-                      <ReceiptText className="h-5 w-5 text-[#397B68]" />
-                      <h2 className="font-sans text-lg font-bold">
-                        Condição Comercial Configurável
+                    <div className="flex items-center gap-2.5">
+                      <ReceiptText className="h-6 w-6 text-[#397B68]" />
+                      <h2 className="font-sans text-xl font-bold">
+                        Condição Comercial
                       </h2>
                     </div>
-                    <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
-                      Defina o modelo fixo acordado por contrato para este estabelecimento.{' '}
-                      <strong>Zero % sobre o valor da conta consumida</strong> e zero cobrança em cancelamentos ou no-shows.
+                    <p className="text-sm leading-relaxed text-[var(--text-secondary)]">
+                      Modelo fixo por presença validada.{' '}
+                      <strong>Zero % sobre o valor da conta</strong> e zero cobrança em cancelamentos ou no-shows.
                     </p>
 
                     <div>
-                      <label className="text-xs font-bold">Modelo de remuneração</label>
+                      <label className="block text-sm font-bold text-[var(--text-primary)]">
+                        Modelo de remuneração
+                      </label>
                       <select
                         value={currentPlan.billing_model}
                         onChange={(e) =>
@@ -4671,7 +4643,7 @@ export function PartnerDashboard({
                             },
                           })
                         }
-                        className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                        className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                       >
                         <option value="PER_ATTENDED_GUEST">
                           Taxa fixa por pessoa atendida (check-in válido)
@@ -4688,8 +4660,8 @@ export function PartnerDashboard({
                     {currentPlan.billing_model === 'PER_ATTENDED_GUEST' && (
                       <>
                         <div>
-                          <label className="text-xs font-bold">
-                            Tarifa por participante elegível validado (R$)
+                          <label className="block text-sm font-bold text-[var(--text-primary)]">
+                            Tarifa por participante validado (R$)
                           </label>
                           <input
                             type="number"
@@ -4705,16 +4677,16 @@ export function PartnerDashboard({
                                 },
                               })
                             }
-                            className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                            className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base font-bold"
                           />
-                          <span className="mt-0.5 block text-[11px] text-[var(--text-secondary)]">
+                          <span className="mt-1 block text-xs text-[var(--text-secondary)]">
                             Referência: R$ 10,00 padrão · R$ 5,00 condição especial de lançamento
                           </span>
                         </div>
 
                         <div>
-                          <label className="text-xs font-bold">
-                            Teto opcional de participantes faturáveis por reserva (Proteção comercial p/ grupos)
+                          <label className="block text-sm font-bold text-[var(--text-primary)]">
+                            Teto opcional de participantes faturáveis por reserva
                           </label>
                           <input
                             type="number"
@@ -4732,10 +4704,10 @@ export function PartnerDashboard({
                                 },
                               });
                             }}
-                            className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                            className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                           />
-                          <span className="mt-0.5 block text-[11px] text-[var(--text-secondary)]">
-                            Deixe em branco para regra padrão individual (1 cobrança por participante validado).
+                          <span className="mt-1 block text-xs text-[var(--text-secondary)]">
+                            Proteção comercial opcional para grupos maiores.
                           </span>
                         </div>
                       </>
@@ -4743,7 +4715,9 @@ export function PartnerDashboard({
 
                     {currentPlan.billing_model === 'PER_COMPLETED_BOOKING' && (
                       <div>
-                        <label className="text-xs font-bold">Taxa fixa por reserva atendida (R$)</label>
+                        <label className="block text-sm font-bold text-[var(--text-primary)]">
+                          Taxa fixa por reserva atendida (R$)
+                        </label>
                         <input
                           type="number"
                           step="0.50"
@@ -4758,14 +4732,16 @@ export function PartnerDashboard({
                               },
                             })
                           }
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                         />
                       </div>
                     )}
 
                     {currentPlan.billing_model === 'PRO_SUBSCRIPTION' && (
                       <div>
-                        <label className="text-xs font-bold">Mensalidade fixa (R$)</label>
+                        <label className="block text-sm font-bold text-[var(--text-primary)]">
+                          Mensalidade fixa (R$)
+                        </label>
                         <input
                           type="number"
                           step="10"
@@ -4780,23 +4756,20 @@ export function PartnerDashboard({
                               },
                             })
                           }
-                          className="mt-1 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm"
+                          className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-4 py-3 text-base"
                         />
                       </div>
                     )}
 
-                    <div className="space-y-1 rounded-xl bg-[var(--bg-canvas)] p-3 text-xs text-[var(--text-secondary)]">
+                    <div className="space-y-1.5 rounded-2xl bg-[var(--bg-canvas)] p-4 text-sm text-[var(--text-secondary)]">
                       <p>
-                        <strong>Unidade faturável:</strong> Participante elegível com presença validada por QR Code (1x por visita)
+                        <strong>Unidade faturável:</strong> Participante com presença validada por QR Code (1x por visita)
                       </p>
                       <p>
                         <strong>Acompanhantes não cadastrados:</strong> R$ 0,00 (não geram cobrança)
                       </p>
                       <p>
-                        <strong>Percentual sobre a conta:</strong> 0% (não aplicável)
-                      </p>
-                      <p>
-                        <strong>Cobrança em no-show/cancelamento:</strong> Bloqueada (R$ 0,00)
+                        <strong>Percentual sobre a conta:</strong> 0%
                       </p>
                       <p>
                         <strong>Comissão em resgates de recompensas:</strong> 0% (R$ 0,00)
@@ -4805,67 +4778,68 @@ export function PartnerDashboard({
 
                     <button
                       type="submit"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#123B56] py-2.5 text-xs font-bold text-white hover:bg-[#102F46]"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#123B56] py-3.5 text-base font-bold text-white hover:bg-[#102F46]"
                     >
-                      <Save className="h-4 w-4" /> Salvar Configuração do Plano
+                      <Save className="h-5 w-5" /> Salvar Configuração
                     </button>
                   </form>
 
                   {/* Audit Ledger & Contest */}
-                  <section className="space-y-4 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 lg:col-span-2">
-                    <div className="grid gap-3 sm:grid-cols-4">
-                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-xs text-[var(--text-secondary)]">Participantes Validados</p>
-                        <p className="mt-1 text-2xl font-extrabold">{totalGuestsBilled}</p>
-                      </div>
-                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-3.5">
-                        <p className="text-xs text-[var(--text-secondary)]">Valor Bruto Apurado</p>
-                        <p className="mt-1 text-2xl font-extrabold">
-                          R$ {grossAccruedBrl.toFixed(2)}
+                  <section className="space-y-5 rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 sm:p-8 lg:col-span-7">
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                        <p className="text-xs font-bold uppercase text-[var(--text-secondary)]">
+                          Participantes Validados
+                        </p>
+                        <p className="mt-1 text-2xl font-extrabold text-[var(--text-primary)]">
+                          {totalGuestsBilled}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5">
-                        <p className="text-xs text-amber-800 dark:text-amber-300">Crédito Abatido</p>
-                        <p className="mt-1 text-2xl font-extrabold text-amber-700 dark:text-amber-300">
-                          -R$ {creditsAbatedBrl.toFixed(2)}
+                      <div className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4">
+                        <p className="text-xs font-bold uppercase text-[var(--text-secondary)]">
+                          Valor Apurado
+                        </p>
+                        <p className="mt-1 text-2xl font-extrabold text-[var(--text-primary)]">
+                          R$ {(grossAccruedBrl - creditsAbatedBrl * 0).toFixed(2).replace('.', ',')}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
-                        <p className="text-xs text-emerald-800 dark:text-emerald-300">Líquido Devido</p>
+                      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                        <p className="text-xs font-bold uppercase text-emerald-800 dark:text-emerald-300">
+                          Total Líquido
+                        </p>
                         <p className="mt-1 text-2xl font-extrabold text-[#397B68] dark:text-[#4CA188]">
-                          R$ {accruedBrl.toFixed(2)}
+                          R$ {accruedBrl.toFixed(2).replace('.', ',')}
                         </p>
                       </div>
                     </div>
 
-                    <h3 className="font-sans text-base font-bold">
-                      Extrato Auditável por Participante Elegível Validado (Zero Duplicidade)
+                    <h3 className="font-sans text-lg font-bold">
+                      Extrato de Presenças Validadas (Zero Duplicidade)
                     </h3>
 
                     {tenantFeeLedger.length === 0 ? (
-                      <p className="rounded-2xl border border-dashed border-[var(--border-hairline)] p-6 text-center text-xs text-[var(--text-secondary)]">
-                        Nenhum participante faturável registrado ainda. Somente participantes com check-in QR dinâmico validado geram entradas aqui.
+                      <p className="rounded-3xl border border-dashed border-[var(--border-hairline)] p-8 text-center text-sm text-[var(--text-secondary)]">
+                        Nenhum participante faturável registrado ainda. Somente participantes com check-in QR validado aparecem aqui.
                       </p>
                     ) : (
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         {tenantFeeLedger.map((entry) => {
                           const slot = entry.participant_slot ?? 1;
                           const label =
                             entry.participant_label ||
                             (slot === 1 ? 'Titular da reserva' : `Acompanhante validado #${slot}`);
                           const gross = entry.gross_fee_brl ?? entry.total_fee_brl;
-                          const abated = entry.credit_abated_brl ?? 0;
 
                           return (
                             <div
                               key={entry.id}
-                              className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-4 text-xs"
+                              className="rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-5 text-sm"
                             >
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div>
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="space-y-1">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span
-                                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                      className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                                         entry.status === 'DISPUTED'
                                           ? 'bg-red-500/15 text-red-600 dark:text-red-300'
                                           : entry.status === 'WAIVED'
@@ -4873,31 +4847,18 @@ export function PartnerDashboard({
                                             : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                                       }`}
                                     >
-                                      {entry.status}
+                                      {entry.status === 'ACCRUED' ? 'Validado' : entry.status}
                                     </span>
-                                    <span className="rounded-full bg-[#123B56]/15 px-2.5 py-0.5 text-xs font-bold text-[#123B56] dark:text-[#8DC4EA]">
+                                    <span className="rounded-full bg-[#123B56]/15 px-3 py-0.5 text-xs font-bold text-[#123B56] dark:text-[#8DC4EA]">
                                       Participante #{slot} · {label}
                                     </span>
-                                    <span className="rounded bg-[var(--bg-surface)] px-2 py-0.5 text-xs font-semibold">
-                                      {entry.modality}
-                                    </span>
-                                    {abated > 0 && (
-                                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[11px] font-extrabold text-amber-700 dark:text-amber-300">
-                                        ⚡ Abatido c/ Crédito (-R$ {abated.toFixed(2)})
-                                      </span>
-                                    )}
                                   </div>
-                                  <p className="mt-1 font-bold text-[var(--text-primary)]">
-                                    Líquido: R$ {entry.total_fee_brl.toFixed(2)}{' '}
-                                    <span className="font-normal text-[var(--text-secondary)]">
-                                      (Tarifa bruta: R$ {gross.toFixed(2)}
-                                      {abated > 0 ? ` − Crédito campanha: R$ ${abated.toFixed(2)}` : ''})
-                                    </span>
+                                  <p className="pt-1 text-base font-bold text-[var(--text-primary)]">
+                                    Tarifa: R$ {gross.toFixed(2).replace('.', ',')}
                                   </p>
                                   <p className="text-xs text-[var(--text-secondary)]">
                                     Reserva: {entry.booking_id.slice(0, 8)} ·{' '}
-                                    {new Date(entry.event_timestamp).toLocaleString('pt-BR')} ·{' '}
-                                    Origem: {entry.attribution_origin}
+                                    {new Date(entry.event_timestamp).toLocaleString('pt-BR')}
                                   </p>
                                   {entry.dispute_reason && (
                                     <p className="mt-1 font-semibold text-red-600 dark:text-red-300">
@@ -4910,10 +4871,10 @@ export function PartnerDashboard({
                                   <button
                                     type="button"
                                     onClick={() => setDisputeTargetId(entry.id)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-red-500/35 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-300"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-500/35 bg-red-500/10 px-3.5 py-2 text-xs font-bold text-red-600 dark:text-red-300"
                                   >
-                                    <ShieldAlert className="h-3.5 w-3.5" />
-                                    Contestar evento
+                                    <ShieldAlert className="h-4 w-4" />
+                                    Contestar
                                   </button>
                                 )}
                               </div>
@@ -4924,20 +4885,20 @@ export function PartnerDashboard({
                                     type="text"
                                     value={disputeReason}
                                     onChange={(e) => setDisputeReason(e.target.value)}
-                                    placeholder="Explique a divergência operacional para auditoria..."
-                                    className="flex-1 rounded-lg border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs"
+                                    placeholder="Explique a divergência operacional..."
+                                    className="flex-1 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3.5 py-2 text-sm"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleDisputeFee(entry.id)}
-                                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white"
+                                    className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white"
                                   >
                                     Registrar Contestação
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setDisputeTargetId(null)}
-                                    className="rounded-lg border border-[var(--border-hairline)] px-3 py-1.5 text-xs"
+                                    className="rounded-xl border border-[var(--border-hairline)] px-3.5 py-2 text-xs font-semibold"
                                   >
                                     Cancelar
                                   </button>

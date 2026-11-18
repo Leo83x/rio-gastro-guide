@@ -914,14 +914,14 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           Uma oferta, várias possibilidades. Zero fricção.
         </h2>
         <p className={`mt-2 text-base sm:text-lg xl:text-xl font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-          O estabelecimento entra em <strong className="text-[#0077B6]">3 etapas simples</strong> (com opção de <strong className="text-[#FF6B35]">Cadastro Assistido</strong> pela equipe BoraRio) e evolui em 4 momentos progressivos conforme percebe resultado.
+          O estabelecimento entra em <strong className="text-[#0077B6]">3 etapas simples</strong> (com opção de <strong className="text-[#FF6B35]">Cadastro Assistido</strong> pela equipe BoraRio) e evolui no seu ritmo conforme percebe resultado.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Momento 1. Começar */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Etapa 1. Começar */}
         <div
-          className={`group rounded-2xl border p-6 transition ${
+          className={`group rounded-2xl border p-6 sm:p-8 transition ${
             isDark
               ? 'border-white/15 bg-white/[0.04] hover:border-[#0077B6]'
               : 'border-slate-300 bg-white hover:border-[#0077B6] shadow-sm'
@@ -930,16 +930,16 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0077B6]/15 text-[#0077B6] text-xl font-black">
             1
           </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>1. Começar</h3>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">Perfil + 1ª Oferta (3 Passos)</p>
+          <h3 className={`mt-4 text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>1. Começar</h3>
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">Perfil + 1ª Oferta (Sem Fricção)</p>
           <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Reaproveita dados do catálogo ou Cadastro Assistido BoraRio. Publica a 1ª oferta sem exigir campanha ou programa de pontos na entrada.
+            Reaproveita os dados já curados no catálogo ou via Cadastro Assistido BoraRio. O parceiro cria sua 1ª oferta sem burocracia e já começa a receber clientes.
           </p>
         </div>
 
-        {/* Momento 2. Gerar mais demanda */}
+        {/* Etapa 2. Gerar mais demanda */}
         <div
-          className={`group rounded-2xl border p-6 transition ${
+          className={`group rounded-2xl border p-6 sm:p-8 transition ${
             isDark
               ? 'border-white/15 bg-white/[0.04] hover:border-[#FF6B35]'
               : 'border-slate-300 bg-white hover:border-[#FF6B35] shadow-sm'
@@ -948,16 +948,16 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FF6B35]/15 text-[#FF6B35] text-xl font-black">
             2
           </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>2. Gerar Demanda</h3>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#FF6B35]">Missão Coletiva Progressiva</p>
+          <h3 className={`mt-4 text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>2. Gerar Demanda</h3>
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#FF6B35]">Individual ou Missão Coletiva</p>
           <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            A mesma oferta pode ser distribuída como Individual ou Missão Coletiva: benefício inicial garantido + faixas extras conforme novas adesões.
+            A mesma oferta pode ser distribuída como Individual ou Missão Coletiva Progressiva: benefício inicial garantido + faixas extras conforme novas adesões.
           </p>
         </div>
 
-        {/* Momento 3. Fidelizar */}
+        {/* Etapa 3. Fidelizar */}
         <div
-          className={`group rounded-2xl border p-6 transition ${
+          className={`group rounded-2xl border p-6 sm:p-8 transition ${
             isDark
               ? 'border-white/15 bg-white/[0.04] hover:border-[#0077B6]'
               : 'border-slate-300 bg-white hover:border-[#0077B6] shadow-sm'
@@ -966,28 +966,10 @@ function Slide3Solution({ isDark }: { isDark: boolean }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0077B6]/15 text-[#0077B6] text-xl font-black">
             3
           </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>3. Fidelizar</h3>
+          <h3 className={`mt-4 text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>3. Fidelizar (Opcional)</h3>
           <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#0077B6]">Recompensas Rio Points (0%)</p>
           <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Módulo opcional posterior: o parceiro cadastra cortesias para troca por pontos sem pagar comissão nem taxa de check-in no resgate.
-          </p>
-        </div>
-
-        {/* Momento 4. Acelerar */}
-        <div
-          className={`group rounded-2xl border p-6 transition ${
-            isDark
-              ? 'border-white/15 bg-white/[0.04] hover:border-amber-500'
-              : 'border-slate-300 bg-white hover:border-amber-500 shadow-sm'
-          }`}
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xl font-black">
-            4
-          </div>
-          <h3 className={`mt-4 text-lg sm:text-xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>4. Acelerar</h3>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Impulsionar + 50% Crédito</p>
-          <p className={`mt-3 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            Promove uma oferta existente com selo "Patrocinado" e converte 50% do valor investido em Crédito Comercial para abater visitas faturáveis.
+            Quando quiser, o parceiro cadastra uma cortesia para troca por pontos, atraindo clientes recorrentes da rede sem pagar comissão nem taxa no resgate.
           </p>
         </div>
       </div>
@@ -1174,7 +1156,7 @@ function Slide5Differentiators({ isDark }: { isDark: boolean }) {
     },
     {
       title: 'Viralização de Mesa Autofinanciada (+100 RP)',
-      desc: 'O anfitrião ganha +100 RP por amigo que escaneia o QR Code na mesa. Cada bônus(custo ~R$ 1) é financiado pela visita faturável gerada pelo próprio amigo (R$ 5 a R$ 10).',
+      desc: 'O anfitrião ganha +100 RP por amigo que escaneia o QR Code na mesa. Cada bônus (custo ~R$ 1) é financiado pela visita faturável gerada pelo próprio amigo (R$ 5 a R$ 10).',
       icon: Users,
       color: 'text-emerald-600 dark:text-emerald-400',
     },
@@ -1185,8 +1167,8 @@ function Slide5Differentiators({ isDark }: { isDark: boolean }) {
       color: 'text-[#0077B6]',
     },
     {
-      title: 'Mídia com 50% de Crédito de Aquisição',
-      desc: 'Ao impulsionar uma oferta existente, 50% do investimento vira crédito comercial para abater visitas faturáveis — eliminando o medo de gastar com anúncio sem retorno.',
+      title: 'Painel Limpo & Entrada em 3 Etapas',
+      desc: 'Sem fricção comercial: o estabelecimento entra apenas com o perfil (próprio ou assistido) e sua primeira oferta, acompanhando resultados em um painel intuitivo.',
       icon: Sparkles,
       color: 'text-amber-600 dark:text-amber-400',
     },
@@ -1251,7 +1233,7 @@ function Slide5Differentiators({ isDark }: { isDark: boolean }) {
   );
 }
 
-// Slide 6: Modelo de Receita (Cobrança por Participante Elegível + Campanhas com Crédito de Aquisição)
+// Slide 6: Modelo de Receita (Cobrança por Participante Elegível Validado)
 function Slide6BusinessModel({ isDark }: { isDark: boolean }) {
   return (
     <div>
@@ -1266,7 +1248,7 @@ function Slide6BusinessModel({ isDark }: { isDark: boolean }) {
           05 • Modelo de Receita
         </span>
         <h2 className={`mt-3 text-3xl sm:text-4xl xl:text-5xl font-black tracking-tight ${isDark ? 'text-white' : 'text-[#102F46]'}`}>
-          Cobrança por participante elegível atendido + Mídia com crédito
+          Cobrança por participante elegível atendido · Zero % sobre a conta
         </h2>
         <p className={`mt-2 text-base sm:text-lg xl:text-xl font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
           Uma reserva para 4 pessoas não cobra 4 visitas automaticamente: só gera cobrança quem aderiu pelo BoraRio e validou presença física no local.
@@ -1330,26 +1312,26 @@ function Slide6BusinessModel({ isDark }: { isDark: boolean }) {
           </div>
         </div>
 
-        {/* Campanhas Patrocinadas com 50% Crédito */}
+        {/* Zero Intermediação & Fidelidade Gratuita */}
         <div
           className={`rounded-2xl border p-6 sm:p-8 text-left ${
             isDark ? 'border-white/15 bg-white/[0.04]' : 'border-slate-300 bg-white shadow-sm'
           }`}
         >
-          <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400`}>
-            Campanhas Patrocinadas
+          <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400`}>
+            Zero Taxa sobre o Consumo
           </span>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className={`text-4xl sm:text-5xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>50%</span>
-            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>vira Crédito de Aquisição</span>
+            <span className={`text-4xl sm:text-5xl font-black ${isDark ? 'text-white' : 'text-[#102F46]'}`}>0%</span>
+            <span className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>comissão na conta</span>
           </div>
           <p className={`mt-4 text-sm sm:text-base leading-relaxed ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
-            O parceiro impulsiona uma oferta já existente (ex: R$ 200) e recebe 50% (R$ 100) em crédito comercial para abater visitas faturáveis.
+            O cliente paga 100% da conta direto na maquininha do estabelecimento. Resgates de cortesias em Rio Points também têm tarifa zero.
           </p>
           <div className={`mt-6 border-t pt-4 text-xs sm:text-sm font-medium ${isDark ? 'border-white/10 text-slate-300' : 'border-slate-200 text-slate-700'}`}>
-            ✓ Receita recorrente de destaque (Mídia)<br />
-            ✓ Reduz o risco percebido pelo restaurante<br />
-            ✓ Contabilização separada de mídia vs. crédito
+            ✓ Fluxo de caixa 100% direto no parceiro<br />
+            ✓ Sem mensalidade fixa obrigatória<br />
+            ✓ Fechamento mensal simples via PIX ou Boleto
           </div>
         </div>
       </div>
@@ -1399,7 +1381,7 @@ function Slide6BusinessModel({ isDark }: { isDark: boolean }) {
               R$ 15 (Lanç.) / R$ 30 (Padrão)
             </div>
             <div className="mt-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-              Ou R$ 0 se abatido c/ crédito
+              Apenas quem validou QR
             </div>
           </div>
         </div>

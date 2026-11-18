@@ -546,12 +546,6 @@ export function ClubView({
                             </div>
 
                             <div className="flex flex-wrap items-center gap-1.5 ml-auto">
-                              {off.is_sponsored && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-300">
-                                  <Sparkles className="h-3 w-3" />
-                                  Patrocinado
-                                </span>
-                              )}
                               <span
                                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${meta.badgeCls}`}
                               >
