@@ -513,41 +513,6 @@ export function DiscoverEditorialSections({
         onDateFilterChange={onNightlifeDateFilterChange}
       />
 
-      {/* SEÇÃO 03 · SUA PRIMEIRA MISSÃO NO BORARIO (Progressão Imediata de Benefícios) */}
-      <section
-        aria-labelledby="home-block-first-mission"
-        className="rounded-3xl border border-[#397B68]/30 bg-gradient-to-br from-[#1B4D3E] via-[#2A6F55] to-[#397B68] p-5 text-white shadow-md sm:p-6"
-      >
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
-              <Award className="h-3.5 w-3.5" />
-              Sua Primeira Missão
-            </span>
-            <h3
-              id="home-block-first-mission"
-              className="mt-2 font-sans text-xl font-black text-white sm:text-2xl"
-            >
-              Seu primeiro rolê vale +250 Rio Points
-            </h3>
-            <p className="mt-1.5 max-w-xl text-sm font-medium text-white leading-relaxed">
-              Faça sua 1ª reserva ou check-in presencial em qualquer restaurante ou evento do BoraRio e acumule pontos no Passaporte Carioca para resgatar cortesias e experiências exclusivas.
-            </p>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onGoToProfile({ section: 'passport' })}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:brightness-105"
-            >
-              <Award className="h-3.5 w-3.5" />
-              Ver Passaporte &amp; Missões
-            </button>
-          </div>
-        </div>
-      </section>
-
       {/* SEÇÃO 04 · DESTAQUE DO DIA: O QUE VALE A PENA VIVER HOJE? */}
       <section aria-labelledby="home-block-spotlight">
         <div className="mb-3.5 flex flex-wrap items-end justify-between gap-2">

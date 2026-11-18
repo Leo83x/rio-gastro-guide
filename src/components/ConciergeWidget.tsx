@@ -17,6 +17,7 @@ interface ConciergeWidgetProps {
   onSelectExperience: (item: Restaurant) => void;
   onSelectNightlifeEvent?: (event: NightlifeEvent) => void;
   isHome?: boolean;
+  hideFloatingButtonOnSmartBar?: boolean;
 }
 
 interface ChatMessage {
@@ -44,6 +45,7 @@ export function ConciergeWidget({
   onSelectExperience,
   onSelectNightlifeEvent,
   isHome = false,
+  hideFloatingButtonOnSmartBar = false,
 }: ConciergeWidgetProps) {
   const [open, setOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -119,8 +121,8 @@ export function ConciergeWidget({
   );
 
   const compactCollapsed = isScrolled && !open;
-  // Na Home, oculta o FAB flutuante quando o usuário já está vendo a barra de busca no topo (evita poluição sobre os cards e dock)
-  const hideFloatingButton = isHome && !isScrolled && !open;
+  // Na Home, oculta o FAB flutuante quando o usuário já está vendo a barra de busca ou a SmartBar (evita sobreposição)
+  const hideFloatingButton = isHome && (hideFloatingButtonOnSmartBar || !isScrolled) && !open;
 
   return (
     <>

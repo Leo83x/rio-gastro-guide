@@ -344,6 +344,7 @@ export function Navbar({
       {activeTab !== 'admin' && (
         <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 px-3 lg:hidden">
           <nav
+            id="borario-mobile-dock"
             aria-label="Navegação principal mobile"
             className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/40 bg-white/88 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#0D1E30]/90"
           >
