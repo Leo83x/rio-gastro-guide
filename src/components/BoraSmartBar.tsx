@@ -18,7 +18,6 @@ import { getWalletSummary } from '../services/pointsLedger';
 import {
   fetchReferralSummaryFromServer,
   getCanonicalAppBaseUrl,
-  getMyReferralLink,
   getReferralAttributions,
 } from '../services/referralStore';
 import { fetchActiveReferralProgramRule } from '../services/pointRulesStore';
@@ -27,6 +26,7 @@ import {
   computeSmartBarState,
   getEffectiveReservationStage,
 } from '../services/smartBarState';
+import { buildTableInviteUrl } from '../services/tableInviteStore';
 import { fetchPartnerVipConfig, getCachedPartnerVipConfig } from '../services/vipInviteStore';
 import type { ReservationRequest } from '../types/experience';
 import type { PartnerVipInviteConfig, ReferralProgramRule, VipInviteRecord } from '../types/growth';
@@ -230,8 +230,8 @@ export function BoraSmartBar({
     `${getCanonicalAppBaseUrl()}/app?vip=${encodeURIComponent(inv.invite_code)}&venue=${encodeURIComponent(inv.restaurant_id)}`;
 
   const handleShareCompanion = (res: ReservationRequest) => {
-    const link = getMyReferralLink(res.experience_id);
-    const text = `Bora comigo em *${res.experience_name}* (${res.neighborhood})?\nAtivei minha ida no BoraRio. Cada pessoa precisa ativar seu próprio passe individual pelo link:\n${link}`;
+    const link = buildTableInviteUrl(res);
+    const text = `Bora comigo em *${res.experience_name}* (${res.neighborhood})?\nConfirme sua presença na nossa mesa sem precisar de cadastro pelo link:\n${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 

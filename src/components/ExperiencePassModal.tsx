@@ -30,6 +30,7 @@ import {
   isReservationExpired,
   validateGroupCompanionCheckin,
 } from '../services/superappStore';
+import { buildTableInviteUrl } from '../services/tableInviteStore';
 import { fetchPartnerVipConfig } from '../services/vipInviteStore';
 import { getActiveVenueQrToken, issueDynamicVenueQrToken } from '../services/visitProofStore';
 import type { ReservationRequest } from '../types/experience';
@@ -242,8 +243,8 @@ export function ExperiencePassModal({
     isCheckedIn && hasVipQuota && validVipInvites.length > 0;
 
   const handleShareWhatsApp = () => {
-    const venueLink = getMyReferralLink(venueId);
-    const text = `Bora comigo em *${venueName}* (${neighborhood})?\nAtivei minha ida no BoraRio (*${offeringTitle}*).\n\nCada pessoa precisa ativar seu próprio passe pelo link abaixo para receber o benefício individual:\n${venueLink}`;
+    const tableLink = buildTableInviteUrl(currentRes);
+    const text = `Bora comigo em *${venueName}* (${neighborhood})?\nReservei nossa ida no BoraRio (*${offeringTitle}*).\n\nConfirme sua presença na mesa em 1 clique (sem precisar de cadastro):\n${tableLink}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 

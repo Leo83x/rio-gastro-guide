@@ -28,6 +28,7 @@ import {
 } from './components/ProfileWalletView';
 import { RestaurantCard } from './components/RestaurantCard';
 import { RestaurantDetailModal } from './components/RestaurantDetailModal';
+import { TableInvitePage } from './components/TableInvitePage';
 import { LandingPage } from './pages/LandingPage';
 import { PartnerDashboard } from './pages/PartnerDashboard';
 import { PartnersLandingPage } from './pages/PartnersLandingPage';
@@ -706,6 +707,31 @@ export function App() {
     return (
       <>
         <InviteFriendsPage onBack={() => navigate('/app')} onRequireAuth={requireAuth} />
+        <AuthGateModal
+          open={authGate.open}
+          reason={authGate.reason}
+          onClose={() => {
+            pendingAuthActionRef.current = null;
+            setAuthGate({ open: false, reason: '' });
+          }}
+          onAuthenticated={() => {
+            setAuthGate({ open: false, reason: '' });
+            setPointsBalance(getPointsBalance());
+            setNotifications(getNotifications());
+            const pending = pendingAuthActionRef.current;
+            pendingAuthActionRef.current = null;
+            pending?.();
+          }}
+        />
+      </>
+    );
+  }
+
+  // 6. Página Dedicada Link da Mesa (/mesa) — confirmação sem cadastro obrigatório
+  if (route === '/mesa') {
+    return (
+      <>
+        <TableInvitePage onOpenApp={() => navigate('/app')} onRequireAuth={requireAuth} />
         <AuthGateModal
           open={authGate.open}
           reason={authGate.reason}
