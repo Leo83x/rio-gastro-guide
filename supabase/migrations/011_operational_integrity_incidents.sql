@@ -71,7 +71,7 @@ CREATE POLICY "Parceiro le ocorrencias do estabelecimento"
       SELECT 1 FROM public.partner_memberships pm
       WHERE pm.restaurant_id = operational_incidents.restaurant_id
         AND pm.user_id = auth.uid()
-        AND pm.is_active = true
+        AND pm.status = 'APPROVED'
     )
   );
 
@@ -120,7 +120,7 @@ CREATE POLICY "Partes vinculadas leem eventos da ocorrencia"
             SELECT 1 FROM public.partner_memberships pm
             WHERE pm.restaurant_id = oi.restaurant_id
               AND pm.user_id = auth.uid()
-              AND pm.is_active = true
+              AND pm.status = 'APPROVED'
           )
         )
     )
@@ -164,7 +164,7 @@ CREATE POLICY "Partes vinculadas leem evidencias da ocorrencia"
             SELECT 1 FROM public.partner_memberships pm
             WHERE pm.restaurant_id = oi.restaurant_id
               AND pm.user_id = auth.uid()
-              AND pm.is_active = true
+              AND pm.status = 'APPROVED'
           )
         )
     )
@@ -251,7 +251,7 @@ CREATE POLICY "Parceiro le propria conformidade"
       SELECT 1 FROM public.partner_memberships pm
       WHERE pm.restaurant_id = partner_compliance_profiles.restaurant_id
         AND pm.user_id = auth.uid()
-        AND pm.is_active = true
+        AND pm.status = 'APPROVED'
     )
   );
 
@@ -287,7 +287,7 @@ CREATE POLICY "Parceiro le proprias medidas"
       SELECT 1 FROM public.partner_memberships pm
       WHERE pm.restaurant_id = partner_compliance_measures.restaurant_id
         AND pm.user_id = auth.uid()
-        AND pm.is_active = true
+        AND pm.status = 'APPROVED'
     )
   );
 

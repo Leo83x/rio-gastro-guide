@@ -494,7 +494,7 @@ BEGIN
     SELECT 1 FROM public.partner_memberships pm
     WHERE pm.restaurant_id = v_res.restaurant_id
       AND pm.user_id = v_caller_uid
-      AND pm.is_active = true
+      AND pm.status = 'APPROVED'
   ) INTO v_is_partner_member;
 
   IF NOT v_is_service AND v_caller_uid IS DISTINCT FROM v_res.user_id AND NOT v_is_partner_member THEN
@@ -881,7 +881,7 @@ BEGIN
     SELECT 1 FROM public.partner_memberships pm
     WHERE pm.restaurant_id = v_res.restaurant_id
       AND pm.user_id = v_caller_uid
-      AND pm.is_active = true
+      AND pm.status = 'APPROVED'
   ) INTO v_is_partner_member;
 
   IF NOT v_is_service AND v_caller_uid IS DISTINCT FROM v_res.user_id AND NOT v_is_partner_member THEN
