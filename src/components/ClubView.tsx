@@ -322,7 +322,12 @@ export function ClubView({
               Minha Jornada BoraRio
             </div>
             <h3 className="mt-2 text-2xl font-black text-white">
-              Explorador · <span className="text-amber-400">{walletSummary.available_balance || 250} RP</span>
+              Explorador · <span className="text-amber-400">{walletSummary.available_balance.toLocaleString('pt-BR')} RP liberados</span>
+              {walletSummary.pending_points > 0 && (
+                <span className="ml-2 text-sm font-semibold text-stone-300">
+                  ({walletSummary.pending_points.toLocaleString('pt-BR')} pendentes)
+                </span>
+              )}
             </h3>
             <p className="mt-0.5 text-xs text-stone-300">
               Saldo de Rio Points e evolução das suas experiências cariocas
@@ -927,16 +932,18 @@ export function ClubView({
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[#F7931E]">
-                  Economia Rio Points · 100 RP = R$ 1,00 · Circulação Multicategoria
+                  Economia Rio Points · Circulação Multicategoria
                 </p>
                 <h3 className="mt-1 font-sans text-2xl font-extrabold">
-                  Saldo disponível: {walletSummary.available_balance.toLocaleString('pt-BR')} RP{' '}
-                  <span className="text-base font-semibold text-amber-300">
-                    (R$ {(walletSummary.available_balance / 100).toFixed(2)})
-                  </span>
+                  Saldo liberado: {walletSummary.available_balance.toLocaleString('pt-BR')} RP
+                  {walletSummary.pending_points > 0 && (
+                    <span className="ml-2 text-sm font-semibold text-amber-300">
+                      + {walletSummary.pending_points.toLocaleString('pt-BR')} RP pendentes
+                    </span>
+                  )}
                 </h3>
                 <p className="mt-1 text-xs text-white/75">
-                  Ganhe <strong>+250 RP (R$ 2,50)</strong> por check-in individual validado em qualquer restaurante e troque por gastronomia, noites, passeios de escuna, diárias/day use de hotéis, bem-estar e museus. Comissão cobrada do parceiro pelo resgate: R$ 0,00.
+                  Acumule Rio Points após check-ins presenciais validados (respeitando os limites configurados) e troque por experiências na rede. Pontos pendentes só são liberados após confirmação. Comissão cobrada do parceiro pelo resgate: R$ 0,00.
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-[11px]">

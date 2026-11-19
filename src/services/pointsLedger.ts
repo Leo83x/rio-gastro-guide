@@ -12,7 +12,7 @@ const STARTER_DEMO_TRANSACTIONS: PointTransaction[] = [
     amount: 500,
     type: 'CREDIT',
     origin: 'campaign_bonus',
-    description: 'Bônus de boas-vindas Bora Club (500 RP = R$ 5,00 de referência)',
+    description: 'Bônus de boas-vindas Bora Club (500 RP)',
     validation_status: 'RELEASED',
     created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
   },

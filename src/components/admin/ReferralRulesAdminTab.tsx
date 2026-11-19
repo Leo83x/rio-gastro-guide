@@ -1,12 +1,15 @@
-import { CheckCircle2, RefreshCw, Save, ShieldAlert, Sparkles } from 'lucide-react';
+import { CheckCircle2, RefreshCw, Save, ShieldAlert, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   fetchActiveReferralProgramRule,
   getActiveReferralProgramRule,
+  getPointEarningRules,
+  savePointEarningRule,
   saveReferralProgramRuleOnServer,
 } from '../../services/pointRulesStore';
 import { supabase } from '../../services/supabaseClient';
 import type { ReferralProgramRule } from '../../types/growth';
+import type { PointEarningRule } from '../../types/rewards';
 
 export function ReferralRulesAdminTab() {
   const [rule, setRule] = useState<ReferralProgramRule>(() => getActiveReferralProgramRule());
@@ -14,6 +17,26 @@ export function ReferralRulesAdminTab() {
   const [saving, setSaving] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [earningRule, setEarningRule] = useState<PointEarningRule>(() => {
+    const list = getPointEarningRules();
+    return (
+      list.find((r) => r.scope_type === 'DEFAULT') ||
+      list[0] || {
+        id: 'rule-default-checkin',
+        rule_code: 'DEFAULT_CHECKIN',
+        scope_type: 'DEFAULT',
+        points_amount: 250,
+        max_credits_per_user_day: 5,
+        max_credits_per_user_venue_day: 1,
+        max_credits_per_user_venue_month: 8,
+        require_verified_checkin: true,
+        active: true,
+        notes: 'Regra padrão de acúmulo por check-in validado.',
+        updated_at: new Date().toISOString(),
+      }
+    );
+  });
+  const [earningFeedback, setEarningFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -378,6 +401,159 @@ export function ReferralRulesAdminTab() {
             </div>
           </form>
         )}
+      </div>
+
+      {/* Economia dos Pontos: Limites de Acúmulo por Check-in */}
+      <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-sm space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Economia dos Pontos
+            </span>
+            <h3 className="mt-2 font-sans text-lg font-extrabold text-[var(--text-primary)]">
+              Limites de Acúmulo por Check-in Validado
+            </h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Configure a pontuação padrão de check-in presencial e os tetos diários/mensais por usuário e estabelecimento. Sem teto percentual fixo nem conversão monetária engessada.
+            </p>
+          </div>
+          <label className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2 text-xs font-bold">
+            <input
+              type="checkbox"
+              checked={earningRule.active}
+              onChange={(e) =>
+                setEarningRule((prev) => ({ ...prev, active: e.target.checked }))
+              }
+              className="h-4 w-4 accent-[#397B68]"
+            />
+            Regra Ativa
+          </label>
+        </div>
+
+        {earningFeedback && (
+          <div
+            className={`flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold ${
+              earningFeedback.ok
+                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300'
+            }`}
+          >
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{earningFeedback.msg}</span>
+          </div>
+        )}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const saved = savePointEarningRule({
+              id: earningRule.id,
+              rule_code: earningRule.rule_code,
+              scope_type: earningRule.scope_type,
+              points_amount: earningRule.points_amount,
+              max_credits_per_user_day: earningRule.max_credits_per_user_day,
+              max_credits_per_user_venue_day: earningRule.max_credits_per_user_venue_day,
+              max_credits_per_user_venue_month: earningRule.max_credits_per_user_venue_month,
+              active: earningRule.active,
+              notes: earningRule.notes,
+            });
+            const updated = saved.find((r) => r.id === earningRule.id) || saved[0];
+            if (updated) setEarningRule(updated);
+            setEarningFeedback({
+              ok: true,
+              msg: 'Limites de acúmulo e pontuação de check-in salvos com sucesso.',
+            });
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Pontos por Check-in (RP)
+              </span>
+              <input
+                type="number"
+                min={0}
+                value={earningRule.points_amount}
+                onChange={(e) =>
+                  setEarningRule((prev) => ({
+                    ...prev,
+                    points_amount: Math.max(0, Number(e.target.value) || 0),
+                  }))
+                }
+                className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm font-bold text-[var(--text-primary)]"
+              />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Limite / Usuário / Dia
+              </span>
+              <input
+                type="number"
+                min={1}
+                value={earningRule.max_credits_per_user_day}
+                onChange={(e) =>
+                  setEarningRule((prev) => ({
+                    ...prev,
+                    max_credits_per_user_day: Math.max(1, Number(e.target.value) || 1),
+                  }))
+                }
+                className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm font-bold text-[var(--text-primary)]"
+              />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Limite / Casa / Dia
+              </span>
+              <input
+                type="number"
+                min={1}
+                value={earningRule.max_credits_per_user_venue_day}
+                onChange={(e) =>
+                  setEarningRule((prev) => ({
+                    ...prev,
+                    max_credits_per_user_venue_day: Math.max(1, Number(e.target.value) || 1),
+                  }))
+                }
+                className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm font-bold text-[var(--text-primary)]"
+              />
+            </label>
+
+            <label className="space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">
+                Limite / Casa / Mês
+              </span>
+              <input
+                type="number"
+                min={1}
+                value={earningRule.max_credits_per_user_venue_month}
+                onChange={(e) =>
+                  setEarningRule((prev) => ({
+                    ...prev,
+                    max_credits_per_user_venue_month: Math.max(1, Number(e.target.value) || 1),
+                  }))
+                }
+                className="w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm font-bold text-[var(--text-primary)]"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <p className="text-[11px] text-[var(--text-secondary)]">
+              Check-in presencial validado é obrigatório. Pontos pendentes e liberados permanecem separados no ledger.
+            </p>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#123B56] px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#102F46]"
+            >
+              <Save className="h-3.5 w-3.5" />
+              Salvar Limites de Acúmulo
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
