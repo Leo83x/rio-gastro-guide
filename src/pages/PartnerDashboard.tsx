@@ -44,6 +44,12 @@ import {
 import QRCode from 'qrcode';
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { BrandLogo } from '../components/BrandLogo';
+import {
+  isSupabaseAuthConfigured,
+  requestMagicLinkLogin,
+  verifyEmailOtpLogin,
+} from '../services/authService';
+import { supabase } from '../services/supabaseClient';
 import { upsertRestaurants } from '../services/database';
 import { checkNightlifeCompleteness, getRioTodayIso } from '../services/nightlife/nightlifeDedup';
 import { submitPartnerNightlifeEvent } from '../services/nightlife/nightlifeStore';
@@ -236,7 +242,11 @@ export function PartnerDashboard({
   onReservationsUpdated,
   onSyncAppState,
 }: PartnerDashboardProps) {
-  const [partnerEmail, setPartnerEmail] = useState('gerencia@parceiro.rio.br');
+  const [partnerEmail, setPartnerEmail] = useState('');
+  const [loginStep, setLoginStep] = useState<'email' | 'otp'>('email');
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginFeedback, setLoginFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [selectedTenantId, setSelectedTenantId] = useState<string>(() => {
     try {
       return localStorage.getItem(PARTNER_SESSION_KEY) || '';
@@ -303,6 +313,10 @@ export function PartnerDashboard({
   const [offDate, setOffDate] = useState(todayDate);
   const [offTime, setOffTime] = useState('19:30');
   const [offCapacity, setOffCapacity] = useState(15);
+  const [offMaxBillableCheckins, setOffMaxBillableCheckins] = useState('');
+  const [offBudgetPeriod, setOffBudgetPeriod] = useState<
+    'TOTAL_OFFERING' | 'DAILY' | 'WEEKLY' | 'MONTHLY'
+  >('TOTAL_OFFERING');
   const [editingOfferingId, setEditingOfferingId] = useState<string | null>(null);
   const [editBenefitDraft, setEditBenefitDraft] = useState('');
 
@@ -411,10 +425,7 @@ export function PartnerDashboard({
     setOpFeedback(null);
   };
 
-  const handleLogin = (e: FormEvent) => {
-    e.preventDefault();
-    const targetId = draftTenantId || restaurants[0]?.id;
-    if (!targetId) return;
+  const enterTenantPanel = (targetId: string) => {
     localStorage.setItem(PARTNER_SESSION_KEY, targetId);
     setSelectedTenantId(targetId);
     setActiveTab('offers');
@@ -422,9 +433,87 @@ export function PartnerDashboard({
     if (found) syncProfileForm(found);
   };
 
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    const targetId = draftTenantId || restaurants[0]?.id;
+    const cleanEmail = partnerEmail.trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setLoginFeedback({ ok: false, msg: 'Informe o e-mail corporativo do estabelecimento.' });
+      return;
+    }
+    if (!targetId) {
+      setLoginFeedback({ ok: false, msg: 'Selecione o estabelecimento.' });
+      return;
+    }
+
+    if (!isSupabaseAuthConfigured() || !supabase) {
+      enterTenantPanel(targetId);
+      return;
+    }
+
+    setLoginLoading(true);
+    setLoginFeedback(null);
+
+    try {
+      // Se já houver sessão ativa com o mesmo e-mail, valida vínculo diretamente
+      const { data: userData } = await supabase.auth.getUser();
+      const hasMatchingSession =
+        userData.user && userData.user.email?.toLowerCase() === cleanEmail.toLowerCase();
+
+      if (!hasMatchingSession && loginStep === 'email') {
+        const res = await requestMagicLinkLogin(cleanEmail);
+        setLoginFeedback({ ok: res.ok, msg: res.message });
+        if (res.ok) setLoginStep('otp');
+        return;
+      }
+
+      let authedUserId = userData.user?.id;
+      if (!hasMatchingSession && loginStep === 'otp') {
+        const verifyRes = await verifyEmailOtpLogin(cleanEmail, loginOtp);
+        if (!verifyRes.ok || !verifyRes.identity?.id) {
+          setLoginFeedback({ ok: false, msg: verifyRes.message });
+          return;
+        }
+        authedUserId = verifyRes.identity.id;
+      }
+
+      if (!authedUserId) {
+        setLoginFeedback({ ok: false, msg: 'Não foi possível validar sua sessão.' });
+        return;
+      }
+
+      const { data: memberships, error: memErr } = await supabase
+        .from('partner_memberships')
+        .select('restaurant_id, status')
+        .eq('user_id', authedUserId)
+        .eq('status', 'APPROVED');
+
+      if (memErr) {
+        setLoginFeedback({ ok: false, msg: `Erro ao consultar vínculo B2B: ${memErr.message}` });
+        return;
+      }
+
+      const approvedIds = (memberships || []).map((m) => String(m.restaurant_id));
+      if (!approvedIds.includes(targetId)) {
+        setLoginFeedback({
+          ok: false,
+          msg: 'Conta autenticada, mas sem vínculo B2B aprovado para este estabelecimento. Solicite aprovação ao Admin ou reivindique o local.',
+        });
+        return;
+      }
+
+      enterTenantPanel(targetId);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem(PARTNER_SESSION_KEY);
     setSelectedTenantId('');
+    setLoginStep('email');
+    setLoginOtp('');
+    setLoginFeedback(null);
     setActiveTab('offers');
     setEditingOfferingId(null);
     setEditingRewardId(null);
@@ -792,6 +881,11 @@ export function PartnerDashboard({
       starts_at: new Date().toISOString(),
       ends_at: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
       capacity_total: Math.max(1, offCapacity),
+      max_billable_checkins:
+        offMaxBillableCheckins.trim() && Number(offMaxBillableCheckins) > 0
+          ? Math.round(Number(offMaxBillableCheckins))
+          : null,
+      billable_budget_period: offBudgetPeriod,
       partner_managed_active: !offSaveAsDraft,
       image_url: offImage.trim() || undefined,
     });
@@ -800,6 +894,7 @@ export function PartnerDashboard({
       setOffTitle('');
       setOffBenefit('');
       setOffEligibleItem('');
+      setOffMaxBillableCheckins('');
       setOffImage('');
       setOffSaveAsDraft(false);
     }
@@ -1284,7 +1379,19 @@ export function PartnerDashboard({
               </div>
             </div>
 
-            <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            {loginFeedback && (
+              <div
+                className={`mt-4 rounded-xl px-3.5 py-2.5 text-xs font-semibold ${
+                  loginFeedback.ok
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-rose-500/15 text-rose-700 dark:text-rose-300'
+                }`}
+              >
+                {loginFeedback.msg}
+              </div>
+            )}
+
+            <form onSubmit={(e) => void handleLogin(e)} className="mt-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[var(--text-primary)]">
                   E-mail corporativo do parceiro
@@ -1294,7 +1401,9 @@ export function PartnerDashboard({
                   required
                   value={partnerEmail}
                   onChange={(e) => setPartnerEmail(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm focus:border-[#FF765E] focus:outline-none"
+                  placeholder="contato@seuestabelecimento.com.br"
+                  disabled={loginStep === 'otp'}
+                  className="mt-1.5 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 text-sm focus:border-[#FF765E] focus:outline-none disabled:opacity-60"
                 />
               </div>
 
@@ -1315,11 +1424,47 @@ export function PartnerDashboard({
                 </select>
               </div>
 
+              {loginStep === 'otp' && (
+                <div>
+                  <label className="block text-xs font-bold text-[var(--text-primary)]">
+                    Código de 6 dígitos enviado para {partnerEmail}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    required
+                    maxLength={8}
+                    value={loginOtp}
+                    onChange={(e) => setLoginOtp(e.target.value)}
+                    placeholder="000000"
+                    className="mt-1.5 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3.5 py-2.5 font-mono text-sm tracking-widest focus:border-[#FF765E] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginStep('email');
+                      setLoginOtp('');
+                      setLoginFeedback(null);
+                    }}
+                    className="mt-1.5 text-[11px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  >
+                    Alterar e-mail
+                  </button>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full rounded-xl bg-[#FF765E] py-3 text-sm font-bold text-white shadow-sm hover:bg-[#e8634c]"
+                disabled={loginLoading}
+                className="w-full rounded-xl bg-[#FF765E] py-3 text-sm font-bold text-white shadow-sm hover:bg-[#e8634c] disabled:opacity-50"
               >
-                Entrar no Painel do Estabelecimento
+                {loginLoading
+                  ? 'Validando acesso...'
+                  : loginStep === 'otp'
+                    ? 'Confirmar código e entrar no Painel'
+                    : isSupabaseAuthConfigured()
+                      ? 'Enviar código de acesso corporativo'
+                      : 'Entrar no Painel do Estabelecimento'}
               </button>
             </form>
           </div>
@@ -2111,6 +2256,45 @@ export function PartnerDashboard({
                         className="mt-1.5 w-full rounded-2xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-3 text-sm font-bold"
                       />
                     </div>
+                  </div>
+
+                  {/* Orçamento de Check-ins Remunerados (Previsibilidade Financeira) */}
+                  <div className="grid gap-3 rounded-2xl border border-[#0077B6]/25 bg-[#0077B6]/5 p-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--text-primary)]">
+                        Limite de check-ins remunerados (Opcional)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={offMaxBillableCheckins}
+                        onChange={(e) => setOffMaxBillableCheckins(e.target.value)}
+                        placeholder="Sem limite (ex: 30)"
+                        className="mt-1.5 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--text-primary)]">
+                        Período do orçamento
+                      </label>
+                      <select
+                        value={offBudgetPeriod}
+                        onChange={(e) =>
+                          setOffBudgetPeriod(
+                            e.target.value as 'TOTAL_OFFERING' | 'DAILY' | 'WEEKLY' | 'MONTHLY'
+                          )
+                        }
+                        className="mt-1.5 w-full rounded-xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] px-3 py-2.5 text-sm"
+                      >
+                        <option value="TOTAL_OFFERING">Por toda a oferta</option>
+                        <option value="DAILY">Por dia</option>
+                        <option value="WEEKLY">Por semana (7 dias)</option>
+                        <option value="MONTHLY">Por mês</option>
+                      </select>
+                    </div>
+                    <p className="sm:col-span-2 text-[11px] text-[var(--text-secondary)]">
+                      Acima desse teto, novos check-ins não geram tarifa para o estabelecimento (previsibilidade financeira garantida).
+                    </p>
                   </div>
 
                   <div>

@@ -89,6 +89,8 @@ export interface PartnerOffering {
   offer_category?: string;
   valid_days_hours?: string;
   views_count?: number;
+  max_billable_checkins?: number | null;
+  billable_budget_period?: 'TOTAL_OFFERING' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
   partner_managed_active: boolean;
   is_demonstrative: boolean;
   image_url?: string;

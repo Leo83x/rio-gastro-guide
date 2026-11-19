@@ -60,6 +60,7 @@ export type PartnerFeeStatus = 'ACCRUED' | 'DISPUTED' | 'WAIVED' | 'INVOICED';
 export interface PartnerFeeLedgerEntry {
   id: string;
   booking_id: string;
+  offering_id?: string;
   visit_proof_id: string;
   restaurant_id: string;
   restaurant_name: string;

@@ -394,6 +394,55 @@ export function accruePartnerFeeFromCheckin(params: {
   const plan = getPartnerCommercialPlan(reservation.experience_id);
   const modality: CommercialModality = reservation.modality || 'TRADITIONAL_BOOKING';
 
+  // Verifica orçamento de check-ins remunerados configurado na oferta (por oferta ou período)
+  let isCappedByOfferingBudget = false;
+  let offeringBudgetLabel = '';
+  if (reservation.offering_id) {
+    try {
+      const rawOfferings = localStorage.getItem('borario_partner_offerings_v1');
+      if (rawOfferings) {
+        const offerings = JSON.parse(rawOfferings) as Array<{
+          id: string;
+          max_billable_checkins?: number | null;
+          billable_budget_period?: 'TOTAL_OFFERING' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
+        }>;
+        const targetOff = offerings.find((o) => o.id === reservation.offering_id);
+        if (targetOff?.max_billable_checkins && targetOff.max_billable_checkins > 0) {
+          const period = targetOff.billable_budget_period || 'TOTAL_OFFERING';
+          const now = new Date();
+          const todayIso = now.toISOString().slice(0, 10);
+          const monthIso = now.toISOString().slice(0, 7);
+          const weekAgoMs = now.getTime() - 7 * 86400000;
+
+          const countInPeriod = ledger.filter((e) => {
+            if (e.offering_id !== reservation.offering_id) return false;
+            if (e.status === 'WAIVED' || e.total_fee_brl <= 0) return false;
+            if (period === 'DAILY') return (e.event_timestamp || '').slice(0, 10) === todayIso;
+            if (period === 'MONTHLY') return (e.event_timestamp || '').slice(0, 7) === monthIso;
+            if (period === 'WEEKLY') {
+              const t = new Date(e.event_timestamp || '').getTime();
+              return Number.isFinite(t) && t >= weekAgoMs;
+            }
+            return true;
+          }).length;
+
+          if (countInPeriod >= targetOff.max_billable_checkins) {
+            isCappedByOfferingBudget = true;
+            const periodNames = {
+              TOTAL_OFFERING: 'total da oferta',
+              DAILY: 'diário',
+              WEEKLY: 'semanal',
+              MONTHLY: 'mensal',
+            };
+            offeringBudgetLabel = `${targetOff.max_billable_checkins} check-ins (${periodNames[period]})`;
+          }
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
   // Verifica teto comercial opcional por reserva (ex: proteger grupos grandes se configurado no plano)
   const existingBillableSlotsForBooking = ledger.filter(
     (e) => e.booking_id === reservation.id && e.status !== 'WAIVED' && e.total_fee_brl > 0
@@ -417,7 +466,7 @@ export function accruePartnerFeeFromCheckin(params: {
   let unitFee = 0;
   let grossFee = 0;
 
-  if (isCappedByBookingLimit || isCompletedBookingModelAlreadyCharged) {
+  if (isCappedByOfferingBudget || isCappedByBookingLimit || isCompletedBookingModelAlreadyCharged) {
     unitFee = 0;
     grossFee = 0;
   } else if (plan.billing_model === 'PER_ATTENDED_GUEST') {
@@ -508,6 +557,7 @@ export function accruePartnerFeeFromCheckin(params: {
   const entry: PartnerFeeLedgerEntry = {
     id: generateUUID(),
     booking_id: reservation.id,
+    offering_id: reservation.offering_id,
     visit_proof_id: visitProof.id,
     restaurant_id: reservation.experience_id,
     restaurant_name: reservation.experience_name,
@@ -531,10 +581,12 @@ export function accruePartnerFeeFromCheckin(params: {
     attribution_origin: reservation.attribution_origin || 'catalog',
     fee_source_type: 'ATTENDED_BOOKING',
     attributed_from_reward_voucher_id: params.attributedFromRewardVoucherId,
-    status: isCappedByBookingLimit ? 'WAIVED' : 'ACCRUED',
-    dispute_reason: isCappedByBookingLimit
-      ? `Isento automaticamente pelo teto comercial de ${plan.max_billable_guests_per_booking} participantes faturáveis por reserva.`
-      : undefined,
+    status: isCappedByOfferingBudget || isCappedByBookingLimit ? 'WAIVED' : 'ACCRUED',
+    dispute_reason: isCappedByOfferingBudget
+      ? `Isento automaticamente pelo orçamento da oferta (${offeringBudgetLabel}).`
+      : isCappedByBookingLimit
+        ? `Isento automaticamente pelo teto comercial de ${plan.max_billable_guests_per_booking} participantes faturáveis por reserva.`
+        : undefined,
     event_timestamp: visitProof.presence_verified_at,
     is_demonstrative: visitProof.is_demonstrative,
   };
