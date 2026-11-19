@@ -18,6 +18,8 @@ interface ConciergeWidgetProps {
   onSelectNightlifeEvent?: (event: NightlifeEvent) => void;
   isHome?: boolean;
   hideFloatingButtonOnSmartBar?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface ChatMessage {
@@ -46,8 +48,18 @@ export function ConciergeWidget({
   onSelectNightlifeEvent,
   isHome = false,
   hideFloatingButtonOnSmartBar = false,
+  open: controlledOpen,
+  onOpenChange,
 }: ConciergeWidgetProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = (next: boolean | ((prev: boolean) => boolean)) => {
+    const resolved = typeof next === 'function' ? next(open) : next;
+    if (controlledOpen === undefined) {
+      setInternalOpen(resolved);
+    }
+    onOpenChange?.(resolved);
+  };
   const [isScrolled, setIsScrolled] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -126,7 +138,7 @@ export function ConciergeWidget({
 
   return (
     <>
-      {/* Floating Button (Oculto no topo da Home para evitar duplicidade com a barra de busca) */}
+      {/* Floating Button (Apenas desktop; no mobile a Bora IA fica no menu de rodapé para não sobrepor a SmartBar) */}
       {!hideFloatingButton && (
         <button
           type="button"
@@ -134,7 +146,7 @@ export function ConciergeWidget({
           aria-label="Abrir Bora IA"
           title="Bora IA Concierge"
           onClick={() => setOpen((prev) => !prev)}
-          className={`fixed bottom-[5.5rem] right-3.5 z-40 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] font-bold text-white shadow-lg shadow-[#FF4B2B]/25 transition-all duration-300 hover:scale-105 lg:bottom-6 lg:right-6 ${
+          className={`fixed bottom-[5.5rem] right-3.5 z-40 hidden items-center justify-center rounded-full bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] font-bold text-white shadow-lg shadow-[#FF4B2B]/25 transition-all duration-300 hover:scale-105 lg:bottom-6 lg:right-6 lg:inline-flex ${
             compactCollapsed
               ? 'h-11 w-11 p-0'
               : 'gap-1.5 px-3 py-2 text-[11px] sm:px-3.5 sm:py-2.5 sm:text-xs'
@@ -147,7 +159,7 @@ export function ConciergeWidget({
 
       {/* Bora IA Chat Window */}
       {open && (
-        <div className="fixed bottom-[9.25rem] right-3.5 z-50 flex h-[460px] max-h-[calc(100vh-11rem)] w-[calc(100vw-1.75rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-2xl lg:bottom-20 lg:right-6 lg:h-[480px]">
+        <div className="fixed bottom-[5.5rem] right-3.5 z-50 flex h-[460px] max-h-[calc(100vh-7.5rem)] w-[calc(100vw-1.75rem)] max-w-sm flex-col overflow-hidden rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-2xl lg:bottom-20 lg:right-6 lg:h-[480px]">
           {/* Header */}
           <div className="flex items-center justify-between bg-borario-ocean px-4 py-3 text-white shadow-xs">
             <div className="flex items-center gap-2.5">

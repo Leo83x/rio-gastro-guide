@@ -191,6 +191,8 @@ export function App() {
     }
   }, []);
 
+  const [boraIaOpen, setBoraIaOpen] = useState(false);
+
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('rio_gastro_theme');
@@ -735,6 +737,7 @@ export function App() {
         activeTab={effectiveTab}
         onSelectTab={(tab) => {
           if (route === '/admin') navigate('/app');
+          setBoraIaOpen(false);
           setActiveTab(tab);
         }}
         onNavigateRoute={navigate}
@@ -749,6 +752,8 @@ export function App() {
         canInstallPwa={canInstall}
         onInstallPwa={() => void promptInstall()}
         overlayHero={effectiveTab === 'discover'}
+        isBoraIaOpen={boraIaOpen}
+        onToggleBoraIa={() => setBoraIaOpen((prev) => !prev)}
       />
 
       {effectiveTab === 'admin' &&
@@ -1239,6 +1244,8 @@ export function App() {
           onSelectExperience={setSelectedRestaurant}
           onSelectNightlifeEvent={setSelectedNightlifeEvent}
           isHome={effectiveTab === 'discover'}
+          open={boraIaOpen}
+          onOpenChange={setBoraIaOpen}
           hideFloatingButtonOnSmartBar={
             effectiveTab === 'discover' &&
             !activePassReservation &&

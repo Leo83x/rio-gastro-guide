@@ -37,6 +37,8 @@ interface NavbarProps {
   canInstallPwa?: boolean;
   onInstallPwa?: () => void;
   overlayHero?: boolean;
+  isBoraIaOpen?: boolean;
+  onToggleBoraIa?: () => void;
 }
 
 const MAIN_TABS: Array<{
@@ -68,6 +70,8 @@ export function Navbar({
   canInstallPwa = false,
   onInstallPwa,
   overlayHero = false,
+  isBoraIaOpen = false,
+  onToggleBoraIa,
 }: NavbarProps) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -191,6 +195,27 @@ export function Navbar({
             >
               <Award className="h-3.5 w-3.5 text-[#F7931E]" />
               <span>{pointsBalance.toLocaleString('pt-BR')} pts</span>
+            </button>
+
+            {/* Profile Icon (Top Bar - Mobile/Tablet) */}
+            <button
+              type="button"
+              aria-label="Meu Perfil"
+              title="Meu Perfil"
+              onClick={() => {
+                setShowNotifs(false);
+                setShowMoreMenu(false);
+                onSelectTab('profile');
+              }}
+              className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors lg:hidden ${
+                activeTab === 'profile'
+                  ? 'border-[#FF6B35] bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-sm'
+                  : isOverHero
+                    ? overHeroControlClass
+                    : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[#FF6B35]/50 hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <User className="h-4 w-4" />
             </button>
 
             {/* Notifications Bell */}
@@ -348,9 +373,9 @@ export function Navbar({
             aria-label="Navegação principal mobile"
             className="pointer-events-auto mx-auto flex max-w-md items-center justify-between gap-1 rounded-full border border-white/40 bg-white/88 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-[#0D1E30]/90"
           >
-            {MAIN_TABS.map((tab) => {
+            {MAIN_TABS.filter((tab) => tab.id !== 'profile').map((tab) => {
               const Icon = tab.icon;
-              const active = activeTab === tab.id;
+              const active = activeTab === tab.id && !isBoraIaOpen;
               const isCenter = tab.isCenterHighlight;
               const badge = tab.id === 'wishes' ? confiaBadgeCount : 0;
               return (
@@ -376,6 +401,23 @@ export function Navbar({
                 </button>
               );
             })}
+            <button
+              type="button"
+              aria-label="Bora IA"
+              onClick={() => {
+                setShowNotifs(false);
+                setShowMoreMenu(false);
+                onToggleBoraIa?.();
+              }}
+              className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[10px] font-bold transition-all ${
+                isBoraIaOpen
+                  ? 'bg-gradient-to-r from-[#FF4B2B] via-[#FF6B35] to-[#F7931E] text-white shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <Sparkles className={`h-4 w-4 ${isBoraIaOpen ? 'text-white' : 'text-[#FF6B35]'}`} />
+              <span>Bora IA</span>
+            </button>
           </nav>
         </div>
       )}
