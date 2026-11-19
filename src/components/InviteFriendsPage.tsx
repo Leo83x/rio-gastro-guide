@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { isUserAuthenticated } from '../services/authService';
 import { fetchActiveReferralProgramRule } from '../services/pointRulesStore';
 import {
   fetchReferralSummaryFromServer,
@@ -27,6 +28,7 @@ import type {
 
 interface InviteFriendsPageProps {
   onBack: () => void;
+  onRequireAuth?: (reason: string, action: () => void) => void;
 }
 
 const STAGE_META: Record<
@@ -78,7 +80,7 @@ function resolveStage(attr: ReferralAttribution): ReferralFunnelStage {
   return 'REWARD_PENDING';
 }
 
-export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
+export function InviteFriendsPage({ onBack, onRequireAuth }: InviteFriendsPageProps) {
   const [loading, setLoading] = useState(true);
   const [serverSynced, setServerSynced] = useState(false);
   const [rule, setRule] = useState<ReferralProgramRule | null>(null);
@@ -87,6 +89,7 @@ export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
   );
   const [copiedLink, setCopiedLink] = useState(false);
 
+  const authenticated = isUserAuthenticated();
   const referralCode = getMyReferralCode();
   const referralLink = getMyReferralLink();
   const supportsNativeShare =
@@ -112,7 +115,7 @@ export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authenticated]);
 
   const stats = useMemo(() => {
     let sent = 0;
@@ -160,7 +163,7 @@ export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
     return base;
   };
 
-  const handleCopy = async () => {
+  const executeCopy = async () => {
     try {
       await navigator.clipboard.writeText(referralLink);
       setCopiedLink(true);
@@ -170,9 +173,20 @@ export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
     }
   };
 
-  const handleNativeShare = async () => {
+  const handleCopy = async () => {
+    if (!authenticated && onRequireAuth) {
+      onRequireAuth(
+        'Entre com seu e-mail para vincular seu link individual de indicação à sua conta e receber seus pontos.',
+        () => void executeCopy()
+      );
+      return;
+    }
+    await executeCopy();
+  };
+
+  const executeNativeShare = async () => {
     if (!supportsNativeShare) {
-      await handleCopy();
+      await executeCopy();
       return;
     }
     try {
@@ -186,12 +200,34 @@ export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
     }
   };
 
-  const handleWhatsAppShare = () => {
+  const handleNativeShare = async () => {
+    if (!authenticated && onRequireAuth) {
+      onRequireAuth(
+        'Entre com seu e-mail para gerar seu link individual e contabilizar suas indicações.',
+        () => void executeNativeShare()
+      );
+      return;
+    }
+    await executeNativeShare();
+  };
+
+  const executeWhatsAppShare = () => {
     window.open(
       `https://wa.me/?text=${encodeURIComponent(buildInviteMessage())}`,
       '_blank',
       'noopener,noreferrer'
     );
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!authenticated && onRequireAuth) {
+      onRequireAuth(
+        'Entre com seu e-mail para enviar seu convite pessoal e receber os Rio Points quando seu amigo fizer check-in.',
+        executeWhatsAppShare
+      );
+      return;
+    }
+    executeWhatsAppShare();
   };
 
   return (
@@ -206,6 +242,26 @@ export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
           Voltar para o BoraRio
         </button>
 
+        {!authenticated && onRequireAuth && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-xs">
+            <p className="font-semibold text-amber-800 dark:text-amber-200">
+              Entre com seu e-mail para vincular seu link pessoal de indicação e receber Rio Points reais.
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                onRequireAuth(
+                  'Entre com seu e-mail para ativar seu link de indicação e acompanhar seus pontos.',
+                  () => undefined
+                )
+              }
+              className="shrink-0 rounded-xl bg-gradient-to-r from-[#FF4B2B] to-[#FF6B35] px-4 py-2 text-xs font-extrabold text-white shadow-sm"
+            >
+              Entrar / Cadastrar agora
+            </button>
+          </div>
+        )}
+
         {/* Hero / Link Pessoal */}
         <section className="rounded-3xl border border-sky-400/25 bg-gradient-to-br from-[#0E2235] via-[#123B56] to-[#0077B6] p-6 sm:p-8 text-white shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -215,7 +271,7 @@ export function InviteFriendsPage({ onBack }: InviteFriendsPageProps) {
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-xs font-semibold text-white/90">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-              {serverSynced ? 'Sincronizado com servidor' : 'Modo visitante / cache local'}
+              {serverSynced ? 'Sincronizado com servidor' : 'Identificação pendente'}
             </span>
           </div>
 

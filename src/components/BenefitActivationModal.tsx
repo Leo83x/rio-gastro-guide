@@ -25,6 +25,7 @@ interface BenefitActivationModalProps {
   restaurant?: Restaurant | null;
   onClose: () => void;
   onActivated: (reservation: ReservationRequest) => void;
+  onRequireAuth?: (reason: string, action: () => void) => void;
 }
 
 export function BenefitActivationModal({
@@ -32,6 +33,7 @@ export function BenefitActivationModal({
   restaurant,
   onClose,
   onActivated,
+  onRequireAuth,
 }: BenefitActivationModalProps) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function BenefitActivationModal({
 
   const scheduleLabel = formatOfferingSchedule(offering.service_date, offering.time_slot_label);
 
-  const handleActivate = () => {
+  const executeActivate = () => {
     setLoading(true);
     setErrorMsg(null);
 
@@ -82,6 +84,17 @@ export function BenefitActivationModal({
       setErrorMsg('Não foi possível ativar o benefício no momento. Tente novamente.');
       setLoading(false);
     }
+  };
+
+  const handleActivate = () => {
+    if (onRequireAuth) {
+      onRequireAuth(
+        `Entre com seu e-mail para emitir seu passe nominal em ${venueName} e garantir seus Rio Points.`,
+        executeActivate
+      );
+      return;
+    }
+    executeActivate();
   };
 
   return (

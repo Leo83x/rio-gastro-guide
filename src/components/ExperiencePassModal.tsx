@@ -43,6 +43,7 @@ interface ExperiencePassModalProps {
   onClose: () => void;
   onCheckinSuccess?: (updatedRes: ReservationRequest) => void;
   onReservationsUpdated?: (all: ReservationRequest[]) => void;
+  onRequireAuth?: (reason: string, action: () => void) => void;
 }
 
 export function ExperiencePassModal({
@@ -51,6 +52,7 @@ export function ExperiencePassModal({
   onClose,
   onCheckinSuccess,
   onReservationsUpdated,
+  onRequireAuth,
 }: ExperiencePassModalProps) {
   const [currentRes, setCurrentRes] = useState<ReservationRequest>(reservation);
   const [showQrScanner, setShowQrScanner] = useState(false);
@@ -99,7 +101,7 @@ export function ExperiencePassModal({
   const uberUrl = buildUberUrl(rideCoords);
   const googleMapsUrl = buildGoogleMapsUrl(rideCoords.latitude, rideCoords.longitude);
 
-  const handleValidateCheckin = (codeOrPinToUse?: string) => {
+  const executeValidateCheckin = (codeOrPinToUse?: string) => {
     setCheckinLoading(true);
     setCheckinFeedback(null);
 
@@ -150,6 +152,17 @@ export function ExperiencePassModal({
     } finally {
       setCheckinLoading(false);
     }
+  };
+
+  const handleValidateCheckin = (codeOrPinToUse?: string) => {
+    if (onRequireAuth) {
+      onRequireAuth(
+        `Entre com seu e-mail para validar sua presença em ${venueName} e creditar seus Rio Points.`,
+        () => executeValidateCheckin(codeOrPinToUse)
+      );
+      return;
+    }
+    executeValidateCheckin(codeOrPinToUse);
   };
 
   const handleValidateCompanionSlot = (slotNumber: number) => {

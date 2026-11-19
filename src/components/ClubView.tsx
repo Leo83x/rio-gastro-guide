@@ -54,6 +54,7 @@ interface ClubViewProps {
   initialSection?: 'offerings' | 'rewards';
   initialModality?: CommercialModality | 'ALL';
   deepLinkNonce?: number;
+  onRequireAuth?: (reason: string, action: () => void) => void;
 }
 
 const MODALITY_META: Record<
@@ -94,6 +95,7 @@ export function ClubView({
   initialSection = 'offerings',
   initialModality = 'ALL',
   deepLinkNonce = 0,
+  onRequireAuth,
 }: ClubViewProps) {
   const [clubSection, setClubSection] = useState<'offerings' | 'rewards'>(initialSection);
   const [offerings, setOfferings] = useState<PartnerOffering[]>(() => getPartnerOfferings());
@@ -213,17 +215,28 @@ export function ClubView({
 
 
   const handleRedeemMarketplaceReward = (reward: PartnerReward) => {
-    const res = redeemPartnerReward(reward.id);
-    setRewardFeedback({
-      ok: res.ok,
-      message: res.message,
-      voucher: res.voucher,
-    });
-    if (res.ok) {
-      setRewards(getPartnerRewards());
-      setSavingsTick((n) => n + 1);
-      onPointsChanged?.();
+    const executeRedeem = () => {
+      const res = redeemPartnerReward(reward.id);
+      setRewardFeedback({
+        ok: res.ok,
+        message: res.message,
+        voucher: res.voucher,
+      });
+      if (res.ok) {
+        setRewards(getPartnerRewards());
+        setSavingsTick((n) => n + 1);
+        onPointsChanged?.();
+      }
+    };
+
+    if (onRequireAuth) {
+      onRequireAuth(
+        `Entre com seu e-mail para resgatar "${reward.title}" e emitir seu voucher nominal.`,
+        executeRedeem
+      );
+      return;
     }
+    executeRedeem();
   };
 
   const handleActivateVoucher = (offer: ClubOffer) => {
@@ -1185,6 +1198,7 @@ export function ClubView({
           restaurant={
             experiences.find((e) => e.id === selectedOfferingForActivation.restaurant_id) || null
           }
+          onRequireAuth={onRequireAuth}
           onClose={() => setSelectedOfferingForActivation(null)}
           onActivated={(newRes) => {
             setSelectedOfferingForActivation(null);

@@ -78,6 +78,7 @@ interface BoraSmartBarProps {
   onOpenRewards: () => void;
   onOpenInvitePage?: () => void;
   onDataChanged?: () => void;
+  onRequireAuth?: (reason: string, action: () => void) => void;
 }
 
 export function BoraSmartBar({
@@ -89,6 +90,7 @@ export function BoraSmartBar({
   onOpenRewards,
   onOpenInvitePage,
   onDataChanged,
+  onRequireAuth,
 }: BoraSmartBarProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -241,11 +243,22 @@ export function BoraSmartBar({
   };
 
   const handleRedeemReward = (reward: PartnerReward) => {
-    const res = redeemPartnerReward(reward.id);
-    setRedeemFeedback({ ok: res.ok, msg: res.message });
-    if (res.ok) {
-      onDataChanged?.();
+    const executeRedeem = () => {
+      const res = redeemPartnerReward(reward.id);
+      setRedeemFeedback({ ok: res.ok, msg: res.message });
+      if (res.ok) {
+        onDataChanged?.();
+      }
+    };
+
+    if (onRequireAuth) {
+      onRequireAuth(
+        `Entre com seu e-mail para resgatar "${reward.title}" e emitir seu voucher nominal.`,
+        executeRedeem
+      );
+      return;
     }
+    executeRedeem();
   };
 
   const renderCapsuleLabel = () => {

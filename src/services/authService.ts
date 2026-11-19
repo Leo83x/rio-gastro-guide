@@ -152,7 +152,15 @@ export function subscribeToAuthChanges(
   return () => data.subscription.unsubscribe();
 }
 
-export async function requestMagicLinkLogin(email: string): Promise<{ ok: boolean; message: string }> {
+export function isUserAuthenticated(identity?: UserProfileIdentity): boolean {
+  const target = identity ?? getUserProfileIdentity();
+  return target.storage_origin === 'supabase_auth' && isValidUuid(target.id);
+}
+
+export async function requestMagicLinkLogin(
+  email: string,
+  metadata?: { display_name?: string; home_neighborhood?: string }
+): Promise<{ ok: boolean; message: string }> {
   if (!supabase) {
     return {
       ok: false,
@@ -164,22 +172,84 @@ export async function requestMagicLinkLogin(email: string): Promise<{ ok: boolea
   if (!cleanEmail || !cleanEmail.includes('@')) {
     return { ok: false, message: 'Informe um e-mail válido.' };
   }
+  const cleanName = metadata?.display_name?.trim();
+  const cleanNeighborhood = metadata?.home_neighborhood?.trim();
   try {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
-      options: { emailRedirectTo: window.location.origin + '/app' },
+      options: {
+        emailRedirectTo: window.location.origin + window.location.pathname + window.location.search,
+        shouldCreateUser: true,
+        data: {
+          ...(cleanName ? { full_name: cleanName } : {}),
+          ...(cleanNeighborhood ? { home_neighborhood: cleanNeighborhood } : {}),
+        },
+      },
     });
     if (error) {
       return { ok: false, message: error.message };
     }
     return {
       ok: true,
-      message: `Link de acesso enviado para ${cleanEmail}. Confira sua caixa de entrada.`,
+      message: `Enviamos um código de 6 dígitos e um link de acesso para ${cleanEmail}.`,
     };
   } catch (err) {
     return {
       ok: false,
       message: err instanceof Error ? err.message : 'Falha ao iniciar autenticação.',
+    };
+  }
+}
+
+export async function verifyEmailOtpLogin(
+  email: string,
+  token: string,
+  profilePatch?: { display_name?: string; home_neighborhood?: string }
+): Promise<{ ok: boolean; message: string; identity?: UserProfileIdentity }> {
+  if (!supabase) {
+    return { ok: false, message: 'Autenticação indisponível neste ambiente.' };
+  }
+  const cleanEmail = email.trim();
+  const cleanToken = token.replace(/\s+/g, '').trim();
+  if (!cleanEmail || !cleanToken || cleanToken.length < 6) {
+    return { ok: false, message: 'Informe o código de 6 dígitos enviado para seu e-mail.' };
+  }
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: cleanEmail,
+      token: cleanToken,
+      type: 'email',
+    });
+    if (error || !data.user) {
+      return { ok: false, message: error?.message || 'Código inválido ou expirado.' };
+    }
+
+    if (profilePatch?.display_name || profilePatch?.home_neighborhood) {
+      const current = getUserProfileIdentity();
+      saveUserProfileIdentity({
+        display_name: profilePatch.display_name?.trim() || current.display_name,
+        home_neighborhood: profilePatch.home_neighborhood?.trim() || current.home_neighborhood,
+      });
+    }
+
+    const synced = await syncSupabaseSessionIdentity();
+    if (synced && (profilePatch?.display_name?.trim() || profilePatch?.home_neighborhood?.trim())) {
+      const updated = saveUserProfileIdentity({
+        display_name: profilePatch.display_name?.trim() || synced.display_name,
+        home_neighborhood: profilePatch.home_neighborhood?.trim() || synced.home_neighborhood,
+      });
+      return { ok: true, message: 'Conta confirmada com sucesso!', identity: updated };
+    }
+
+    return {
+      ok: true,
+      message: 'Conta confirmada com sucesso!',
+      identity: synced ?? getUserProfileIdentity(),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : 'Falha ao validar código.',
     };
   }
 }

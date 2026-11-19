@@ -1,7 +1,8 @@
 import { Bookmark, CheckCircle2, SlidersHorizontal, UtensilsCrossed, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AdminPanel, type AdminTab } from './components/AdminPanel';
 import { AdminGatekeeper } from './components/admin/AdminGatekeeper';
+import { AuthGateModal } from './components/AuthGateModal';
 import { BoraSmartBar } from './components/BoraSmartBar';
 import { BrandLogo } from './components/BrandLogo';
 import { ClubView } from './components/ClubView';
@@ -31,7 +32,12 @@ import { LandingPage } from './pages/LandingPage';
 import { PartnerDashboard } from './pages/PartnerDashboard';
 import { PartnersLandingPage } from './pages/PartnersLandingPage';
 import { PitchDeckPage } from './pages/PitchDeckPage';
-import { getUserProfileIdentity, subscribeToAuthChanges, syncSupabaseSessionIdentity } from './services/authService';
+import {
+  getUserProfileIdentity,
+  isUserAuthenticated,
+  subscribeToAuthChanges,
+  syncSupabaseSessionIdentity,
+} from './services/authService';
 import {
   getTrustConnections,
   getVisibleConfiaRecommendations,
@@ -192,6 +198,20 @@ export function App() {
   }, []);
 
   const [boraIaOpen, setBoraIaOpen] = useState(false);
+  const [authGate, setAuthGate] = useState<{ open: boolean; reason: string }>({
+    open: false,
+    reason: '',
+  });
+  const pendingAuthActionRef = useRef<(() => void) | null>(null);
+
+  const requireAuth = useCallback((reason: string, action: () => void) => {
+    if (isUserAuthenticated()) {
+      action();
+      return;
+    }
+    pendingAuthActionRef.current = action;
+    setAuthGate({ open: true, reason });
+  }, []);
 
   const [isDark, setIsDark] = useState<boolean>(() => {
     try {
@@ -683,7 +703,27 @@ export function App() {
 
   // 5. Página Dedicada Convide e Ganhe (/convide)
   if (route === '/convide') {
-    return <InviteFriendsPage onBack={() => navigate('/app')} />;
+    return (
+      <>
+        <InviteFriendsPage onBack={() => navigate('/app')} onRequireAuth={requireAuth} />
+        <AuthGateModal
+          open={authGate.open}
+          reason={authGate.reason}
+          onClose={() => {
+            pendingAuthActionRef.current = null;
+            setAuthGate({ open: false, reason: '' });
+          }}
+          onAuthenticated={() => {
+            setAuthGate({ open: false, reason: '' });
+            setPointsBalance(getPointsBalance());
+            setNotifications(getNotifications());
+            const pending = pendingAuthActionRef.current;
+            pendingAuthActionRef.current = null;
+            pending?.();
+          }}
+        />
+      </>
+    );
   }
 
   const effectiveTab: AppTab = route === '/admin' ? 'admin' : activeTab;
@@ -1145,6 +1185,7 @@ export function App() {
           initialModality={clubDeepLink.modality}
           deepLinkNonce={clubDeepLink.nonce}
           onSelectExperience={setSelectedRestaurant}
+          onRequireAuth={requireAuth}
           onReservationCreated={(req) => {
             setReservations((prev) => [req, ...prev]);
             setNotifications(getNotifications());
@@ -1319,6 +1360,7 @@ export function App() {
           onShareToConfia={handleShareVenueToConfia}
           onClose={() => setSelectedRestaurant(null)}
           onRestaurantClaimed={handleRestaurantClaimed}
+          onRequireAuth={requireAuth}
           onReservationCreated={(req) => {
             setReservations((prev) => [req, ...prev]);
             setNotifications(getNotifications());
@@ -1344,6 +1386,7 @@ export function App() {
           }}
           onOpenRewards={() => setActiveTab('club')}
           onOpenInvitePage={() => navigate('/convide')}
+          onRequireAuth={requireAuth}
           onDataChanged={() => {
             setReservations(getReservations());
             setPointsBalance(getPointsBalance());
@@ -1358,6 +1401,7 @@ export function App() {
           restaurant={
             restaurants.find((r) => r.id === activeOfferingForActivation.restaurant_id) || null
           }
+          onRequireAuth={requireAuth}
           onClose={() => setActiveOfferingForActivation(null)}
           onActivated={(newRes) => {
             setActiveOfferingForActivation(null);
@@ -1375,6 +1419,7 @@ export function App() {
         <ExperiencePassModal
           reservation={activePassReservation}
           restaurant={activePassRestaurant}
+          onRequireAuth={requireAuth}
           onClose={() => setActivePassReservation(null)}
           onCheckinSuccess={(updatedRes) => {
             setReservations((prev) =>
@@ -1391,6 +1436,24 @@ export function App() {
           }}
         />
       )}
+
+      <AuthGateModal
+        open={authGate.open}
+        reason={authGate.reason}
+        onClose={() => {
+          pendingAuthActionRef.current = null;
+          setAuthGate({ open: false, reason: '' });
+        }}
+        onAuthenticated={() => {
+          setAuthGate({ open: false, reason: '' });
+          setReservations(getReservations());
+          setPointsBalance(getPointsBalance());
+          setNotifications(getNotifications());
+          const pending = pendingAuthActionRef.current;
+          pendingAuthActionRef.current = null;
+          pending?.();
+        }}
+      />
 
       <PwaInstallModal
         isOpen={showPwaInstallModal}

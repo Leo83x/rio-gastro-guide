@@ -42,6 +42,7 @@ interface RestaurantDetailModalProps {
   onClose: () => void;
   onRestaurantClaimed: (restaurantId: string) => void;
   onReservationCreated?: (req: ReservationRequest) => void;
+  onRequireAuth?: (reason: string, action: () => void) => void;
 }
 
 export function RestaurantDetailModal({
@@ -52,6 +53,7 @@ export function RestaurantDetailModal({
   onClose,
   onRestaurantClaimed,
   onReservationCreated,
+  onRequireAuth,
 }: RestaurantDetailModalProps) {
   const validPhotos = Array.from(
     new Set(
@@ -660,6 +662,7 @@ export function RestaurantDetailModal({
         <BenefitActivationModal
           offering={selectedOfferingForActivation}
           restaurant={restaurant}
+          onRequireAuth={onRequireAuth}
           onClose={() => setSelectedOfferingForActivation(null)}
           onActivated={(newRes) => {
             setSelectedOfferingForActivation(null);
