@@ -366,40 +366,52 @@ export function PartnersLandingPage({
             </h2>
           </div>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-3">
-            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-8">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-7">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#397B68]/15 text-[#397B68]">
                 <Wallet className="h-6 w-6" />
               </div>
-              <h3 className="mt-5 font-sans text-xl font-bold text-[var(--text-primary)]">
-                Pagamento direto no seu caixa
+              <h3 className="mt-5 font-sans text-lg font-bold text-[var(--text-primary)]">
+                Pagamento direto no caixa
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-                O BoraRio não intermedeia o pagamento da conta. O cliente consome e paga normalmente no seu estabelecimento pela sua maquininha.
+                O BoraRio não intermedeia a conta. O cliente consome e paga normalmente no seu estabelecimento pela sua maquininha.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-8">
+            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-7">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FF6B35]/15 text-[#FF6B35]">
                 <QrCode className="h-6 w-6" />
               </div>
-              <h3 className="mt-5 font-sans text-xl font-bold text-[var(--text-primary)]">
-                Check-in antifraude
+              <h3 className="mt-5 font-sans text-lg font-bold text-[var(--text-primary)]">
+                Check-in antifraude no servidor
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-                Validação simples por QR Code temporário ou PIN de 4 dígitos no balcão. Sem cupons impressos nem códigos reaproveitáveis.
+                Validação server-side por QR Code dinâmico ou PIN de 4 dígitos no balcão. Sem cupons impressos nem códigos reaproveitáveis.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-8">
+            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-7">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0077B6]/15 text-[#0077B6]">
-                <ShieldCheck className="h-6 w-6" />
+                <Gift className="h-6 w-6" />
               </div>
-              <h3 className="mt-5 font-sans text-xl font-bold text-[var(--text-primary)]">
-                Fidelidade sem comissão
+              <h3 className="mt-5 font-sans text-lg font-bold text-[var(--text-primary)]">
+                Convites VIP &amp; Fidelidade 0%
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-                Clientes acumulam Rio Points na rede BoraRio e trocam por benefícios na sua casa com comissão zero sobre os resgates.
+                Autorize cotas de Convites VIP pós-check-in no painel e atraia resgates de Rio Points com comissão zero para sua casa.
+              </p>
+            </div>
+
+            <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-canvas)] p-7">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-500">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h3 className="mt-5 font-sans text-lg font-bold text-[var(--text-primary)]">
+                Integridade &amp; Contestação
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+                Proteção contra abuso de reservas, no-shows recorrentes e contestação com preservação de evidências direto no Painel B2B.
               </p>
             </div>
           </div>

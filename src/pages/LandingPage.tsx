@@ -723,28 +723,36 @@ export function LandingPage({
           </p>
         </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-3">
-          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-7 shadow-sm">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-sm">
             <Crown className="h-8 w-8 text-[#FF6B35]" />
-            <h3 className="mt-4 font-sans text-xl font-bold">Reservas &amp; Vantagens</h3>
+            <h3 className="mt-4 font-sans text-lg font-bold">Reservas &amp; Vantagens</h3>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
               Faça reservas diretas, garanta cortesias exclusivas (como welcome drinks ou sobremesas) e participe de demandas especiais.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-7 shadow-sm">
+          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-sm">
             <QrCode className="h-8 w-8 text-[#0077B6]" />
-            <h3 className="mt-4 font-sans text-xl font-bold">Check-in Dinâmico Antifraude</h3>
+            <h3 className="mt-4 font-sans text-lg font-bold">Check-in &amp; Integridade</h3>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Ao chegar ao local, escaneie o QR Code dinâmico com expiração temporária para validar sua visita real e liberar pontos com segurança.
+              Validação antifraude por QR dinâmico ou PIN no servidor, com canal de ocorrências e contestação para proteger você e seus pontos.
             </p>
           </div>
 
-          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-7 shadow-sm">
-            <Award className="h-8 w-8 text-[#4CA188]" />
-            <h3 className="mt-4 font-sans text-xl font-bold">Rio Points no Passaporte</h3>
+          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-sm">
+            <Sparkles className="h-8 w-8 text-[#F7931E]" />
+            <h3 className="mt-4 font-sans text-lg font-bold">BoraSmartBar &amp; Bora IA</h3>
             <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-              Colecione selos digitais dos bairros do Rio, acumule Rio Points e troque por recompensas e experiências autênticas.
+              Cápsula inteligente que acompanha reservas ativas, convites e recompensas em tempo real, com a Bora IA acessível direto no rodapé.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-6 shadow-sm">
+            <Award className="h-8 w-8 text-[#4CA188]" />
+            <h3 className="mt-4 font-sans text-lg font-bold">Rio Points &amp; Convites VIP</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
+              Acumule pontos após visitas reais, convide amigos e libere Convites VIP autorizados pelo estabelecimento após o check-in.
             </p>
           </div>
         </div>

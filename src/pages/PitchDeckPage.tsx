@@ -1001,22 +1001,22 @@ function Slide4ProductJourney({ isDark }: { isDark: boolean }) {
     },
     {
       num: '2',
-      title: 'Convida Amigos (Viralização)',
-      desc: 'Compartilha a missão no WhatsApp para destravar as Faixas 2 e 3 ou envia seu Convite VIP (+300 RP).',
+      title: 'Convida Amigos & Convite VIP',
+      desc: 'Compartilha a missão ou indica amigos pelo WhatsApp; após o check-in, libera Convites VIP autorizados pelo estabelecimento.',
       icon: Target,
       color: 'text-[#FF6B35] bg-[#FF6B35]/15 border-[#FF6B35]/30',
     },
     {
       num: '3',
-      title: 'Valida por Participante na Mesa',
-      desc: 'Cada participante elegível valida presença via QR Code dinâmico (1 validação por pessoa por visita, zero duplicidade).',
+      title: 'Valida no Servidor por Participante',
+      desc: 'Cada participante elegível valida presença via QR dinâmico ou PIN no servidor (1 validação única por pessoa por visita).',
       icon: QrCode,
       color: 'text-[#0077B6] bg-[#0077B6]/15 border-[#0077B6]/30',
     },
     {
       num: '4',
-      title: 'Bônus Anfitrião de Mesa (+100 RP)',
-      desc: 'O titular da reserva ganha +100 RP extras por cada amigo da mesa que também valida seu próprio check-in (até +300 RP).',
+      title: 'BoraSmartBar & Rio Points Reais',
+      desc: 'A cápsula inteligente acompanha reservas, convites e progresso de recompensas; pontos só liberam após check-in válido.',
       icon: Award,
       color: 'text-amber-500 bg-amber-500/15 border-amber-500/30',
     },
@@ -1119,18 +1119,29 @@ function Slide4ProductJourney({ isDark }: { isDark: boolean }) {
             <div className="mt-3 rounded-2xl border border-[#0077B6]/40 bg-[#0077B6]/15 p-3 text-center">
               <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black text-[#0077B6]">
                 <CheckCircle2 className="h-4 w-4 text-[#0077B6]" />
-                <span>3 Check-ins + Bônus Anfitrião!</span>
+                <span>Check-in Validado no Servidor!</span>
               </div>
               <p className="mt-1 text-xs text-slate-500 font-medium">
-                +200 RP amigos na mesa · Acompanhante s/ app: R$ 0 cobrado.
+                Convite VIP liberado · Acompanhante s/ app: R$ 0 cobrado.
               </p>
             </div>
 
+            {/* Mocked BoraSmartBar */}
+            <div className="mt-3 rounded-full border border-white/15 bg-stone-950/90 px-3 py-2 text-[11px] font-semibold text-white shadow-lg flex items-center justify-between">
+              <span className="flex items-center gap-1.5 truncate">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+                <span>Convite VIP disponível · Gero</span>
+              </span>
+              <span className="rounded-full bg-[#FF6B35] px-2 py-0.5 text-[10px] font-bold">Abrir</span>
+            </div>
+
             {/* Bottom Nav pill */}
-            <div className="mt-4 flex justify-around border-t pt-2.5 text-xs font-bold text-slate-400">
-              <span className="text-[#0077B6]">Explorar</span>
-              <span>Missões</span>
-              <span>Carteira</span>
+            <div className="mt-3 flex justify-around border-t pt-2.5 text-[10px] font-bold text-slate-400">
+              <span className="text-[#0077B6]">Descobrir</span>
+              <span>Roteiros</span>
+              <span>Bora Club</span>
+              <span>Desejos</span>
+              <span className="text-[#FF6B35]">Bora IA</span>
             </div>
           </div>
         </div>
@@ -1144,7 +1155,7 @@ function Slide5Differentiators({ isDark }: { isDark: boolean }) {
   const items = [
     {
       title: 'Cobrança por Participante Elegível Validado',
-      desc: 'Separamos Reserva, Participantes e Visita Faturável. Só gera cobrança quem aderiu pelo BoraRio e validou presença física por QR Code (1x por visita).',
+      desc: 'Separamos Reserva, Presença Física e Visita Faturável. Só gera cobrança quem aderiu pelo BoraRio e validou presença no servidor (1x por visita).',
       icon: ShieldCheck,
       color: 'text-[#0077B6]',
     },
@@ -1155,20 +1166,20 @@ function Slide5Differentiators({ isDark }: { isDark: boolean }) {
       color: 'text-[#FF6B35]',
     },
     {
-      title: 'Viralização de Mesa Autofinanciada (+100 RP)',
-      desc: 'O anfitrião ganha +100 RP por amigo que escaneia o QR Code na mesa. Cada bônus (custo ~R$ 1) é financiado pela visita faturável gerada pelo próprio amigo (R$ 5 a R$ 10).',
+      title: 'Convites VIP & Regras Configuráveis',
+      desc: 'Parceiros autorizam cotas de Convites VIP pós-check-in e o Admin calibra regras de indicação sem valores engessados. Pontos só liberam após visita real.',
       icon: Users,
       color: 'text-emerald-600 dark:text-emerald-400',
     },
     {
-      title: 'Indicação Assíncrona (+300 RP no 1º Check-in)',
-      desc: 'Usuários ganham +300 RP ao indicar amigos, mesmo que consumam ofertas diferentes em outros dias. O prêmio só libera após a 1ª visita real validada (fraude zero).',
+      title: 'Integridade Operacional & Ledger Auditável',
+      desc: 'QR/PIN validados no servidor com idempotência integral e módulo de ocorrências/contestação que protege consumidor, parceiro e plataforma.',
       icon: RotateCcw,
       color: 'text-[#0077B6]',
     },
     {
-      title: 'Painel Limpo & Entrada em 3 Etapas',
-      desc: 'Sem fricção comercial: o estabelecimento entra apenas com o perfil (próprio ou assistido) e sua primeira oferta, acompanhando resultados em um painel intuitivo.',
+      title: 'BoraSmartBar, Bora IA & Entrada em 3 Etapas',
+      desc: 'Cápsula contextual + Bora IA no rodapé para o consumidor, e entrada B2B sem fricção: 1 perfil (próprio ou assistido) + 1 oferta para começar.',
       icon: Sparkles,
       color: 'text-amber-600 dark:text-amber-400',
     },
