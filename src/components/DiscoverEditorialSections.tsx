@@ -341,9 +341,10 @@ export function DiscoverEditorialSections({
               const progressCurrent = off.reserved_count;
               const progressPct = Math.min(100, Math.round((progressCurrent / progressTotal) * 100));
               const savings = off.estimated_savings_brl;
-              const timingLabel =
+              const timingLabel = (
                 off.condition_badge ||
-                (off.time_slot_label ? `⏰ Hoje às ${off.time_slot_label}` : '⏰ Hoje');
+                (off.time_slot_label ? `Hoje às ${off.time_slot_label}` : 'Hoje')
+              ).replace(/^⏰\s*/, '');
 
               return (
                 <div

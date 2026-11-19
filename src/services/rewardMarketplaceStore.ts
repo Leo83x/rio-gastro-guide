@@ -66,6 +66,37 @@ function generateVoucherCode(): string {
 function buildStarterRewards(): PartnerReward[] {
   const nowIso = new Date().toISOString();
   return [
+    // 0. RECOMPENSA DE ENTRADA (200 RP)
+    {
+      id: 'rew-pilot-cafe-boas-vindas',
+      restaurant_id: '22222222-2222-4222-8222-000000000005',
+      restaurant_name: 'Café do Forte · Copacabana',
+      neighborhood: 'Copacabana',
+      segment_category: 'Passeios & Turismo',
+      reward_type: 'BEBIDA_NAO_ALCOOLICA',
+      title: 'Café Expresso ou Água de Coco de Boas-Vindas',
+      description:
+        'Sua primeira recompensa no BoraRio: fácil de alcançar já nos primeiros check-ins para curtir a orla de Copacabana.',
+      eligible_item: '1 Café Expresso ou 1 Água de Coco Gelada',
+      points_cost: 200,
+      reference_price_brl: 6.0,
+      estimated_cost_brl: 2.0,
+      min_consumption_brl: 0,
+      quantity_total: 40,
+      quantity_available: 40,
+      max_per_user: 2,
+      valid_days_hours: 'Terça a Domingo · 10h às 17h',
+      rules_summary: 'Apresente o voucher BR-REW no balcão do Café do Forte.',
+      restrictions: 'Válido enquanto durar o estoque promocional.',
+      voucher_validity_days: 30,
+      status: 'AVAILABLE',
+      commission_rate: 0,
+      redemption_fee_brl: 0,
+      is_demonstrative: true,
+      created_at: nowIso,
+      updated_at: nowIso,
+    },
+
     // 1. GASTRONOMIA
     {
       id: 'rew-pilot-braz-sobremesa',
@@ -459,10 +490,16 @@ function buildStarterRewards(): PartnerReward[] {
 
 function loadAndNormalizeRewards(): PartnerReward[] {
   let list = readJson<PartnerReward[]>(KEYS.REWARDS, []);
-  // Migração transparente caso o catálogo esteja vazio ou usando escala antiga (< 500 RP)
-  if (list.length === 0 || list.some((r) => r.is_demonstrative && r.points_cost < 500)) {
-    list = buildStarterRewards();
+  const starters = buildStarterRewards();
+  if (list.length === 0) {
+    list = starters;
     writeJson(KEYS.REWARDS, list);
+  } else {
+    const entryStarter = starters[0];
+    if (entryStarter && !list.some((r) => r.id === entryStarter.id)) {
+      list = [entryStarter, ...list];
+      writeJson(KEYS.REWARDS, list);
+    }
   }
   const now = Date.now();
   let changed = false;

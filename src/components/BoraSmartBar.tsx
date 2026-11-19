@@ -21,6 +21,7 @@ import {
   getMyReferralLink,
   getReferralAttributions,
 } from '../services/referralStore';
+import { fetchActiveReferralProgramRule } from '../services/pointRulesStore';
 import { getPartnerRewards, redeemPartnerReward } from '../services/rewardMarketplaceStore';
 import {
   computeSmartBarState,
@@ -28,9 +29,45 @@ import {
 } from '../services/smartBarState';
 import { fetchPartnerVipConfig, getCachedPartnerVipConfig } from '../services/vipInviteStore';
 import type { ReservationRequest } from '../types/experience';
-import type { PartnerVipInviteConfig, VipInviteRecord } from '../types/growth';
+import type { PartnerVipInviteConfig, ReferralProgramRule, VipInviteRecord } from '../types/growth';
 import type { Restaurant } from '../types/restaurant';
 import type { PartnerReward } from '../types/rewards';
+
+function formatReservationStageLabel(stage: string): string {
+  switch (stage) {
+    case 'REQUESTED':
+      return 'Aguardando';
+    case 'CONFIRMED':
+      return 'Confirmada';
+    case 'CHECKED_IN':
+      return 'Check-in feito';
+    case 'ATTENDED':
+      return 'Atendida';
+    case 'CANCELLED':
+      return 'Cancelada';
+    case 'NO_SHOW':
+      return 'Não compareceu';
+    default:
+      return stage;
+  }
+}
+
+function formatReservationDateLabel(dateStr: string): string {
+  if (!dateStr) return 'Hoje';
+  const now = new Date();
+  const toIso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayIso = toIso(now);
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowIso = toIso(tomorrow);
+
+  if (dateStr === todayIso) return 'Hoje';
+  if (dateStr === tomorrowIso) return 'Amanhã';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (match) return `${match[3]}/${match[2]}`;
+  return dateStr;
+}
 
 interface BoraSmartBarProps {
   reservations: ReservationRequest[];
@@ -58,6 +95,7 @@ export function BoraSmartBar({
   const [dockOffsetPx, setDockOffsetPx] = useState(84);
   const [vipInvites, setVipInvites] = useState<VipInviteRecord[]>([]);
   const [vipConfigsByVenue, setVipConfigsByVenue] = useState<Record<string, PartnerVipInviteConfig>>({});
+  const [referralRule, setReferralRule] = useState<ReferralProgramRule | null>(null);
   const [copiedVipCode, setCopiedVipCode] = useState<string | null>(null);
   const [redeemFeedback, setRedeemFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [activeSheetSection, setActiveSheetSection] = useState<
@@ -141,6 +179,12 @@ export function BoraSmartBar({
         }
       });
     }
+
+    void fetchActiveReferralProgramRule().then((rule) => {
+      if (active && rule) {
+        setReferralRule(rule);
+      }
+    });
 
     return () => {
       active = false;
@@ -262,11 +306,17 @@ export function BoraSmartBar({
           <button
             type="button"
             onClick={() => setMinimized(false)}
-            aria-label="Expandir BoraSmartBar"
+            aria-label="Expandir Meus Passes e Pontos"
             className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-stone-950/90 px-3.5 py-2 text-xs font-bold text-white shadow-xl backdrop-blur-xl hover:border-amber-400/50"
           >
             <span className={`h-2 w-2 rounded-full ${capsule.dotColor}`} />
-            <span>BoraSmartBar</span>
+            <span>
+              {smartState.primaryState === 'ACTIVE_RESERVATION'
+                ? `Passe Ativo (${smartState.activeReservations.length})`
+                : smartState.wallet.available_balance > 0
+                  ? `✨ ${smartState.wallet.available_balance} pts`
+                  : '🎁 Meus Benefícios'}
+            </span>
             <ChevronUp className="h-3.5 w-3.5 text-stone-300" />
           </button>
         ) : (
@@ -323,7 +373,7 @@ export function BoraSmartBar({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Painel rápido BoraSmartBar"
+          aria-label="Meus Passes e Pontos"
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 backdrop-blur-xs sm:items-center sm:p-4"
           onClick={() => setSheetOpen(false)}
         >
@@ -353,7 +403,7 @@ export function BoraSmartBar({
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-amber-400">
-                    BoraSmartBar · Centro Rápido
+                    Meus Passes e Pontos
                   </p>
                   <h3 className="text-base font-extrabold text-white">
                     {smartState.wallet.available_balance} Rio Points liberados
@@ -460,7 +510,8 @@ export function BoraSmartBar({
                             <div>
                               <p className="text-sm font-bold text-white">{res.experience_name}</p>
                               <p className="text-[11px] text-stone-300">
-                                {res.date} às {res.time} · {res.guests} {res.guests === 1 ? 'pessoa' : 'pessoas'}
+                                {formatReservationDateLabel(res.date)} às {res.time} · {res.guests}{' '}
+                                {res.guests === 1 ? 'pessoa' : 'pessoas'}
                               </p>
                               <p className="flex items-center gap-1 text-[11px] text-stone-400">
                                 <MapPin className="h-3 w-3 text-[#FF6B35]" />
@@ -468,7 +519,7 @@ export function BoraSmartBar({
                               </p>
                             </div>
                             <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                              {stage}
+                              {formatReservationStageLabel(stage)}
                             </span>
                           </div>
 
@@ -651,9 +702,15 @@ export function BoraSmartBar({
                       Convide e ganhe
                     </p>
                     <p className="text-[11px] text-stone-400">
-                      {smartState.pendingReferralsCount > 0
-                        ? `${smartState.pendingReferralsCount} indicações em acompanhamento`
-                        : 'Compartilhe o BoraRio com amigos'}
+                      {referralRule?.active && referralRule.referrer_points > 0
+                        ? `+${referralRule.referrer_points} pts por amigo que fizer check-in${
+                            smartState.pendingReferralsCount > 0
+                              ? ` · ${smartState.pendingReferralsCount} em andamento`
+                              : ''
+                          }`
+                        : smartState.pendingReferralsCount > 0
+                          ? `${smartState.pendingReferralsCount} indicações em acompanhamento`
+                          : 'Compartilhe o BoraRio e ganhe pontos após o check-in'}
                     </p>
                   </div>
                   <button

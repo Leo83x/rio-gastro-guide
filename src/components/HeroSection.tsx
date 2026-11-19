@@ -84,15 +84,15 @@ const THREE_PILLARS: CorePillar[] = [
   {
     id: 'comer',
     label: 'Comer',
-    sub: 'Gastronomia',
+    sub: 'Restaurantes',
     macro: 'Gastronomia',
     icon: UtensilsCrossed,
     gradient: 'from-[#FF4B2B] via-[#FF6B35] to-[#F7931E]',
   },
   {
     id: 'noite',
-    label: 'Noite & Eventos',
-    sub: 'Bares & Shows',
+    label: 'Noite',
+    sub: 'Bares',
     macro: 'Vida Noturna',
     icon: Moon,
     gradient: 'from-[#0E2235] via-[#123B56] to-[#0077B6]',
@@ -101,7 +101,7 @@ const THREE_PILLARS: CorePillar[] = [
   {
     id: 'passeios',
     label: 'Passeios',
-    sub: 'Cultura & Lazer',
+    sub: 'Lazer',
     macro: 'Turismo & Praias',
     icon: Compass,
     gradient: 'from-[#1B4D3E] via-[#2A6F55] to-[#397B68]',
@@ -399,14 +399,14 @@ export function HeroSection({
                       }, 70);
                     }
                   }}
-                  className={`group flex items-center gap-1.5 rounded-xl p-2 text-left transition-all sm:gap-2.5 sm:p-2.5 ${
+                  className={`group flex items-center gap-1.5 rounded-xl px-1.5 py-2 text-left transition-all sm:gap-2.5 sm:p-2.5 ${
                     active
                       ? `bg-gradient-to-r ${act.gradient} text-white shadow-md ring-1 ring-white/25`
                       : 'border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] hover:border-[#FF6B35]/50 hover:bg-[var(--bg-surface)]'
                   }`}
                 >
                   <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105 sm:h-9 sm:w-9 ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105 sm:h-9 sm:w-9 ${
                       active
                         ? 'bg-white/20 text-white shadow-xs'
                         : `bg-gradient-to-r ${act.gradient} text-white shadow-xs`
